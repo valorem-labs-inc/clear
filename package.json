@@ -1,0 +1,27 @@
+{
+  "name": "valoremoptions",
+  "author": "Alcibiades",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Alcibiades-Capital/valorem-options-contracts.git"
+  },
+  "scripts": {
+    "prettier": "prettier --write 'src/**/*.sol'",
+    "prettier:list": "prettier --list-different 'src/**/*.sol'",
+    "prettier:check": "prettier --check 'src/**/*.sol'",
+    "solhint": "solhint --config ./.solhint.json 'src/**/*.sol' --fix",
+    "solhint:check": "solhint --config ./.solhint.json 'src/**/*.sol'",
+    "lint": "npm run prettier && npm run solhint",
+    "lint:check": "npm run prettier:check && npm run solhint:check"
+  },
+  "devDependencies": {
+    "prettier": "^2.5.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.19",
+    "solhint": "^3.3.6"
+  },
+  "dependencies": {
+  }
+}

@@ -1,0 +1,84 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  run-ci:
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+
+      - name: Install dev dependencies
+        run: npm install
+
+      - name: Set up python
+        id: setup-python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v2
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+
+      - name: Install library
+        run: poetry install --no-interaction
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Set up rust cache
+        uses: Swatinem/rust-cache@v1
+
+      - name: Save git SHA for Foundry
+        run: |
+          echo "forge-sha=$(git ls-remote  https://github.com/gakonst/foundry HEAD | awk '{ print $1}')" >> $GITHUB_ENV
+
+      - name: Cache Forge
+        uses: actions/cache@v2
+        id: cache-forge
+        env:
+          cache-name: cache-forge
+        with:
+          path: ~/.cargo/bin/forge
+          key: ${{ env.cache-name }}-${{ env.forge-sha }}
+
+      # if couldn't get, install it
+      - name: Install Forge
+        if: steps.cache-forge.outputs.cache-hit != 'true'
+        run: |
+          cargo install --git https://github.com/gakonst/foundry --bin forge --locked
+
+      - name: Pull Submodules
+        run: forge update
+
+      - name: Run lint check
+        run: npm run lint:check
+
+      # Too slow to run regularly
+      #- name: Run audit
+      #  run: poetry run slither --solc-remaps @openzeppelin=lib/openzeppelin-contracts --solc-args optimize src/
+
+      - name: Run tests
+        # TODO(Store as a secret)
+        run: forge test --optimize --fork-url https://eth-mainnet.alchemyapi.io/v2/p6SBr3BiRU8XHYK8tdynKuxKOcXb_C9Y

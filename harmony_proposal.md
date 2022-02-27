@@ -6,7 +6,7 @@ Valorem Options V1
 
 ## Project Developer
 
-[Alcibiades Capital LLC](https://alcibiades.capital/about/)
+- [Alcibiades Capital LLC](https://alcibiades.capital/about/)
 
 ## Proposal Overview
 
@@ -32,14 +32,14 @@ program enables the development of next generation MVPs for financial derivative
 
 Alcibiades Capital LLC will be working with the following partners to ensure the rapid implementation of this MVP:
 
-[EOI Digital](https://transform.eoi.digital/) - Risk Modeling, Financial Analysis, Frontend
-[Cult Method](https://cultmethod.com/) - Branding, UI, Design
-[Alcibiades Capital LLC](https://alcibiades.capital/consulting/) - Smart Contracts, Backend, Security Testing
-Harmony - Grant funding, blockchain
+- [EOI Digital](https://transform.eoi.digital/) - Risk Modeling, Financial Analysis, Frontend
+- [Cult Method](https://cultmethod.com/) - Branding, UI, Design
+- [Alcibiades Capital LLC](https://alcibiades.capital/consulting/) - Smart Contracts, Backend, Security Testing
+- Harmony - Grant funding, blockchain
 
 ## Proposal Ask
 
-$50k
+- $50k
 
 ### Milestones
 
@@ -52,7 +52,7 @@ $50k
 
 ### Timeline
 
-6-8 Weeks.
+- 6-8 Weeks.
 
 ## Metrics for Success
 

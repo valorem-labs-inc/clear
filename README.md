@@ -1,19 +1,14 @@
 # Valorem Options V1 Core
 
 ## Abstract
-This DeFi money lego enables writing covered call and covered put, physically settled, american or european options. All
-written options are fully collateralized against an ERC-20 underlying asset and exercised with an ERC-20 exercise asset
-on a FIFO written basis per unique option type. Options contracts are issued as ERC-1155 tokens, with each token
-representing a contract. Option writers are issued a 1/1 ERC-1155 NFT representing a lot of contracts written for
-claiming collateral and exercise assignment. The protocol allows for pluggable premium pricing models for use in
-markets.
 
-## On the exercise assignment process
-
-Traditional options are settled in two ways, FIFO or random. Firstly, there is no way to get real or even pseudo random
-numbers without reliance on an outside oracle on the blockchain. Secondly, we had considered using a 1/1 ERC-1155 to
-represent each individual option and assigning exercise per token. However the gas overhead and other technical
-considerations made this impractical, so we went with a FIFO queue on the order the options were written.
+Valorem Options V1 is a DeFi money lego enabling writing covered call and covered put, physically settled, american or
+european options. All written options are fully collateralized against an ERC-20 underlying asset and exercised with an
+ERC-20 exercise asset using a chainlink VRF random number per unique option type for fair settlement. Options contracts
+are issued as fungible ERC-1155 tokens, with each token representing a contract. Option writers are additionally issued
+an ERC-1155 NFT representing a lot of contracts written for claiming collateral and exercise assignment. This design
+eliminates the need for market price oracles, and allows for permission-less writing, and gas efficient transfer, of
+a broad swath of traditional options.
 
 ### FIFO Implementation
 

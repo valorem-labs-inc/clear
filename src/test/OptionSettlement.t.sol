@@ -5,7 +5,11 @@ import "ds-test/test.sol";
 import "../OptionSettlement.sol";
 
 contract OptionSettlementTest is DSTest {
-    function setUp() public {}
+    OptionSettlementEngine public engine;
+
+    function setUp() public {
+        engine = new OptionSettlementEngine();
+    }
 
     function testExample() public {
         assertTrue(true);

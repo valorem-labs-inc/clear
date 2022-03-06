@@ -40,37 +40,16 @@ jobs:
       - name: Install library
         run: poetry install --no-interaction
 
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Install Foundry
+        uses: onbjerg/foundry-toolchain@v1
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - name: Set up rust cache
-        uses: Swatinem/rust-cache@v1
-
-      - name: Save git SHA for Foundry
-        run: |
-          echo "forge-sha=$(git ls-remote  https://github.com/gakonst/foundry HEAD | awk '{ print $1}')" >> $GITHUB_ENV
-
-      - name: Cache Forge
-        uses: actions/cache@v2
-        id: cache-forge
-        env:
-          cache-name: cache-forge
-        with:
-          path: ~/.cargo/bin/forge
-          key: ${{ env.cache-name }}-${{ env.forge-sha }}
-
-      # if couldn't get, install it
-      - name: Install Forge
-        if: steps.cache-forge.outputs.cache-hit != 'true'
-        run: |
-          cargo install --git https://github.com/gakonst/foundry --bin forge --locked
-
+          version: nightly
+      
       - name: Pull Submodules
         run: forge update
+
+      - name: Run tests
+        run: forge test --optimize --fork-url https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
       - name: Run lint check
         run: npm run lint:check
@@ -78,7 +57,3 @@ jobs:
       # Too slow to run regularly
       #- name: Run audit
       #  run: poetry run slither --solc-remaps @openzeppelin=lib/openzeppelin-contracts --solc-args optimize src/
-
-      - name: Run tests
-        # TODO(Store as a secret)
-        run: forge test --optimize --fork-url https://eth-mainnet.alchemyapi.io/v2/p6SBr3BiRU8XHYK8tdynKuxKOcXb_C9Y

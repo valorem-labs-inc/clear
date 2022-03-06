@@ -3,43 +3,59 @@ pragma solidity 0.8.11;
 
 import "solmate/tokens/ERC1155.sol";
 
-contract OptionSettlementLayer is ERC1155 {
+/**
+   Valorem Options V1 is a DeFi money lego enabling writing covered call and covered put, physically settled, american or
+   european options. All written options are fully collateralized against an ERC-20 underlying asset and exercised with an
+   ERC-20 exercise asset using a chainlink VRF random number per unique option type for fair settlement. Options contracts
+   are issued as fungible ERC-1155 tokens, with each token representing a contract. Option writers are additionally issued
+   an ERC-1155 NFT representing a lot of contracts written for claiming collateral and exercise assignment. This design
+   eliminates the need for market price oracles, and allows for permission-less writing, and gas efficient transfer, of
+   a broad swath of traditional options.
+*/
 
+// TODO(Support both physically and cash settled options after the mvp?)
+//enum Settlement {
+//    Physical,
+//    Cash
+//}
+
+enum Type {
+    None,
+    Option,
+    Claim
+}
+
+struct Option {
+    uint256 settlementSeed;
+    address underlyingAsset;
+    address exerciseAsset;
+    uint256 exerciseTimestamp;
+    uint256 expiryTimestamp;
+}
+
+struct Claim {
+    // TODO(State about asset exercise, etc)
+    uint256 option;
+    uint256 amountWritten;
+    uint256 amountExercised;
+}
+
+contract OptionSettlementEngine is ERC1155 {
+    // To increment the next available token id
+    uint256 private _nextTokenId;
+
+    // TODO(Null values here should return None from the enum, or design needs to change.)
+    // Is this an option or a claim?
+    mapping(uint256 => Type) public tokenType;
+
+    // Accessor for Option contract details
+    mapping(uint256 => Option) public option;
+
+    // Accessor for claim ticket details
+    mapping(uint256 => Claim) public claim;
+
+    // TODO(The URI should return relevant details about the contract or claim dep on ID)
     function uri(uint256) public pure virtual override returns (string memory) {
         return "";
-    }
-
-    function mint(
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes memory data
-    ) public virtual {
-        _mint(to, id, amount, data);
-    }
-
-    function batchMint(
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) public virtual {
-        _batchMint(to, ids, amounts, data);
-    }
-
-    function burn(
-        address from,
-        uint256 id,
-        uint256 amount
-    ) public virtual {
-        _burn(from, id, amount);
-    }
-
-    function batchBurn(
-        address from,
-        uint256[] memory ids,
-        uint256[] memory amounts
-    ) public virtual {
-        _batchBurn(from, ids, amounts);
     }
 }

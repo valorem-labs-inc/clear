@@ -26,8 +26,11 @@ enum Type {
 }
 
 struct Option {
+    // Random seed created at the time of option chain creation
     uint256 settlementSeed;
+    // The underlying asset to be received
     address underlyingAsset;
+    //
     address exerciseAsset;
     uint256 exerciseTimestamp;
     uint256 expiryTimestamp;
@@ -36,11 +39,13 @@ struct Option {
 struct Claim {
     // TODO(State about asset exercise, etc)
     uint256 option;
+    // These are 1:1 contracts with the underlying struct
     uint256 amountWritten;
     uint256 amountExercised;
 }
 
 contract OptionSettlementEngine is ERC1155 {
+    // TODO(Events for subgraph)
     // To increment the next available token id
     uint256 private _nextTokenId;
 
@@ -56,6 +61,10 @@ contract OptionSettlementEngine is ERC1155 {
 
     // TODO(The URI should return relevant details about the contract or claim dep on ID)
     function uri(uint256) public pure virtual override returns (string memory) {
+        // https://eips.ethereum.org/EIPS/eip-1155#metadata
+        // Return base64 encoded json blob with metadata for rendering on the frontend
         return "";
     }
+
+    // Here there must exist a way to get the data about a given token id transparently
 }

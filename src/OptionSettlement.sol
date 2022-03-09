@@ -52,6 +52,7 @@ struct Claim {
     // The amount of contracts assigned for exercise to this claim
     uint256 amountExercised;
     // The two amounts above along with the option info, can be used to calculate the underlying assets
+    bool claimed;
 }
 
 contract OptionSettlementEngine is ERC1155 {
@@ -66,7 +67,8 @@ contract OptionSettlementEngine is ERC1155 {
     // Accessor for Option contract details
     mapping(uint256 => Option) public option;
 
-    mapping(bytes32 => bool) chainMap;
+    // This is used to check if an Option chain already exists
+    mapping(bytes32 => bool) private chainMap;
 
     // Accessor for claim ticket details
     mapping(uint256 => Claim) public claim;
@@ -102,21 +104,30 @@ contract OptionSettlementEngine is ERC1155 {
         //}
         //    }
         string memory json = Base64.encode(
-            bytes(
-                string(
-                    abi.encodePacked("{}")
-                )
-            )
+            bytes(string(abi.encodePacked("{}")))
         );
         return string(abi.encodePacked("data:application/json;base64,", json));
     }
 
     // TODO(random number should be generated from vrf)
-    function newOptionsChain(Option memory option) {
-        // TODO(This should check that a duplicate chain doesn't exist, and iff it does, revert)
+    function newOptionsChain(Option memory optionInfo) public {
+        // Check that a duplicate chain doesn't exist, and if it does, revert
+        bytes32 chainKey = keccak256(abi.encode(optionInfo));
+        require(chainMap[chainKey] == false);
+
         // Else, create new options chain
         // TODO(There should be at least 24 hours between expiry and exercise)
+
+        chainMap[chainKey] = true;
     }
 
-    // Here there must exist a way to get the data about a given token id transparently
+    // TODO(Write option)
+
+    // TODO(Exercise option)
+
+    // TODO(Use claim)
+
+    // TODO(Get info about options contract)
+
+    // TODO(Get info about a claim)
 }

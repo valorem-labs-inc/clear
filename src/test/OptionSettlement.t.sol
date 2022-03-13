@@ -38,4 +38,19 @@ contract OptionSettlementTest is DSTest {
         });
         engine.newOptionsChain(info);
     }
+
+    function testFailDuplicateOptionsChain() public {
+        // This should fail to create the second and duplicate options chain
+        Option memory info = Option({
+            underlyingAsset: address(weth),
+            exerciseAsset: address(dai),
+            settlementSeed: 1,
+            underlyingAmount: 1 ether,
+            exerciseAmount: 3000 ether,
+            exerciseTimestamp: block.timestamp,
+            expiryTimestamp: (block.timestamp + 604800)
+        });
+        engine.newOptionsChain(info);
+        engine.newOptionsChain(info);
+    }
 }

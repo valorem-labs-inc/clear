@@ -116,15 +116,16 @@ contract OptionSettlementEngine is ERC1155 {
     function newOptionsChain(Option memory optionInfo) public {
         // Check that a duplicate chain doesn't exist, and if it does, revert
         bytes32 chainKey = keccak256(abi.encode(optionInfo));
-        require(
-            chainMap[chainKey] == false,
-            "This option chain already exists"
-        );
+        require(chainMap[chainKey] == false, "This option chain exists");
 
         // Else, create new options chain
 
         // Create option token and increment
         tokenType[_nextTokenId] = Type.Option;
+        require(
+            optionInfo.expiryTimestamp >= (block.timestamp + 86400),
+            "Expiry < 24 hours from now."
+        );
         // TODO(There should be at least 24 hours between expiry and exercise)
         // TODO(Any other requirements, like the assets not being the same)
         option[_nextTokenId] = optionInfo;

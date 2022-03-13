@@ -113,7 +113,10 @@ contract OptionSettlementEngine is ERC1155 {
     }
 
     // TODO(random number should be generated from vrf)
-    function newOptionsChain(Option memory optionInfo) public {
+    function newOptionsChain(Option memory optionInfo)
+        public
+        returns (uint256 tokenId)
+    {
         // Check that a duplicate chain doesn't exist, and if it does, revert
         bytes32 chainKey = keccak256(abi.encode(optionInfo));
         require(chainMap[chainKey] == false, "This option chain exists");
@@ -140,11 +143,11 @@ contract OptionSettlementEngine is ERC1155 {
 
         // TODO(This should emit an event about the creation for indexing in a graph)
 
+        tokenId = _nextTokenId;
+
         // Increment the next token id to be used
         _nextTokenId += 1;
         chainMap[chainKey] = true;
-
-        // TODO(Should this return info about the option token?)
     }
 
     // TODO(Write option)

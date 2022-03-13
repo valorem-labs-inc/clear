@@ -126,8 +126,16 @@ contract OptionSettlementEngine is ERC1155 {
             optionInfo.expiryTimestamp >= (block.timestamp + 86400),
             "Expiry < 24 hours from now."
         );
-        // TODO(There should be at least 24 hours between expiry and exercise)
-        // TODO(Any other requirements, like the assets not being the same)
+        require(
+            optionInfo.expiryTimestamp >=
+                (optionInfo.exerciseTimestamp + 86400),
+            "Exercise < 24 hours from exp"
+        );
+        require(
+            optionInfo.exerciseAsset != optionInfo.underlyingAsset,
+            "Underlying == Exercise"
+        );
+        // TODO(Do we need to check that the ERC20's in question exist here?)
         option[_nextTokenId] = optionInfo;
 
         // TODO(This should emit an event about the creation for indexing in a graph)

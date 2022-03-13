@@ -5,8 +5,8 @@ import "base64/Base64.sol";
 import "solmate/tokens/ERC1155.sol";
 
 /**
-   Valorem Options V1 is a DeFi money lego enabling writing covered call and covered put, physically settled, american or
-   european options. All written options are fully collateralized against an ERC-20 underlying asset and exercised with an
+   Valorem Options V1 is a DeFi money lego enabling writing covered call and covered put, physically settled, options.
+   All written options are fully collateralized against an ERC-20 underlying asset and exercised with an
    ERC-20 exercise asset using a chainlink VRF random number per unique option type for fair settlement. Options contracts
    are issued as fungible ERC-1155 tokens, with each token representing a contract. Option writers are additionally issued
    an ERC-1155 NFT representing a lot of contracts written for claiming collateral and exercise assignment. This design
@@ -113,7 +113,10 @@ contract OptionSettlementEngine is ERC1155 {
     function newOptionsChain(Option memory optionInfo) public {
         // Check that a duplicate chain doesn't exist, and if it does, revert
         bytes32 chainKey = keccak256(abi.encode(optionInfo));
-        require(chainMap[chainKey] == false);
+        require(
+            chainMap[chainKey] == false,
+            "This option chain already exists"
+        );
 
         // Else, create new options chain
         // TODO(There should be at least 24 hours between expiry and exercise)

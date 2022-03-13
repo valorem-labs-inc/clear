@@ -56,7 +56,10 @@ struct Claim {
 }
 
 contract OptionSettlementEngine is ERC1155 {
+    // TODO(Interface file to interact without looking at the internals)
+
     // TODO(Events for subgraph)
+
     // To increment the next available token id
     uint256 private _nextTokenId;
 
@@ -119,9 +122,20 @@ contract OptionSettlementEngine is ERC1155 {
         );
 
         // Else, create new options chain
-        // TODO(There should be at least 24 hours between expiry and exercise)
 
+        // Create option token and increment
+        tokenType[_nextTokenId] = Type.Option;
+        // TODO(There should be at least 24 hours between expiry and exercise)
+        // TODO(Any other requirements, like the assets not being the same)
+        option[_nextTokenId] = optionInfo;
+
+        // TODO(This should emit an event about the creation for indexing in a graph)
+
+        // Increment the next token id to be used
+        _nextTokenId += 1;
         chainMap[chainKey] = true;
+
+        // TODO(Should this return info about the option token?)
     }
 
     // TODO(Write option)

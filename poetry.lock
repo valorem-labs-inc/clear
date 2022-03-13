@@ -11,7 +11,7 @@ pysha3 = ">=1.0.2"
 
 [[package]]
 name = "prettytable"
-version = "3.1.1"
+version = "3.2.0"
 description = "A simple Python library for easily displaying tabular data in a visually appealing ASCII table format"
 category = "main"
 optional = false
@@ -62,8 +62,8 @@ crytic-compile = [
     {file = "crytic-compile-0.2.2.tar.gz", hash = "sha256:708fd968a9d8856982838e5c56e1c7ff8e3f14d1d7eac971065395a28af4a60f"},
 ]
 prettytable = [
-    {file = "prettytable-3.1.1-py3-none-any.whl", hash = "sha256:f546d42de21ac14d791c91e4e9814f02271f4a5bf27b894457914be7513dc92b"},
-    {file = "prettytable-3.1.1.tar.gz", hash = "sha256:43c9e23272ca253d038ae76fe3adde89794e92e7fcab2ddf5b94b38642ef4f21"},
+    {file = "prettytable-3.2.0-py3-none-any.whl", hash = "sha256:f6c5ec87c3ef9df5bba1d32d826c1b862ecad0344dddb6082e3562caf71fe085"},
+    {file = "prettytable-3.2.0.tar.gz", hash = "sha256:ae7d96c64100543dc61662b40a28f3b03c0f94a503ed121c6fca2782c5816f81"},
 ]
 pysha3 = [
     {file = "pysha3-1.0.2-cp27-cp27m-manylinux1_i686.whl", hash = "sha256:6e6a84efb7856f5d760ee55cd2b446972cb7b835676065f6c4f694913ea8f8d9"},

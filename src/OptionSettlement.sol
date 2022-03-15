@@ -77,7 +77,14 @@ contract OptionSettlementEngine is ERC1155 {
     mapping(uint256 => Claim) public claim;
 
     // TODO(The URI should return relevant details about the contract or claim dep on ID)
-    function uri(uint256) public pure virtual override returns (string memory) {
+    function uri(uint256 tokenId)
+        public
+        view
+        virtual
+        override
+        returns (string memory)
+    {
+        require(tokenType[tokenId] != Type.None, "Token does not exist");
         // https://eips.ethereum.org/EIPS/eip-1155#metadata
         // Return base64 encoded json blob with metadata for rendering on the frontend
         //{
@@ -123,11 +130,6 @@ contract OptionSettlementEngine is ERC1155 {
 
         // Else, create new options chain
 
-        // Zero out random number for gas savings and to await randomness
-        optionInfo.settlementSeed = 0;
-
-        // Create option token and increment
-        tokenType[_nextTokenId] = Type.Option;
         require(
             optionInfo.expiryTimestamp >= (block.timestamp + 86400),
             "Expiry < 24 hours from now."
@@ -141,6 +143,13 @@ contract OptionSettlementEngine is ERC1155 {
             optionInfo.exerciseAsset != optionInfo.underlyingAsset,
             "Underlying == Exercise"
         );
+
+        // Zero out random number for gas savings and to await randomness
+        optionInfo.settlementSeed = 0;
+
+        // Create option token and increment
+        tokenType[_nextTokenId] = Type.Option;
+
         // TODO(Do we need to check that the ERC20's in question exist here?)
         option[_nextTokenId] = optionInfo;
 

@@ -24,6 +24,16 @@ contract OptionSettlementTest is DSTest {
         dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
         // Setup settlement engine
         engine = new OptionSettlementEngine();
+        Option memory info = Option({
+            underlyingAsset: address(weth),
+            exerciseAsset: address(dai),
+            settlementSeed: 1,
+            underlyingAmount: 1 ether,
+            exerciseAmount: 3000 ether,
+            exerciseTimestamp: uint64(block.timestamp),
+            expiryTimestamp: (uint64(block.timestamp) + 604800)
+        });
+        engine.newOptionsChain(info);
     }
 
     function testNewOptionsChain(uint256 settlementSeed) public {
@@ -32,7 +42,7 @@ contract OptionSettlementTest is DSTest {
             exerciseAsset: address(dai),
             settlementSeed: settlementSeed,
             underlyingAmount: 1 ether,
-            exerciseAmount: 3000 ether,
+            exerciseAmount: 3100 ether,
             exerciseTimestamp: uint64(block.timestamp),
             expiryTimestamp: (uint64(block.timestamp) + 604800)
         });
@@ -51,6 +61,13 @@ contract OptionSettlementTest is DSTest {
             expiryTimestamp: (uint64(block.timestamp) + 604800)
         });
         engine.newOptionsChain(info);
-        engine.newOptionsChain(info);
+    }
+
+    function testUri() public view {
+        engine.uri(0);
+    }
+
+    function testFailUri() public view {
+        engine.uri(1);
     }
 }

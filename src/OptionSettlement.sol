@@ -29,18 +29,18 @@ enum Type {
 struct Option {
     // The underlying asset to be received
     address underlyingAsset;
+    // The timestamp after which this option may be exercised
+    uint64 exerciseTimestamp;
     // The address of the asset needed for exercise
     address exerciseAsset;
+    // The timestamp before which this option must be exercised
+    uint64 expiryTimestamp;
     // Random seed created at the time of option chain creation
     uint256 settlementSeed;
     // The amount of the underlying asset contained within an option contract of this type
     uint256 underlyingAmount;
     // The amount of the exercise asset required to exercise this option
     uint256 exerciseAmount;
-    // The timestamp after which this option may be exercised
-    uint256 exerciseTimestamp;
-    // The timestamp before which this option must be exercised
-    uint256 expiryTimestamp;
 }
 
 struct Claim {
@@ -122,6 +122,9 @@ contract OptionSettlementEngine is ERC1155 {
         require(chainMap[chainKey] == false, "This option chain exists");
 
         // Else, create new options chain
+
+        // Zero out random number for gas savings and to await randomness
+        optionInfo.settlementSeed = 0;
 
         // Create option token and increment
         tokenType[_nextTokenId] = Type.Option;

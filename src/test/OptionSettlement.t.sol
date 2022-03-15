@@ -33,8 +33,8 @@ contract OptionSettlementTest is DSTest {
             settlementSeed: settlementSeed,
             underlyingAmount: 1 ether,
             exerciseAmount: 3000 ether,
-            exerciseTimestamp: block.timestamp,
-            expiryTimestamp: (block.timestamp + 604800)
+            exerciseTimestamp: uint64(block.timestamp),
+            expiryTimestamp: (uint64(block.timestamp) + 604800)
         });
         engine.newOptionsChain(info);
     }
@@ -47,8 +47,8 @@ contract OptionSettlementTest is DSTest {
             settlementSeed: 1,
             underlyingAmount: 1 ether,
             exerciseAmount: 3000 ether,
-            exerciseTimestamp: block.timestamp,
-            expiryTimestamp: (block.timestamp + 604800)
+            exerciseTimestamp: uint64(block.timestamp),
+            expiryTimestamp: (uint64(block.timestamp) + 604800)
         });
         engine.newOptionsChain(info);
         engine.newOptionsChain(info);

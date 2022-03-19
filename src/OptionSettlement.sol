@@ -2,6 +2,7 @@
 pragma solidity 0.8.11;
 
 import "base64/Base64.sol";
+import "solmate/tokens/ERC20.sol";
 import "solmate/tokens/ERC1155.sol";
 
 /**
@@ -14,17 +15,13 @@ import "solmate/tokens/ERC1155.sol";
    a broad swath of traditional options.
 */
 
-// TODO(Support both physically and cash settled options after the mvp?)
-//enum Settlement {
-//    Physical,
-//    Cash
-//}
-
 enum Type {
     None,
     Option,
     Claim
 }
+
+// TODO(An enum here indicating if the option is a put or a call would be redundant, but maybe useful?)
 
 struct Option {
     // The underlying asset to be received
@@ -121,7 +118,7 @@ contract OptionSettlementEngine is ERC1155 {
 
     // TODO(random number should be generated from vrf)
     function newOptionsChain(Option memory optionInfo)
-        public
+        external
         returns (uint256 tokenId)
     {
         // Check that a duplicate chain doesn't exist, and if it does, revert
@@ -150,7 +147,14 @@ contract OptionSettlementEngine is ERC1155 {
         // Create option token and increment
         tokenType[_nextTokenId] = Type.Option;
 
-        // TODO(Do we need to check that the ERC20's in question exist here?)
+        // Check that both tokens are ERC20 by instantiating them and checking supply
+        ERC20 underlying = ERC20(optionInfo.underlyingAsset);
+        ERC20 exercise = ERC20(optionInfo.exerciseAsset);
+
+        // Check total supplies and ensure the option will be exercisable
+        require(underlying.totalSupply() >= optionInfo.underlyingAmount, "Invalid Supply");
+        require(exercise.totalSupply() >= optionInfo.exerciseAmount, "Invalid Supply");
+
         option[_nextTokenId] = optionInfo;
 
         // TODO(This should emit an event about the creation for indexing in a graph)
@@ -162,11 +166,16 @@ contract OptionSettlementEngine is ERC1155 {
         chainMap[chainKey] = true;
     }
 
-    // TODO(Write option)
+    function writeOption(uint256 tokenId) external view {
+        require(tokenType[tokenId] == Type.Option, "Token is not an option");
+        // TODO(Transfer the requisite underlying asset)
+        // TODO(Create and transfer the claim token)
+        // TODO(Emit event about the writing)
+    }
 
     // TODO(Exercise option)
 
-    // TODO(Use claim)
+    // TODO(Redeem claim)
 
     // TODO(Get info about options contract)
 

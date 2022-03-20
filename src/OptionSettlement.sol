@@ -62,6 +62,11 @@ contract OptionSettlementEngine is ERC1155 {
 
     // TODO(Do we need to track internal balances)
 
+    uint8 public immutable feeBps = 5;
+
+    // TODO(Implement setters for this and a real address)
+    address public feeTo = 0x36273803306a3C22bc848f8Db761e974697ece0d;
+
     // To increment the next available token id
     uint256 private _nextTokenId;
 
@@ -72,6 +77,7 @@ contract OptionSettlementEngine is ERC1155 {
     // Accessor for Option contract details
     mapping(uint256 => Option) public option;
 
+    // TODO(Should this be a public uint256 lookup of the token id if exists?)
     // This is used to check if an Option chain already exists
     mapping(bytes32 => bool) private chainMap;
 
@@ -98,6 +104,7 @@ contract OptionSettlementEngine is ERC1155 {
         external
         returns (uint256 tokenId)
     {
+        // TODO(Transfer the link fee here)
         // Check that a duplicate chain doesn't exist, and if it does, revert
         bytes32 chainKey = keccak256(abi.encode(optionInfo));
         require(chainMap[chainKey] == false, "This option chain exists");
@@ -148,25 +155,67 @@ contract OptionSettlementEngine is ERC1155 {
         tokenId = _nextTokenId;
 
         // Increment the next token id to be used
-        _nextTokenId += 1;
+        ++_nextTokenId;
         chainMap[chainKey] = true;
     }
 
-    function mintClaim() internal {}
-
-    function writeOption(uint256 tokenId, uint256 amount) external {
+    function writeOptions(uint256 tokenId, uint256 amount) external {
         require(tokenType[tokenId] == Type.Option, "Token is not an option");
+        require(
+            option[tokenId].settlementSeed != 0,
+            "Settlement seed not populated"
+        );
+
+        Option storage optionRecord = option[tokenId];
+
+        uint256 tx_amount = amount * optionRecord.underlyingAmount;
 
         // Transfer the requisite underlying asset
         SafeTransferLib.safeTransferFrom(
-            ERC20(option[tokenId].underlyingAsset),
+            ERC20(optionRecord.underlyingAsset),
             msg.sender,
             address(this),
-            (amount * option[tokenId].underlyingAmount)
+            tx_amount
         );
 
-        // TODO(Create and transfer the claim token)
+        // TODO(Consider an internal balance counter here and aggregating these in a fee sweep)
+        // TODO(Ensure rounding down or precise math here)
+        // Transfer fee to writer
+        SafeTransferLib.safeTransfer(
+            ERC20(optionRecord.underlyingAsset),
+            feeTo,
+            ((tx_amount / 10000) * feeBps)
+        );
+        // TODO(Do we need any other internal balance counters?)
+
+        uint256 claimTokenId = _nextTokenId;
+
+        // Mint the options contracts and claim token
+        uint256[] memory tokens = new uint256[](2);
+        tokens[0] = tokenId;
+        tokens[1] = claimTokenId;
+
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = amount;
+        amounts[1] = 1;
+
+        bytes memory data = new bytes(0);
+
+        // Send tokens to writer
+        _batchMint(msg.sender, tokens, amounts, data);
+
+        // Store info about the claim
+        tokenType[claimTokenId] = Type.Claim;
+        claim[claimTokenId] = Claim({
+            option: tokenId,
+            amountWritten: amount,
+            amountExercised: 0,
+            claimed: false
+        });
+
         // TODO(Emit event about the writing)
+        // Increment the next token ID
+        ++_nextTokenId;
     }
 
     // TODO(Exercise option)

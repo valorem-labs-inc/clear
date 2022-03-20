@@ -22,8 +22,10 @@ enum Type {
     Claim
 }
 
+// TODO(Right now fee is taken on top of written amount and exercised amount, should the model be different?)
 // TODO(Consider converting require strings to errors)
 // TODO(An enum here indicating if the option is a put or a call would be redundant, but maybe useful?)
+// TODO(Consider rebase tokens, fee on transfer tokens, or other tokens which may break assumptions)
 
 struct Option {
     // The underlying asset to be received
@@ -234,7 +236,7 @@ contract OptionSettlementEngine is ERC1155 {
         uint256 tx_amount = optionRecord.underlyingAmount * amount;
         uint256 fee = ((rx_amount / 10000) * feeBps);
 
-        // Transfer the requisite exercise asset
+        // Transfer in the requisite exercise asset
         SafeTransferLib.safeTransferFrom(
             ERC20(optionRecord.exerciseAsset),
             msg.sender,
@@ -243,16 +245,17 @@ contract OptionSettlementEngine is ERC1155 {
         );
 
         // TODO(Consider aggregating this)
-        // Transfer protocol fee
+        // Transfer out protocol fee
         SafeTransferLib.safeTransfer(
             ERC20(optionRecord.exerciseAsset),
             feeTo,
             fee
         );
 
+        // Transfer out the underlying
         SafeTransferLib.safeTransfer(
             ERC20(optionRecord.underlyingAsset),
-            feeTo,
+            msg.sender,
             tx_amount
         );
 

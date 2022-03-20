@@ -140,6 +140,9 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assert(engine.balanceOf(address(this), 0) == amountToWrite);
         // Assert that we have the claim
         assert(engine.balanceOf(address(this), 1) == 1);
+        uint256 bal = IERC20(weth).balanceOf(address(this));
         engine.exercise(0, amountToWrite);
+        uint256 newBal = IERC20(weth).balanceOf(address(this));
+        assert(newBal == (bal + (1 ether * uint256(amountToWrite))));
     }
 }

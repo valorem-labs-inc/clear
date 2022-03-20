@@ -21,6 +21,7 @@ enum Type {
     Claim
 }
 
+// TODO(Consider converting require strings to errors)
 // TODO(An enum here indicating if the option is a put or a call would be redundant, but maybe useful?)
 
 struct Option {
@@ -52,6 +53,7 @@ struct Claim {
     bool claimed;
 }
 
+// TODO(Add VRF)
 contract OptionSettlementEngine is ERC1155 {
     // TODO(Interface file to interact without looking at the internals)
 
@@ -152,8 +154,14 @@ contract OptionSettlementEngine is ERC1155 {
         ERC20 exercise = ERC20(optionInfo.exerciseAsset);
 
         // Check total supplies and ensure the option will be exercisable
-        require(underlying.totalSupply() >= optionInfo.underlyingAmount, "Invalid Supply");
-        require(exercise.totalSupply() >= optionInfo.exerciseAmount, "Invalid Supply");
+        require(
+            underlying.totalSupply() >= optionInfo.underlyingAmount,
+            "Invalid Supply"
+        );
+        require(
+            exercise.totalSupply() >= optionInfo.exerciseAmount,
+            "Invalid Supply"
+        );
 
         option[_nextTokenId] = optionInfo;
 
@@ -168,6 +176,7 @@ contract OptionSettlementEngine is ERC1155 {
 
     function writeOption(uint256 tokenId) external view {
         require(tokenType[tokenId] == Type.Option, "Token is not an option");
+
         // TODO(Transfer the requisite underlying asset)
         // TODO(Create and transfer the claim token)
         // TODO(Emit event about the writing)

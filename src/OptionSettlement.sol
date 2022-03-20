@@ -100,7 +100,7 @@ contract OptionSettlementEngine is ERC1155 {
         return string(abi.encodePacked("data:application/json;base64,", json));
     }
 
-    function newOptionsChain(Option memory optionInfo)
+    function newChain(Option memory optionInfo)
         external
         returns (uint256 tokenId)
     {
@@ -135,16 +135,16 @@ contract OptionSettlementEngine is ERC1155 {
         tokenType[_nextTokenId] = Type.Option;
 
         // Check that both tokens are ERC20 by instantiating them and checking supply
-        ERC20 underlying = ERC20(optionInfo.underlyingAsset);
-        ERC20 exercise = ERC20(optionInfo.exerciseAsset);
+        ERC20 underlyingToken = ERC20(optionInfo.underlyingAsset);
+        ERC20 exerciseToken = ERC20(optionInfo.exerciseAsset);
 
         // Check total supplies and ensure the option will be exercisable
         require(
-            underlying.totalSupply() >= optionInfo.underlyingAmount,
+            underlyingToken.totalSupply() >= optionInfo.underlyingAmount,
             "Invalid Supply"
         );
         require(
-            exercise.totalSupply() >= optionInfo.exerciseAmount,
+            exerciseToken.totalSupply() >= optionInfo.exerciseAmount,
             "Invalid Supply"
         );
 
@@ -159,14 +159,14 @@ contract OptionSettlementEngine is ERC1155 {
         chainMap[chainKey] = true;
     }
 
-    function writeOptions(uint256 tokenId, uint256 amount) external {
-        require(tokenType[tokenId] == Type.Option, "Token is not an option");
+    function write(uint256 optionId, uint256 amount) external {
+        require(tokenType[optionId] == Type.Option, "Token is not an option");
         require(
-            option[tokenId].settlementSeed != 0,
+            option[optionId].settlementSeed != 0,
             "Settlement seed not populated"
         );
 
-        Option storage optionRecord = option[tokenId];
+        Option storage optionRecord = option[optionId];
 
         uint256 tx_amount = amount * optionRecord.underlyingAmount;
 
@@ -188,12 +188,12 @@ contract OptionSettlementEngine is ERC1155 {
         );
         // TODO(Do we need any other internal balance counters?)
 
-        uint256 claimTokenId = _nextTokenId;
+        uint256 claimId = _nextTokenId;
 
         // Mint the options contracts and claim token
         uint256[] memory tokens = new uint256[](2);
-        tokens[0] = tokenId;
-        tokens[1] = claimTokenId;
+        tokens[0] = optionId;
+        tokens[1] = claimId;
 
         uint256[] memory amounts = new uint256[](2);
         amounts[0] = amount;
@@ -205,9 +205,9 @@ contract OptionSettlementEngine is ERC1155 {
         _batchMint(msg.sender, tokens, amounts, data);
 
         // Store info about the claim
-        tokenType[claimTokenId] = Type.Claim;
-        claim[claimTokenId] = Claim({
-            option: tokenId,
+        tokenType[claimId] = Type.Claim;
+        claim[claimId] = Claim({
+            option: optionId,
             amountWritten: amount,
             amountExercised: 0,
             claimed: false
@@ -218,11 +218,20 @@ contract OptionSettlementEngine is ERC1155 {
         ++_nextTokenId;
     }
 
-    // TODO(Exercise option)
+    function exercise(uint256 optionId, uint256 amount) external view {
+        require(tokenType[optionId] == Type.Option, "Token is not an option");
+        // TODO(Implement)
+    }
 
-    // TODO(Redeem claim)
+    function redeem(uint256 claimId) external view {
+        require(tokenType[claimId] == Type.Claim, "Token is not an claim");
+        // TODO(Implement)
+    }
 
-    // TODO(Get info about options contract)
-
-    // TODO(Get info about a claim)
+    function underlying(uint256 tokenId) external view {
+        require(tokenType[tokenId] != Type.None, "Token does not exist");
+        // TODO(Get info about underlying assets)
+        // TODO(Get info about options contract)
+        // TODO(Get info about a claim)
+    }
 }

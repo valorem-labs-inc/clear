@@ -168,14 +168,15 @@ contract OptionSettlementEngine is ERC1155 {
 
         Option storage optionRecord = option[optionId];
 
-        uint256 tx_amount = amount * optionRecord.underlyingAmount;
+        uint256 rx_amount = amount * optionRecord.underlyingAmount;
+        uint256 fee = ((rx_amount / 10000) * feeBps);
 
         // Transfer the requisite underlying asset
         SafeTransferLib.safeTransferFrom(
             ERC20(optionRecord.underlyingAsset),
             msg.sender,
             address(this),
-            tx_amount
+            (rx_amount + fee)
         );
 
         // TODO(Consider an internal balance counter here and aggregating these in a fee sweep)
@@ -184,7 +185,7 @@ contract OptionSettlementEngine is ERC1155 {
         SafeTransferLib.safeTransfer(
             ERC20(optionRecord.underlyingAsset),
             feeTo,
-            ((tx_amount / 10000) * feeBps)
+            fee
         );
         // TODO(Do we need any other internal balance counters?)
 
@@ -218,9 +219,46 @@ contract OptionSettlementEngine is ERC1155 {
         ++_nextTokenId;
     }
 
-    function exercise(uint256 optionId, uint256 amount) external view {
+    function exercise(uint256 optionId, uint256 amount) external {
         require(tokenType[optionId] == Type.Option, "Token is not an option");
-        // TODO(Implement)
+
+        Option storage optionRecord = option[optionId];
+
+        // Require that we have reached the exercise timestamp
+
+        require(
+            optionRecord.exerciseTimestamp <= block.timestamp,
+            "Too early to exercise"
+        );
+        uint256 rx_amount = optionRecord.exerciseAmount * amount;
+        uint256 tx_amount = optionRecord.underlyingAmount * amount;
+        uint256 fee = ((rx_amount / 10000) * feeBps);
+
+        // Transfer the requisite exercise asset
+        SafeTransferLib.safeTransferFrom(
+            ERC20(optionRecord.exerciseAsset),
+            msg.sender,
+            address(this),
+            (rx_amount + fee)
+        );
+
+        // TODO(Consider aggregating this)
+        // Transfer protocol fee
+        SafeTransferLib.safeTransfer(
+            ERC20(optionRecord.exerciseAsset),
+            feeTo,
+            fee
+        );
+
+        SafeTransferLib.safeTransfer(
+            ERC20(optionRecord.underlyingAsset),
+            feeTo,
+            tx_amount
+        );
+
+        // TODO(Exercise assignment and claims update)
+        _burn(msg.sender, optionId, amount);
+        // TODO(Emit events for indexing and frontend)
     }
 
     function redeem(uint256 claimId) external view {

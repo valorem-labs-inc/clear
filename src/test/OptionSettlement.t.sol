@@ -85,6 +85,9 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         writeTokenBalance(address(this), address(dai), 1000000000 * 1e18);
         // And 10 M WETH
         writeTokenBalance(address(this), address(weth), 10000000 * 1e18);
+        // Issue approvals
+        IERC20(weth).approve(address(engine), type(uint256).max);
+        IERC20(dai).approve(address(engine), type(uint256).max);
     }
 
     function testNewChain(uint256 settlementSeed) public {
@@ -124,7 +127,6 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
     // TODO(Why is gas report not working on this function)
     function testWrite(uint16 amountToWrite) public {
-        IERC20(weth).approve(address(engine), type(uint256).max);
         engine.write(0, uint256(amountToWrite));
         // Assert that we have the contracts
         assert(engine.balanceOf(address(this), 0) == amountToWrite);
@@ -133,11 +135,11 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     }
 
     function testExercise(uint16 amountToWrite) public {
-        IERC20(weth).approve(address(engine), type(uint256).max);
         engine.write(0, uint256(amountToWrite));
         // Assert that we have the contracts
         assert(engine.balanceOf(address(this), 0) == amountToWrite);
         // Assert that we have the claim
         assert(engine.balanceOf(address(this), 1) == 1);
+        engine.exercise(0, amountToWrite);
     }
 }

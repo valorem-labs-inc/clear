@@ -46,6 +46,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     // TODO(correctness)
     Vm public constant VM = Vm(HEVM_ADDRESS);
     OptionSettlementEngine public engine;
+    Type public testType = Type.Option;
     
     uint256 public wethTotalSupply;
     uint256 public daiTotalSupply;
@@ -114,12 +115,14 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         });
 
         uint256 tokenId = engine.newChain(info);
-
+    
         assertTrue(engine.chainMap(keccak256(abi.encode(info))));
         assertEq(engine._nextTokenId(), nextTokenId + 1);
         assertEq(tokenId, engine._nextTokenId() - 1);
 
         // TODO(Check tokenType Enum. Can we change it to a simple array?)
+        if(engine.tokenType(engine._nextTokenId()) == testType) assertTrue(true);
+        
     }
 
     function testFuzzNewChain(
@@ -158,6 +161,8 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(tokenId, engine._nextTokenId() - 1);
 
         // TODO(Check tokenType Enum. Can we change it to a simple array?)
+        if(engine.tokenType(engine._nextTokenId()) == testType) assertTrue(true);
+
     }
 
     function testFailDuplicateChain() public {

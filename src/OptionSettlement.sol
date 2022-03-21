@@ -265,9 +265,40 @@ contract OptionSettlementEngine is ERC1155 {
         // TODO(Emit events for indexing and frontend)
     }
 
-    function redeem(uint256 claimId) external view {
+    function redeem(uint256 claimId) external {
         require(tokenType[claimId] == Type.Claim, "Token is not an claim");
-        // TODO(Implement)
+        require(!claim[claimId].claimed, "Already Claimed");
+
+        uint256 balance = ERC1155(address(this)).balanceOf(msg.sender, claimId);
+        require(balance == 1, "no claim token");
+
+        uint256 optionId = claim[claimId].option;
+
+        Option storage optionRecord = option[optionId];
+
+        require(optionRecord.expiryTimestamp <= block.timestamp, "Not expired yet");
+
+        uint256 tx_amount = optionRecord.underlyingAmount * claim[claimId].amountWritten;
+
+        SafeTransferLib.safeTransfer(
+            ERC20(optionRecord.underlyingAsset),
+            msg.sender,
+            tx_amount
+        );
+
+        tokenType[claimId] = Type.None;
+        claim[claimId].claimed = true;
+
+        uint256[] memory tokens = new uint256[](2);
+        tokens[0] = optionId;
+        tokens[1] = claimId;
+
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = claim[claimId].amountWritten;
+        amounts[1] = 1;
+
+        _batchBurn(msg.sender, tokens, amounts);
+
     }
 
     function underlying(uint256 tokenId) external view {

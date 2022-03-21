@@ -16,6 +16,7 @@ import "solmate/utils/SafeTransferLib.sol";
    a broad swath of traditional options.
 */
 
+// TODO(Can we change it to a simple array[3] with 0 - none, 1 - option, 2 - claim ?)
 enum Type {
     None,
     Option,
@@ -70,7 +71,7 @@ contract OptionSettlementEngine is ERC1155 {
     address public feeTo = 0x36273803306a3C22bc848f8Db761e974697ece0d;
 
     // To increment the next available token id
-    uint256 private _nextTokenId;
+    uint256 public _nextTokenId;
 
     // TODO(Null values here should return None from the enum, or design needs to change.)
     // Is this an option or a claim?
@@ -81,7 +82,7 @@ contract OptionSettlementEngine is ERC1155 {
 
     // TODO(Should this be a public uint256 lookup of the token id if exists?)
     // This is used to check if an Option chain already exists
-    mapping(bytes32 => bool) private chainMap;
+    mapping(bytes32 => bool) public chainMap;
 
     // Accessor for claim ticket details
     mapping(uint256 => Claim) public claim;

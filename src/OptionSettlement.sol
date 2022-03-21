@@ -22,8 +22,10 @@ enum Type {
     Claim
 }
 
+// TODO(Right now fee is taken on top of written amount and exercised amount, should the model be different?)
 // TODO(Consider converting require strings to errors)
 // TODO(An enum here indicating if the option is a put or a call would be redundant, but maybe useful?)
+// TODO(Consider rebase tokens, fee on transfer tokens, or other tokens which may break assumptions)
 
 struct Option {
     // The underlying asset to be received
@@ -100,7 +102,7 @@ contract OptionSettlementEngine is ERC1155 {
         return string(abi.encodePacked("data:application/json;base64,", json));
     }
 
-    function newOptionsChain(Option memory optionInfo)
+    function newChain(Option memory optionInfo)
         external
         returns (uint256 tokenId)
     {
@@ -135,16 +137,16 @@ contract OptionSettlementEngine is ERC1155 {
         tokenType[_nextTokenId] = Type.Option;
 
         // Check that both tokens are ERC20 by instantiating them and checking supply
-        ERC20 underlying = ERC20(optionInfo.underlyingAsset);
-        ERC20 exercise = ERC20(optionInfo.exerciseAsset);
+        ERC20 underlyingToken = ERC20(optionInfo.underlyingAsset);
+        ERC20 exerciseToken = ERC20(optionInfo.exerciseAsset);
 
         // Check total supplies and ensure the option will be exercisable
         require(
-            underlying.totalSupply() >= optionInfo.underlyingAmount,
+            underlyingToken.totalSupply() >= optionInfo.underlyingAmount,
             "Invalid Supply"
         );
         require(
-            exercise.totalSupply() >= optionInfo.exerciseAmount,
+            exerciseToken.totalSupply() >= optionInfo.exerciseAmount,
             "Invalid Supply"
         );
 
@@ -159,23 +161,24 @@ contract OptionSettlementEngine is ERC1155 {
         chainMap[chainKey] = true;
     }
 
-    function writeOptions(uint256 tokenId, uint256 amount) external {
-        require(tokenType[tokenId] == Type.Option, "Token is not an option");
+    function write(uint256 optionId, uint256 amount) external {
+        require(tokenType[optionId] == Type.Option, "Token is not an option");
         require(
-            option[tokenId].settlementSeed != 0,
+            option[optionId].settlementSeed != 0,
             "Settlement seed not populated"
         );
 
-        Option storage optionRecord = option[tokenId];
+        Option storage optionRecord = option[optionId];
 
-        uint256 tx_amount = amount * optionRecord.underlyingAmount;
+        uint256 rx_amount = amount * optionRecord.underlyingAmount;
+        uint256 fee = ((rx_amount / 10000) * feeBps);
 
         // Transfer the requisite underlying asset
         SafeTransferLib.safeTransferFrom(
             ERC20(optionRecord.underlyingAsset),
             msg.sender,
             address(this),
-            tx_amount
+            (rx_amount + fee)
         );
 
         // TODO(Consider an internal balance counter here and aggregating these in a fee sweep)
@@ -184,16 +187,16 @@ contract OptionSettlementEngine is ERC1155 {
         SafeTransferLib.safeTransfer(
             ERC20(optionRecord.underlyingAsset),
             feeTo,
-            ((tx_amount / 10000) * feeBps)
+            fee
         );
         // TODO(Do we need any other internal balance counters?)
 
-        uint256 claimTokenId = _nextTokenId;
+        uint256 claimId = _nextTokenId;
 
         // Mint the options contracts and claim token
         uint256[] memory tokens = new uint256[](2);
-        tokens[0] = tokenId;
-        tokens[1] = claimTokenId;
+        tokens[0] = optionId;
+        tokens[1] = claimId;
 
         uint256[] memory amounts = new uint256[](2);
         amounts[0] = amount;
@@ -205,9 +208,9 @@ contract OptionSettlementEngine is ERC1155 {
         _batchMint(msg.sender, tokens, amounts, data);
 
         // Store info about the claim
-        tokenType[claimTokenId] = Type.Claim;
-        claim[claimTokenId] = Claim({
-            option: tokenId,
+        tokenType[claimId] = Type.Claim;
+        claim[claimId] = Claim({
+            option: optionId,
             amountWritten: amount,
             amountExercised: 0,
             claimed: false
@@ -218,11 +221,58 @@ contract OptionSettlementEngine is ERC1155 {
         ++_nextTokenId;
     }
 
-    // TODO(Exercise option)
+    function exercise(uint256 optionId, uint256 amount) external {
+        require(tokenType[optionId] == Type.Option, "Token is not an option");
 
-    // TODO(Redeem claim)
+        Option storage optionRecord = option[optionId];
 
-    // TODO(Get info about options contract)
+        // Require that we have reached the exercise timestamp
 
-    // TODO(Get info about a claim)
+        require(
+            optionRecord.exerciseTimestamp <= block.timestamp,
+            "Too early to exercise"
+        );
+        uint256 rx_amount = optionRecord.exerciseAmount * amount;
+        uint256 tx_amount = optionRecord.underlyingAmount * amount;
+        uint256 fee = ((rx_amount / 10000) * feeBps);
+
+        // Transfer in the requisite exercise asset
+        SafeTransferLib.safeTransferFrom(
+            ERC20(optionRecord.exerciseAsset),
+            msg.sender,
+            address(this),
+            (rx_amount + fee)
+        );
+
+        // TODO(Consider aggregating this)
+        // Transfer out protocol fee
+        SafeTransferLib.safeTransfer(
+            ERC20(optionRecord.exerciseAsset),
+            feeTo,
+            fee
+        );
+
+        // Transfer out the underlying
+        SafeTransferLib.safeTransfer(
+            ERC20(optionRecord.underlyingAsset),
+            msg.sender,
+            tx_amount
+        );
+
+        // TODO(Exercise assignment and claims update)
+        _burn(msg.sender, optionId, amount);
+        // TODO(Emit events for indexing and frontend)
+    }
+
+    function redeem(uint256 claimId) external view {
+        require(tokenType[claimId] == Type.Claim, "Token is not an claim");
+        // TODO(Implement)
+    }
+
+    function underlying(uint256 tokenId) external view {
+        require(tokenType[tokenId] != Type.None, "Token does not exist");
+        // TODO(Get info about underlying assets)
+        // TODO(Get info about options contract)
+        // TODO(Get info about a claim)
+    }
 }

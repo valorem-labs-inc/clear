@@ -191,20 +191,11 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         engine.uri(1);
     }
 
-    // TODO(Why is gas report not working on this function)
-    // function testWrite(uint16 amountToWrite) public {
-    //     engine.write(0, uint256(amountToWrite));
-    //     // Assert that we have the contracts
-    //     assert(engine.balanceOf(address(this), 0) == amountToWrite);
-    //     // Assert that we have the claim
-    //     assert(engine.balanceOf(address(this), 1) == 1);
-    // }
-
     function testWrite() public {
         uint256 nextTokenId = engine._nextTokenId();
-
         uint256 wethBalance = IERC20(weth).balanceOf(address(engine));
         uint256 testWallet = IERC20(weth).balanceOf(address(0x36273803306a3C22bc848f8Db761e974697ece0d));
+
         uint256 rxAmount = 10000 * 1 ether;
         uint256 fee = ((rxAmount / 10000) * feeBps);
 
@@ -224,6 +215,32 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(engine._nextTokenId(), nextTokenId + 1);
 
         if(engine.tokenType(engine._nextTokenId()) == testClaimType) assertTrue(true);
+    }
+
+    function testFuzzWrite(uint16 amount) public {
+
+        VM.assume(amount > 0);
+        VM.assume(amount <= type(uint16).max);
+
+        uint256 nextTokenId = engine._nextTokenId();
+
+        engine.write(0, uint256(amount));
+
+        (uint256 option, uint256 amountWritten, uint256 amountExercised, bool claimed) = engine.claim(nextTokenId);
+
+        // TODO(Wallet balance checks)
+
+        assertEq(engine.balanceOf(address(this), 0), amount);
+        assertEq(engine.balanceOf(address(this), 1), 1);
+
+        assertTrue(!claimed);
+        assertEq(option, 0);
+        assertEq(amountWritten, amount);
+        assertEq(amountExercised, 0);
+        assertEq(engine._nextTokenId(), nextTokenId + 1);
+
+        if(engine.tokenType(engine._nextTokenId()) == testClaimType) assertTrue(true);
+
     }
 
     function testExercise(uint16 amountToWrite) public {

@@ -276,9 +276,13 @@ contract OptionSettlementEngine is ERC1155 {
 
         Option storage optionRecord = option[optionId];
 
-        require(optionRecord.expiryTimestamp <= block.timestamp, "Not expired yet");
+        require(
+            optionRecord.expiryTimestamp <= block.timestamp,
+            "Not expired yet"
+        );
 
-        uint256 tx_amount = optionRecord.underlyingAmount * claim[claimId].amountWritten;
+        uint256 tx_amount = optionRecord.underlyingAmount *
+            claim[claimId].amountWritten;
 
         SafeTransferLib.safeTransfer(
             ERC20(optionRecord.underlyingAsset),
@@ -298,7 +302,6 @@ contract OptionSettlementEngine is ERC1155 {
         amounts[1] = 1;
 
         _batchBurn(msg.sender, tokens, amounts);
-
     }
 
     function underlying(uint256 tokenId) external view {

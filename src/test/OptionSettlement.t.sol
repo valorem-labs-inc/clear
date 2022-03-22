@@ -46,7 +46,11 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     // TODO(correctness)
     Vm public constant VM = Vm(HEVM_ADDRESS);
     OptionSettlementEngine public engine;
-    Type public testType = Type.Option;
+
+    Type public testOptionType = Type.Option;
+    Type public testClaimType = Type.Claim;
+
+    uint8 public immutable feeBps = 5;
     
     uint256 public wethTotalSupply;
     uint256 public daiTotalSupply;
@@ -120,8 +124,8 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(engine._nextTokenId(), nextTokenId + 1);
         assertEq(tokenId, engine._nextTokenId() - 1);
 
-        // TODO(Check tokenType Enum. Can we change it to a simple array?)
-        if(engine.tokenType(engine._nextTokenId()) == testType) assertTrue(true);
+        // TODO(Option struct test)
+        if(engine.tokenType(engine._nextTokenId()) == testOptionType) assertTrue(true);
         
     }
 
@@ -161,7 +165,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(tokenId, engine._nextTokenId() - 1);
 
         // TODO(Check tokenType Enum. Can we change it to a simple array?)
-        if(engine.tokenType(engine._nextTokenId()) == testType) assertTrue(true);
+        if(engine.tokenType(engine._nextTokenId()) == testOptionType) assertTrue(true);
 
     }
 
@@ -188,12 +192,38 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     }
 
     // TODO(Why is gas report not working on this function)
-    function testWrite(uint16 amountToWrite) public {
-        engine.write(0, uint256(amountToWrite));
-        // Assert that we have the contracts
-        assert(engine.balanceOf(address(this), 0) == amountToWrite);
-        // Assert that we have the claim
-        assert(engine.balanceOf(address(this), 1) == 1);
+    // function testWrite(uint16 amountToWrite) public {
+    //     engine.write(0, uint256(amountToWrite));
+    //     // Assert that we have the contracts
+    //     assert(engine.balanceOf(address(this), 0) == amountToWrite);
+    //     // Assert that we have the claim
+    //     assert(engine.balanceOf(address(this), 1) == 1);
+    // }
+
+    function testWrite() public {
+        uint256 nextTokenId = engine._nextTokenId();
+
+        uint256 wethBalance = IERC20(weth).balanceOf(address(engine));
+        uint256 testWallet = IERC20(weth).balanceOf(address(0x36273803306a3C22bc848f8Db761e974697ece0d));
+        uint256 rxAmount = 10000 * 1 ether;
+        uint256 fee = ((rxAmount / 10000) * feeBps);
+
+        engine.write(0, 10000);
+
+        (uint256 option, uint256 amountWritten, uint256 amountExercised, bool claimed) = engine.claim(nextTokenId);
+
+        assertEq(IERC20(weth).balanceOf(address(engine)), wethBalance + rxAmount);
+        assertEq(IERC20(weth).balanceOf(address(0x36273803306a3C22bc848f8Db761e974697ece0d)), testWallet + fee);
+        assertEq(engine.balanceOf(address(this), 0), 10000);
+        assertEq(engine.balanceOf(address(this), 1), 1);
+
+        assertTrue(!claimed);
+        assertEq(option, 0);
+        assertEq(amountWritten, 10000);
+        assertEq(amountExercised, 0);
+        assertEq(engine._nextTokenId(), nextTokenId + 1);
+
+        if(engine.tokenType(engine._nextTokenId()) == testClaimType) assertTrue(true);
     }
 
     function testExercise(uint16 amountToWrite) public {

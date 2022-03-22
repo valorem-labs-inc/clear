@@ -49,6 +49,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
     Type public testOptionType = Type.Option;
     Type public testClaimType = Type.Claim;
+    Type public testNoneType = Type.None;
 
     uint8 public immutable feeBps = 5;
 
@@ -333,5 +334,35 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             (daiBalance - rxAmount - fee)
         );
         assertEq(engine.balanceOf(address(this), 0), 0);
+    }
+
+    function testRedeem() public {
+        engine.write(0, 10);
+
+        uint256 wethBalanceEngine = IERC20(weth).balanceOf(address(engine));
+        uint256 wethBalance = IERC20(weth).balanceOf(address(this));
+
+        VM.warp(1e15);
+
+        engine.redeem(1);
+
+        (, , , bool claimed) = engine.claim(1);
+        uint256 optionAmount = engine.balanceOf(address(this), 0);
+        uint256 claimAmount = engine.balanceOf(address(this), 1);
+
+        assertEq(
+            IERC20(weth).balanceOf(address(engine)),
+            wethBalanceEngine - (10 * 1 ether)
+        );
+        assertEq(
+            IERC20(weth).balanceOf(address(this)),
+            wethBalance + (10 * 1 ether)
+        );
+        assertEq(optionAmount, 0);
+        assertEq(claimAmount, 0);
+        assertTrue(claimed);
+
+        if (engine.tokenType(engine._nextTokenId()) == testNoneType)
+            assertTrue(true);
     }
 }

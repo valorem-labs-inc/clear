@@ -293,15 +293,45 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             assertTrue(true);
     }
 
-    function testExercise(uint16 amountToWrite) public {
-        engine.write(0, uint256(amountToWrite));
-        // Assert that we have the contracts
-        assert(engine.balanceOf(address(this), 0) == amountToWrite);
-        // Assert that we have the claim
-        assert(engine.balanceOf(address(this), 1) == 1);
-        uint256 bal = IERC20(weth).balanceOf(address(this));
-        engine.exercise(0, amountToWrite);
-        uint256 newBal = IERC20(weth).balanceOf(address(this));
-        assert(newBal == (bal + (1 ether * uint256(amountToWrite))));
+    // TODO(a function to create random new chains for fuzzing)
+
+    function testExercise() public {
+        uint256 wethBalanceEngine = IERC20(weth).balanceOf(address(engine));
+        uint256 daiBalanceEngine = IERC20(dai).balanceOf(address(engine));
+        uint256 daiTestWallet = IERC20(dai).balanceOf(
+            address(0x36273803306a3C22bc848f8Db761e974697ece0d)
+        );
+
+        uint256 rxAmount = 10 * 3000 ether;
+        uint256 txAmount = 10 * 1 ether;
+        uint256 fee = ((rxAmount / 10000) * feeBps);
+
+        engine.write(0, 10);
+
+        uint256 wethBalance = IERC20(weth).balanceOf(address(this));
+        uint256 daiBalance = IERC20(dai).balanceOf(address(this));
+
+        engine.exercise(0, 10);
+
+        assertEq(
+            IERC20(dai).balanceOf(
+                address(0x36273803306a3C22bc848f8Db761e974697ece0d)
+            ),
+            daiTestWallet + fee
+        );
+        assertEq(IERC20(weth).balanceOf(address(engine)), wethBalanceEngine);
+        assertEq(
+            IERC20(dai).balanceOf(address(engine)),
+            daiBalanceEngine + rxAmount
+        );
+        assertEq(
+            IERC20(weth).balanceOf(address(this)),
+            (wethBalance + txAmount)
+        );
+        assertEq(
+            IERC20(dai).balanceOf(address(this)),
+            (daiBalance - rxAmount - fee)
+        );
+        assertEq(engine.balanceOf(address(this), 0), 0);
     }
 }

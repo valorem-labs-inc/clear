@@ -70,7 +70,7 @@ contract OptionSettlementEngine is ERC1155 {
     address public feeTo = 0x36273803306a3C22bc848f8Db761e974697ece0d;
 
     // To increment the next available token id
-    uint256 public _nextTokenId;
+    uint256 public nextTokenId;
 
     // TODO(Null values here should return None from the enum, or design needs to change.)
     // Is this an option or a claim?
@@ -134,7 +134,7 @@ contract OptionSettlementEngine is ERC1155 {
         optionInfo.settlementSeed = 42;
 
         // Create option token and increment
-        tokenType[_nextTokenId] = Type.Option;
+        tokenType[nextTokenId] = Type.Option;
 
         // Check that both tokens are ERC20 by instantiating them and checking supply
         ERC20 underlyingToken = ERC20(optionInfo.underlyingAsset);
@@ -150,14 +150,14 @@ contract OptionSettlementEngine is ERC1155 {
             "Invalid Supply"
         );
 
-        option[_nextTokenId] = optionInfo;
+        option[nextTokenId] = optionInfo;
 
         // TODO(This should emit an event about the creation for indexing in a graph)
 
-        tokenId = _nextTokenId;
+        tokenId = nextTokenId;
 
         // Increment the next token id to be used
-        ++_nextTokenId;
+        ++nextTokenId;
         chainMap[chainKey] = true;
     }
 
@@ -191,7 +191,7 @@ contract OptionSettlementEngine is ERC1155 {
         );
         // TODO(Do we need any other internal balance counters?)
 
-        uint256 claimId = _nextTokenId;
+        uint256 claimId = nextTokenId;
 
         // Mint the options contracts and claim token
         uint256[] memory tokens = new uint256[](2);
@@ -218,7 +218,7 @@ contract OptionSettlementEngine is ERC1155 {
 
         // TODO(Emit event about the writing)
         // Increment the next token ID
-        ++_nextTokenId;
+        ++nextTokenId;
     }
 
     function exercise(uint256 optionId, uint256 amount) external {

@@ -101,7 +101,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     }
 
     function testNewChain() public {
-        uint256 nextTokenId = engine._nextTokenId();
+        uint256 nextTokenId = engine.nextTokenId();
 
         Option memory info = Option({
             underlyingAsset: address(weth),
@@ -126,8 +126,8 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         ) = engine.option(nextTokenId);
 
         assertTrue(engine.chainMap(keccak256(abi.encode(info))));
-        assertEq(engine._nextTokenId(), nextTokenId + 1);
-        assertEq(tokenId, engine._nextTokenId() - 1);
+        assertEq(engine.nextTokenId(), nextTokenId + 1);
+        assertEq(tokenId, engine.nextTokenId() - 1);
 
         assertEq(testExerciseTimestamp, uint64(block.timestamp));
         assertEq(testExpiryTimestamp, (uint64(block.timestamp) + 604800));
@@ -135,7 +135,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(testExerciseAmount, 3100 ether);
         assertEq(testSettlementSeed, 42);
 
-        if (engine.tokenType(engine._nextTokenId()) == Type.Option)
+        if (engine.tokenType(engine.nextTokenId()) == Type.Option)
             assertTrue(true);
     }
 
@@ -146,7 +146,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         uint64 exerciseTimestamp,
         uint64 expiryTimestamp
     ) public {
-        uint256 nextTokenId = engine._nextTokenId();
+        uint256 nextTokenId = engine.nextTokenId();
 
         VM.assume(expiryTimestamp >= block.timestamp + 86400);
         VM.assume(exerciseTimestamp >= block.timestamp);
@@ -181,8 +181,8 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         ) = engine.option(nextTokenId);
 
         assertTrue(engine.chainMap(keccak256(abi.encode(info))));
-        assertEq(engine._nextTokenId(), nextTokenId + 1);
-        assertEq(tokenId, engine._nextTokenId() - 1);
+        assertEq(engine.nextTokenId(), nextTokenId + 1);
+        assertEq(tokenId, engine.nextTokenId() - 1);
 
         assertEq(testExerciseTimestamp, exerciseTimestamp);
         assertEq(testExpiryTimestamp, expiryTimestamp);
@@ -190,7 +190,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(testExerciseAmount, exerciseAmount);
         assertEq(testSettlementSeed, 42);
 
-        if (engine.tokenType(engine._nextTokenId()) == Type.Option)
+        if (engine.tokenType(engine.nextTokenId()) == Type.Option)
             assertTrue(true);
     }
 
@@ -217,7 +217,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     }
 
     function testWrite() public {
-        uint256 nextTokenId = engine._nextTokenId();
+        uint256 nextTokenId = engine.nextTokenId();
         uint256 wethBalance = IERC20(weth).balanceOf(address(engine));
         uint256 testWallet = IERC20(weth).balanceOf(
             address(0x36273803306a3C22bc848f8Db761e974697ece0d)
@@ -252,9 +252,9 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(option, 0);
         assertEq(amountWritten, 10000);
         assertEq(amountExercised, 0);
-        assertEq(engine._nextTokenId(), nextTokenId + 1);
+        assertEq(engine.nextTokenId(), nextTokenId + 1);
 
-        if (engine.tokenType(engine._nextTokenId()) == Type.Claim)
+        if (engine.tokenType(engine.nextTokenId()) == Type.Claim)
             assertTrue(true);
     }
 
@@ -262,7 +262,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         VM.assume(amount > 0);
         VM.assume(amount <= type(uint16).max);
 
-        uint256 nextTokenId = engine._nextTokenId();
+        uint256 nextTokenId = engine.nextTokenId();
 
         engine.write(0, uint256(amount));
 
@@ -282,9 +282,9 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(option, 0);
         assertEq(amountWritten, amount);
         assertEq(amountExercised, 0);
-        assertEq(engine._nextTokenId(), nextTokenId + 1);
+        assertEq(engine.nextTokenId(), nextTokenId + 1);
 
-        if (engine.tokenType(engine._nextTokenId()) == Type.Claim)
+        if (engine.tokenType(engine.nextTokenId()) == Type.Claim)
             assertTrue(true);
     }
 

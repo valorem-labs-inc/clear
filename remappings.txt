@@ -1,4 +1,0 @@
-base64/=lib/base64/src/
-ds-test/=lib/ds-test/src/
-solmate/=lib/solmate/src/
-forge-std/=lib/forge-std/src/

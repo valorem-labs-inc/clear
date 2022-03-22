@@ -47,12 +47,6 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     Vm public constant VM = Vm(HEVM_ADDRESS);
     OptionSettlementEngine public engine;
 
-    Type public testOptionType = Type.Option;
-    Type public testClaimType = Type.Claim;
-    Type public testNoneType = Type.None;
-
-    uint8 public immutable feeBps = 5;
-
     uint256 public wethTotalSupply;
     uint256 public daiTotalSupply;
 
@@ -60,7 +54,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     IERC20 public dai;
 
     using stdStorage for StdStorage;
-    StdStorage public stdstore;
+    StdStorage stdstore;
 
     function writeTokenBalance(
         address who,
@@ -141,7 +135,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(testExerciseAmount, 3100 ether);
         assertEq(testSettlementSeed, 42);
 
-        if (engine.tokenType(engine._nextTokenId()) == testOptionType)
+        if (engine.tokenType(engine._nextTokenId()) == Type.Option)
             assertTrue(true);
     }
 
@@ -196,7 +190,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(testExerciseAmount, exerciseAmount);
         assertEq(testSettlementSeed, 42);
 
-        if (engine.tokenType(engine._nextTokenId()) == testOptionType)
+        if (engine.tokenType(engine._nextTokenId()) == Type.Option)
             assertTrue(true);
     }
 
@@ -230,7 +224,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         );
 
         uint256 rxAmount = 10000 * 1 ether;
-        uint256 fee = ((rxAmount / 10000) * feeBps);
+        uint256 fee = ((rxAmount / 10000) * engine.feeBps());
 
         engine.write(0, 10000);
 
@@ -260,7 +254,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(amountExercised, 0);
         assertEq(engine._nextTokenId(), nextTokenId + 1);
 
-        if (engine.tokenType(engine._nextTokenId()) == testClaimType)
+        if (engine.tokenType(engine._nextTokenId()) == Type.Claim)
             assertTrue(true);
     }
 
@@ -290,11 +284,9 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(amountExercised, 0);
         assertEq(engine._nextTokenId(), nextTokenId + 1);
 
-        if (engine.tokenType(engine._nextTokenId()) == testClaimType)
+        if (engine.tokenType(engine._nextTokenId()) == Type.Claim)
             assertTrue(true);
     }
-
-    // TODO(a function to create random new chains for fuzzing)
 
     function testExercise() public {
         uint256 wethBalanceEngine = IERC20(weth).balanceOf(address(engine));
@@ -305,7 +297,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
         uint256 rxAmount = 10 * 3000 ether;
         uint256 txAmount = 10 * 1 ether;
-        uint256 fee = ((rxAmount / 10000) * feeBps);
+        uint256 fee = ((rxAmount / 10000) * engine.feeBps());
 
         engine.write(0, 10);
 
@@ -362,7 +354,11 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(claimAmount, 0);
         assertTrue(claimed);
 
-        if (engine.tokenType(engine._nextTokenId()) == testNoneType)
+        if (engine.tokenType(engine._nextTokenId()) == Type.None)
             assertTrue(true);
     }
+
+    // TODO(a function to create random new chains for fuzzing)
+    // TODO(testFuzzExercise)
+    // TODO(testFuzzRedeem)
 }

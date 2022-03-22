@@ -16,7 +16,6 @@ import "solmate/utils/SafeTransferLib.sol";
    a broad swath of traditional options.
 */
 
-// TODO(Can we change it to a simple array[3] with 0 - none, 1 - option, 2 - claim ?)
 enum Type {
     None,
     Option,

@@ -119,12 +119,27 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         });
 
         uint256 tokenId = engine.newChain(info);
+
+        (   
+            ,
+            uint64 testExerciseTimestamp, 
+            ,
+            uint64 testExpiryTimestamp, 
+            uint256 testSettlementSeed,
+            uint256 testUnderlyingAmount,
+            uint256 testExerciseAmount
+        ) = engine.option(nextTokenId);
     
         assertTrue(engine.chainMap(keccak256(abi.encode(info))));
         assertEq(engine._nextTokenId(), nextTokenId + 1);
         assertEq(tokenId, engine._nextTokenId() - 1);
 
-        // TODO(Option struct test)
+        assertEq(testExerciseTimestamp, uint64(block.timestamp));
+        assertEq(testExpiryTimestamp, (uint64(block.timestamp) + 604800));
+        assertEq(testUnderlyingAmount, 1 ether);
+        assertEq(testExerciseAmount, 3100 ether);
+        assertEq(testSettlementSeed, 42);
+
         if(engine.tokenType(engine._nextTokenId()) == testOptionType) assertTrue(true);
         
     }
@@ -160,11 +175,26 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
         uint256 tokenId = engine.newChain(info);
 
+        (   
+            ,
+            uint64 testExerciseTimestamp, 
+            ,
+            uint64 testExpiryTimestamp, 
+            uint256 testSettlementSeed,
+            uint256 testUnderlyingAmount,
+            uint256 testExerciseAmount
+        ) = engine.option(nextTokenId);
+
         assertTrue(engine.chainMap(keccak256(abi.encode(info))));
         assertEq(engine._nextTokenId(), nextTokenId + 1);
         assertEq(tokenId, engine._nextTokenId() - 1);
 
-        // TODO(Check tokenType Enum. Can we change it to a simple array?)
+        assertEq(testExerciseTimestamp, exerciseTimestamp);
+        assertEq(testExpiryTimestamp, expiryTimestamp);
+        assertEq(testUnderlyingAmount, underlyingAmount);
+        assertEq(testExerciseAmount, exerciseAmount);
+        assertEq(testSettlementSeed, 42);
+
         if(engine.tokenType(engine._nextTokenId()) == testOptionType) assertTrue(true);
 
     }

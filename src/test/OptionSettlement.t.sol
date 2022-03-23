@@ -218,10 +218,11 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
     function testWrite() public {
         uint256 nextTokenId = engine.nextTokenId();
-        uint256 wethBalance = IERC20(weth).balanceOf(address(engine));
+        uint256 wethBalanceEngine = IERC20(weth).balanceOf(address(engine));
         uint256 testWallet = IERC20(weth).balanceOf(
             address(0x36273803306a3C22bc848f8Db761e974697ece0d)
         );
+        uint256 wethBalance = IERC20(weth).balanceOf(address(this));
 
         uint256 rxAmount = 10000 * 1 ether;
         uint256 fee = ((rxAmount / 10000) * engine.feeBps());
@@ -237,13 +238,17 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
         assertEq(
             IERC20(weth).balanceOf(address(engine)),
-            wethBalance + rxAmount
+            wethBalanceEngine + rxAmount
         );
         assertEq(
             IERC20(weth).balanceOf(
                 address(0x36273803306a3C22bc848f8Db761e974697ece0d)
             ),
             testWallet + fee
+        );
+        assertEq(
+            IERC20(weth).balanceOf(address(this)),
+            wethBalance - rxAmount - fee
         );
         assertEq(engine.balanceOf(address(this), 0), 10000);
         assertEq(engine.balanceOf(address(this), 1), 1);
@@ -326,6 +331,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             (daiBalance - rxAmount - fee)
         );
         assertEq(engine.balanceOf(address(this), 0), 0);
+        assertEq(engine.balanceOf(address(this), 1), 1);
     }
 
     function testFuzzExercise(uint16 amountWrite, uint16 amountExercise)

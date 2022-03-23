@@ -262,13 +262,20 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             assertTrue(true);
     }
 
-    function testFuzzWrite(uint16 amount) public {
-        VM.assume(amount > 0);
-        VM.assume(amount <= type(uint16).max);
-
+    function testFuzzWrite(uint256 amountWrite) public {
         uint256 nextTokenId = engine.nextTokenId();
+        uint256 wethBalanceEngine = IERC20(weth).balanceOf(address(engine));
+        uint256 wethFeeTo = IERC20(weth).balanceOf(address(engine.feeTo()));
+        uint256 wethBalance = IERC20(weth).balanceOf(address(this));
 
-        engine.write(0, uint256(amount));
+        VM.assume(amountWrite <= wethBalanceEngine / 1 ether);
+        VM.assume(amountWrite <= type(uint256).max);
+        VM.assume(amountWrite > 0);
+
+        uint256 rxAmount = amountWrite * 1 ether;
+        uint256 fee = ((rxAmount / 10000) * engine.feeBps());
+
+        engine.write(0, amountWrite);
 
         (
             uint256 option,
@@ -277,14 +284,25 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             bool claimed
         ) = engine.claim(nextTokenId);
 
-        // TODO(Wallet balance checks)
+        assertEq(
+            IERC20(weth).balanceOf(address(engine)),
+            wethBalanceEngine + rxAmount
+        );
+        assertEq(
+            IERC20(weth).balanceOf(address(engine.feeTo())),
+            wethFeeTo + fee
+        );
+        assertEq(
+            IERC20(weth).balanceOf(address(this)),
+            wethBalance - rxAmount - fee
+        );
 
-        assertEq(engine.balanceOf(address(this), 0), amount);
+        assertEq(engine.balanceOf(address(this), 0), amountWrite);
         assertEq(engine.balanceOf(address(this), 1), 1);
 
         assertTrue(!claimed);
         assertEq(option, 0);
-        assertEq(amountWritten, amount);
+        assertEq(amountWritten, amountWrite);
         assertEq(amountExercised, 0);
         assertEq(engine.nextTokenId(), nextTokenId + 1);
 
@@ -389,6 +407,5 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     }
 
     // TODO(a function to create random new chains for fuzzing)
-    // TODO(testFuzzExercise)
     // TODO(testFuzzRedeem)
 }

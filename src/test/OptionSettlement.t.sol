@@ -328,6 +328,28 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(engine.balanceOf(address(this), 0), 0);
     }
 
+    function testFuzzExercise(uint16 amountWrite, uint16 amountExercise)
+        public
+    {
+        VM.assume(amountWrite >= amountExercise);
+        VM.assume(amountWrite > 0);
+        VM.assume(amountExercise > 0);
+        VM.assume(amountWrite <= type(uint16).max);
+        VM.assume(amountExercise <= type(uint16).max);
+
+        engine.write(0, uint256(amountWrite));
+
+        engine.exercise(0, uint256(amountExercise));
+
+        assertEq(
+            engine.balanceOf(address(this), 0),
+            amountWrite - amountExercise
+        );
+        assertEq(engine.balanceOf(address(this), 1), 1);
+
+        // TODO(Wallet balance checks)
+    }
+
     // TODO(a function to create random new chains for fuzzing)
     // TODO(testFuzzExercise)
     // TODO(testFuzzRedeem)

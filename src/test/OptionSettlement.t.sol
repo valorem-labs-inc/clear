@@ -92,6 +92,9 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         // And 10 M WETH
         writeTokenBalance(address(this), address(weth), 10000000 * 1e18);
 
+        writeTokenBalance(address(engine), address(dai), 1000000000 * 1e18);
+        writeTokenBalance(address(engine), address(weth), 10000000 * 1e18);
+
         // Issue approvals
         IERC20(weth).approve(address(engine), type(uint256).max);
         IERC20(dai).approve(address(engine), type(uint256).max);
@@ -218,10 +221,9 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
     function testWrite() public {
         uint256 nextTokenId = engine.nextTokenId();
-        uint256 wethBalance = IERC20(weth).balanceOf(address(engine));
-        uint256 testWallet = IERC20(weth).balanceOf(
-            address(0x36273803306a3C22bc848f8Db761e974697ece0d)
-        );
+        uint256 wethBalanceEngine = IERC20(weth).balanceOf(address(engine));
+        uint256 wethFeeTo = IERC20(weth).balanceOf(address(engine.feeTo()));
+        uint256 wethBalance = IERC20(weth).balanceOf(address(this));
 
         uint256 rxAmount = 10000 * 1 ether;
         uint256 fee = ((rxAmount / 10000) * engine.feeBps());
@@ -237,13 +239,15 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
         assertEq(
             IERC20(weth).balanceOf(address(engine)),
-            wethBalance + rxAmount
+            wethBalanceEngine + rxAmount
         );
         assertEq(
-            IERC20(weth).balanceOf(
-                address(0x36273803306a3C22bc848f8Db761e974697ece0d)
-            ),
-            testWallet + fee
+            IERC20(weth).balanceOf(address(engine.feeTo())),
+            wethFeeTo + fee
+        );
+        assertEq(
+            IERC20(weth).balanceOf(address(this)),
+            wethBalance - rxAmount - fee
         );
         assertEq(engine.balanceOf(address(this), 0), 10000);
         assertEq(engine.balanceOf(address(this), 1), 1);
@@ -258,13 +262,20 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             assertTrue(true);
     }
 
-    function testFuzzWrite(uint16 amount) public {
-        VM.assume(amount > 0);
-        VM.assume(amount <= type(uint16).max);
-
+    function testFuzzWrite(uint256 amountWrite) public {
         uint256 nextTokenId = engine.nextTokenId();
+        uint256 wethBalanceEngine = IERC20(weth).balanceOf(address(engine));
+        uint256 wethFeeTo = IERC20(weth).balanceOf(address(engine.feeTo()));
+        uint256 wethBalance = IERC20(weth).balanceOf(address(this));
 
-        engine.write(0, uint256(amount));
+        VM.assume(amountWrite <= wethBalanceEngine / 1 ether);
+        VM.assume(amountWrite <= type(uint256).max);
+        VM.assume(amountWrite > 0);
+
+        uint256 rxAmount = amountWrite * 1 ether;
+        uint256 fee = ((rxAmount / 10000) * engine.feeBps());
+
+        engine.write(0, amountWrite);
 
         (
             uint256 option,
@@ -273,14 +284,25 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             bool claimed
         ) = engine.claim(nextTokenId);
 
-        // TODO(Wallet balance checks)
+        assertEq(
+            IERC20(weth).balanceOf(address(engine)),
+            wethBalanceEngine + rxAmount
+        );
+        assertEq(
+            IERC20(weth).balanceOf(address(engine.feeTo())),
+            wethFeeTo + fee
+        );
+        assertEq(
+            IERC20(weth).balanceOf(address(this)),
+            wethBalance - rxAmount - fee
+        );
 
-        assertEq(engine.balanceOf(address(this), 0), amount);
+        assertEq(engine.balanceOf(address(this), 0), amountWrite);
         assertEq(engine.balanceOf(address(this), 1), 1);
 
         assertTrue(!claimed);
         assertEq(option, 0);
-        assertEq(amountWritten, amount);
+        assertEq(amountWritten, amountWrite);
         assertEq(amountExercised, 0);
         assertEq(engine.nextTokenId(), nextTokenId + 1);
 
@@ -291,9 +313,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     function testExercise() public {
         uint256 wethBalanceEngine = IERC20(weth).balanceOf(address(engine));
         uint256 daiBalanceEngine = IERC20(dai).balanceOf(address(engine));
-        uint256 daiTestWallet = IERC20(dai).balanceOf(
-            address(0x36273803306a3C22bc848f8Db761e974697ece0d)
-        );
+        uint256 daiFeeTo = IERC20(dai).balanceOf(address(engine.feeTo()));
 
         uint256 rxAmount = 10 * 3000 ether;
         uint256 txAmount = 10 * 1 ether;
@@ -307,10 +327,8 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         engine.exercise(0, 10);
 
         assertEq(
-            IERC20(dai).balanceOf(
-                address(0x36273803306a3C22bc848f8Db761e974697ece0d)
-            ),
-            daiTestWallet + fee
+            IERC20(dai).balanceOf(address(engine.feeTo())),
+            daiFeeTo + fee
         );
         assertEq(IERC20(weth).balanceOf(address(engine)), wethBalanceEngine);
         assertEq(
@@ -326,9 +344,68 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             (daiBalance - rxAmount - fee)
         );
         assertEq(engine.balanceOf(address(this), 0), 0);
+        assertEq(engine.balanceOf(address(this), 1), 1);
+    }
+
+    function testFuzzExercise(uint256 amountWrite, uint256 amountExercise)
+        public
+    {
+        uint256 wethBalanceEngine = IERC20(weth).balanceOf(address(engine));
+        uint256 daiBalanceEngine = IERC20(dai).balanceOf(address(engine));
+        uint256 wethFeeTo = IERC20(weth).balanceOf(address(engine.feeTo()));
+        uint256 daiFeeTo = IERC20(dai).balanceOf(address(engine.feeTo()));
+
+        VM.assume(amountWrite <= wethBalanceEngine / 1 ether);
+        VM.assume(amountExercise <= daiBalanceEngine / 3000 ether);
+        VM.assume(amountWrite >= amountExercise);
+        VM.assume(amountWrite > 0);
+        VM.assume(amountExercise > 0);
+        VM.assume(amountWrite <= type(uint256).max);
+        VM.assume(amountExercise <= type(uint256).max);
+
+        uint256 rxAmount = amountExercise * 3000 ether;
+        uint256 txAmount = amountExercise * 1 ether;
+        uint256 exerciseFee = (rxAmount / 10000) * engine.feeBps();
+        uint256 writeFee = ((amountWrite * 1 ether) / 10000) * engine.feeBps();
+
+        engine.write(0, amountWrite);
+
+        uint256 wethBalance = IERC20(weth).balanceOf(address(this));
+        uint256 daiBalance = IERC20(dai).balanceOf(address(this));
+
+        engine.exercise(0, amountExercise);
+
+        assertEq(
+            IERC20(weth).balanceOf(address(engine.feeTo())),
+            wethFeeTo + writeFee
+        );
+        assertEq(
+            IERC20(dai).balanceOf(address(engine.feeTo())),
+            daiFeeTo + exerciseFee
+        );
+        assertEq(
+            IERC20(weth).balanceOf(address(engine)),
+            wethBalanceEngine + ((amountWrite - amountExercise) * 1 ether)
+        );
+        assertEq(
+            IERC20(dai).balanceOf(address(engine)),
+            daiBalanceEngine + rxAmount
+        );
+        assertEq(
+            IERC20(weth).balanceOf(address(this)),
+            (wethBalance + txAmount)
+        );
+        assertEq(
+            IERC20(dai).balanceOf(address(this)),
+            (daiBalance - rxAmount - exerciseFee)
+        );
+        assertEq(
+            engine.balanceOf(address(this), 0),
+            amountWrite - amountExercise
+        );
+        assertEq(engine.balanceOf(address(this), 1), 1);
     }
 
     // TODO(a function to create random new chains for fuzzing)
-    // TODO(testFuzzExercise)
     // TODO(testFuzzRedeem)
 }

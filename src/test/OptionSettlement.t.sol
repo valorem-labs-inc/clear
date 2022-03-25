@@ -308,6 +308,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     }
 
     function testExercise() public {
+        // TODO(add checks after updating exercise())
         uint256 wethBalanceEngine = IERC20(weth).balanceOf(address(engine));
         uint256 daiBalanceEngine = IERC20(dai).balanceOf(address(engine));
         uint256 daiFeeTo = IERC20(dai).balanceOf(address(engine.feeTo()));
@@ -347,6 +348,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     function testFuzzExercise(uint256 amountWrite, uint256 amountExercise)
         public
     {
+        // TODO(add checks after updating exercise())
         uint256 wethBalanceEngine = IERC20(weth).balanceOf(address(engine));
         uint256 daiBalanceEngine = IERC20(dai).balanceOf(address(engine));
         uint256 wethFeeTo = IERC20(weth).balanceOf(address(engine.feeTo()));
@@ -414,6 +416,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     }
 
     function testRedeem() public {
+        // TODO(add checks after updating exercise())
         uint256 wethBalanceEngine = IERC20(weth).balanceOf(address(engine));
         uint256 wethBalance = IERC20(weth).balanceOf(address(this));
 
@@ -426,12 +429,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
         engine.redeem(1);
 
-        (
-            ,
-            uint256 amountWritten,
-            uint256 amountExercised,
-            bool claimed
-        ) = engine.claim(1);
+        (, , , bool claimed) = engine.claim(1);
 
         uint256 claimAmount = engine.balanceOf(address(this), 1);
 
@@ -439,12 +437,12 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(IERC20(weth).balanceOf(address(this)), wethBalance - fee);
         assertEq(claimAmount, 0);
         assertTrue(claimed);
-        assertEq(amountWritten, amountExercised);
 
         if (engine.tokenType(1) == Type.None) assertTrue(true);
     }
 
     function testFuzzRedeem(uint256 amountWrite) public {
+        // TODO(add checks after updating exercise())
         uint256 wethBalanceEngine = IERC20(weth).balanceOf(address(engine));
         uint256 daiBalanceEngine = IERC20(dai).balanceOf(address(engine));
 
@@ -461,12 +459,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
         engine.redeem(1);
 
-        (
-            ,
-            uint256 amountWritten,
-            uint256 amountExercised,
-            bool claimed
-        ) = engine.claim(1);
+        (, , , bool claimed) = engine.claim(1);
 
         assertEq(IERC20(weth).balanceOf(address(engine)), wethBalanceEngine);
         assertEq(IERC20(dai).balanceOf(address(engine)), daiBalanceEngine);
@@ -478,7 +471,6 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(engine.balanceOf(address(this), 0), amountWrite);
         assertEq(engine.balanceOf(address(this), 1), 0);
         assertTrue(claimed);
-        assertEq(amountWritten, amountExercised);
 
         if (engine.tokenType(1) == Type.None) assertTrue(true);
     }

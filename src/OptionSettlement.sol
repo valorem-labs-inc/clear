@@ -282,33 +282,28 @@ contract OptionSettlementEngine is ERC1155 {
             "Not expired yet"
         );
 
-        uint256 rx_amount = optionRecord.exerciseAmount *
+        uint256 exerciseAmount = optionRecord.exerciseAmount *
             claimRecord.amountExercised;
-        uint256 tx_amount = (optionRecord.underlyingAmount *
+        uint256 underlyingAmount = (optionRecord.underlyingAmount *
             (claimRecord.amountWritten - claimRecord.amountExercised));
 
-        if (claimRecord.amountExercised > 0) {
-            SafeTransferLib.safeTransfer(
-                ERC20(optionRecord.underlyingAsset),
-                msg.sender,
-                tx_amount
-            );
-
+        if (exerciseAmount > 0) {
             SafeTransferLib.safeTransfer(
                 ERC20(optionRecord.exerciseAsset),
                 msg.sender,
-                rx_amount
+                exerciseAmount
             );
-        } else {
+        }
+
+        if (underlyingAmount > 0) {
             SafeTransferLib.safeTransfer(
                 ERC20(optionRecord.underlyingAsset),
                 msg.sender,
-                tx_amount
+                underlyingAmount
             );
         }
 
         tokenType[claimId] = Type.None;
-        claimRecord.amountExercised = claimRecord.amountWritten;
         claimRecord.claimed = true;
 
         _burn(msg.sender, claimId, 1);

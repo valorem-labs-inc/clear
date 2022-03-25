@@ -41,9 +41,6 @@ abstract contract NFTreceiver {
 }
 
 contract OptionSettlementTest is DSTest, NFTreceiver {
-    // These are just happy path functional tests ATM
-    // TODO(Fuzzing)
-    // TODO(correctness)
     Vm public constant VM = Vm(HEVM_ADDRESS);
     OptionSettlementEngine public engine;
 
@@ -406,8 +403,9 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(engine.balanceOf(address(this), 1), 1);
     }
 
-    function testFailExercise(uint256 amountWrite, uint256 amountExercise) public {
-        
+    function testFailExercise(uint256 amountWrite, uint256 amountExercise)
+        public
+    {
         VM.assume(amountExercise > amountWrite);
 
         engine.write(0, amountWrite);
@@ -415,6 +413,39 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         engine.exercise(0, amountExercise);
     }
 
-    // TODO(a function to create random new chains for fuzzing)
+    function testRedeem() public {
+        uint256 wethBalanceEngine = IERC20(weth).balanceOf(address(engine));
+        uint256 wethBalance = IERC20(weth).balanceOf(address(this));
+
+        uint256 rxAmount = 10 * 1 ether;
+        uint256 fee = ((rxAmount / 10000) * engine.feeBps());
+
+        engine.write(0, 10);
+
+        VM.warp(1e15);
+
+        engine.redeem(1);
+
+        (
+            ,
+            uint256 amountWritten,
+            uint256 amountExercised,
+            bool claimed
+        ) = engine.claim(1);
+
+        uint256 claimAmount = engine.balanceOf(address(this), 1);
+
+        assertEq(IERC20(weth).balanceOf(address(engine)), wethBalanceEngine);
+        assertEq(IERC20(weth).balanceOf(address(this)), wethBalance - fee);
+        assertEq(claimAmount, 0);
+        assertTrue(claimed);
+        assertEq(amountWritten, amountExercised);
+
+        if (engine.tokenType(engine.nextTokenId()) == Type.None)
+            assertTrue(true);
+    }
+
+    // TODO(testCreateRandomChain)
     // TODO(testFuzzRedeem)
+    // TODO(testAllThreeTogether)
 }

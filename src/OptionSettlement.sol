@@ -264,9 +264,54 @@ contract OptionSettlementEngine is ERC1155 {
         // TODO(Emit events for indexing and frontend)
     }
 
-    function redeem(uint256 claimId) external view {
+    function redeem(uint256 claimId) external {
         require(tokenType[claimId] == Type.Claim, "Token is not an claim");
-        require(!claim[claimId].claimed, "Already Claimed");
+
+        uint256 balance = this.balanceOf(msg.sender, claimId);
+        require(balance == 1, "no claim token");
+
+        Claim storage claimRecord = claim[claimId];
+
+        require(!claimRecord.claimed, "Already Claimed");
+
+        uint256 optionId = claimRecord.option;
+        Option storage optionRecord = option[optionId];
+
+        require(
+            optionRecord.expiryTimestamp <= block.timestamp,
+            "Not expired yet"
+        );
+
+        uint256 rx_amount = optionRecord.exerciseAmount *
+            claimRecord.amountExercised;
+        uint256 tx_amount = (optionRecord.underlyingAmount *
+            (claimRecord.amountWritten - claimRecord.amountExercised));
+
+        if (claimRecord.amountExercised > 0) {
+            SafeTransferLib.safeTransfer(
+                ERC20(optionRecord.underlyingAsset),
+                msg.sender,
+                tx_amount
+            );
+
+            SafeTransferLib.safeTransfer(
+                ERC20(optionRecord.exerciseAsset),
+                msg.sender,
+                rx_amount
+            );
+        } else {
+            SafeTransferLib.safeTransfer(
+                ERC20(optionRecord.underlyingAsset),
+                msg.sender,
+                tx_amount
+            );
+        }
+
+        tokenType[claimId] = Type.None;
+        claimRecord.amountExercised = claimRecord.amountWritten;
+        claimRecord.claimed = true;
+
+        _burn(msg.sender, claimId, 1);
     }
 
     function underlying(uint256 tokenId) external view {

@@ -31,17 +31,17 @@ struct Option {
     // The underlying asset to be received
     address underlyingAsset;
     // The timestamp after which this option may be exercised
-    uint64 exerciseTimestamp;
+    uint40 exerciseTimestamp;
+    // The timestamp before which this option must be exercised
+    uint40 expiryTimestamp;
     // The address of the asset needed for exercise
     address exerciseAsset;
-    // The timestamp before which this option must be exercised
-    uint64 expiryTimestamp;
-    // Random seed created at the time of option chain creation
-    uint256 settlementSeed;
     // The amount of the underlying asset contained within an option contract of this type
-    uint256 underlyingAmount;
+    uint96 underlyingAmount;
+    // Random seed created at the time of option chain creation
+    uint160 settlementSeed;
     // The amount of the exercise asset required to exercise this option
-    uint256 exerciseAmount;
+    uint96 exerciseAmount;
 }
 
 struct Claim {
@@ -49,9 +49,9 @@ struct Claim {
     uint256 option;
     // These are 1:1 contracts with the underlying Option struct
     // The number of contracts written in this claim
-    uint256 amountWritten;
+    uint112 amountWritten;
     // The amount of contracts assigned for exercise to this claim
-    uint256 amountExercised;
+    uint112 amountExercised;
     // The two amounts above along with the option info, can be used to calculate the underlying assets
     bool claimed;
 }
@@ -161,7 +161,7 @@ contract OptionSettlementEngine is ERC1155 {
         chainMap[chainKey] = true;
     }
 
-    function write(uint256 optionId, uint256 amount) external {
+    function write(uint256 optionId, uint112 amount) external {
         require(tokenType[optionId] == Type.Option, "Token is not an option");
         require(
             option[optionId].settlementSeed != 0,
@@ -199,7 +199,7 @@ contract OptionSettlementEngine is ERC1155 {
         tokens[1] = claimId;
 
         uint256[] memory amounts = new uint256[](2);
-        amounts[0] = amount;
+        amounts[0] = uint256(amount);
         amounts[1] = 1;
 
         bytes memory data = new bytes(0);

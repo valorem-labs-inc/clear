@@ -76,11 +76,11 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         Option memory info = Option({
             underlyingAsset: address(weth),
             exerciseAsset: address(dai),
-            settlementSeed: 1,
-            underlyingAmount: 1 ether,
-            exerciseAmount: 3000 ether,
-            exerciseTimestamp: uint64(block.timestamp),
-            expiryTimestamp: (uint64(block.timestamp) + 604800)
+            settlementSeed: uint160(1),
+            underlyingAmount: uint96(1 ether),
+            exerciseAmount: uint96(3000 ether),
+            exerciseTimestamp: uint40(block.timestamp),
+            expiryTimestamp: (uint40(block.timestamp) + 604800)
         });
         engine.newChain(info);
 
@@ -106,31 +106,31 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         Option memory info = Option({
             underlyingAsset: address(weth),
             exerciseAsset: address(dai),
-            settlementSeed: 0,
-            underlyingAmount: 1 ether,
-            exerciseAmount: 3100 ether,
-            exerciseTimestamp: uint64(block.timestamp),
-            expiryTimestamp: (uint64(block.timestamp) + 604800)
+            settlementSeed: uint160(1),
+            underlyingAmount: uint96(1 ether),
+            exerciseAmount: uint96(3100 ether),
+            exerciseTimestamp: uint40(block.timestamp),
+            expiryTimestamp: (uint40(block.timestamp) + 604800)
         });
 
         uint256 tokenId = engine.newChain(info);
 
         (
             ,
-            uint64 testExerciseTimestamp,
+            uint40 testExerciseTimestamp,
+            uint40 testExpiryTimestamp,
             ,
-            uint64 testExpiryTimestamp,
-            uint256 testSettlementSeed,
-            uint256 testUnderlyingAmount,
-            uint256 testExerciseAmount
+            uint96 testUnderlyingAmount,
+            uint160 testSettlementSeed,
+            uint96 testExerciseAmount
         ) = engine.option(nextTokenId);
 
         assertTrue(engine.chainMap(keccak256(abi.encode(info))));
         assertEq(engine.nextTokenId(), nextTokenId + 1);
         assertEq(tokenId, engine.nextTokenId() - 1);
 
-        assertEq(testExerciseTimestamp, uint64(block.timestamp));
-        assertEq(testExpiryTimestamp, (uint64(block.timestamp) + 604800));
+        assertEq(testExerciseTimestamp, uint40(block.timestamp));
+        assertEq(testExpiryTimestamp, (uint40(block.timestamp) + 604800));
         assertEq(testUnderlyingAmount, 1 ether);
         assertEq(testExerciseAmount, 3100 ether);
         assertEq(testSettlementSeed, 42);
@@ -140,19 +140,19 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     }
 
     function testFuzzNewChain(
-        uint256 settlementSeed,
-        uint256 underlyingAmount,
-        uint256 exerciseAmount,
-        uint64 exerciseTimestamp,
-        uint64 expiryTimestamp
+        uint160 settlementSeed,
+        uint96 underlyingAmount,
+        uint96 exerciseAmount,
+        uint40 exerciseTimestamp,
+        uint40 expiryTimestamp
     ) public {
         uint256 nextTokenId = engine.nextTokenId();
 
         VM.assume(expiryTimestamp >= block.timestamp + 86400);
         VM.assume(exerciseTimestamp >= block.timestamp);
         VM.assume(exerciseTimestamp <= expiryTimestamp - 86400);
-        VM.assume(expiryTimestamp <= type(uint64).max);
-        VM.assume(exerciseTimestamp <= type(uint64).max);
+        VM.assume(expiryTimestamp <= type(uint40).max);
+        VM.assume(exerciseTimestamp <= type(uint40).max);
         VM.assume(underlyingAmount <= wethTotalSupply);
         VM.assume(exerciseAmount <= daiTotalSupply);
         VM.assume(type(uint256).max - underlyingAmount >= wethTotalSupply);
@@ -172,12 +172,12 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
         (
             ,
-            uint64 testExerciseTimestamp,
+            uint40 testExerciseTimestamp,
+            uint40 testExpiryTimestamp,
             ,
-            uint64 testExpiryTimestamp,
-            uint256 testSettlementSeed,
-            uint256 testUnderlyingAmount,
-            uint256 testExerciseAmount
+            uint96 testUnderlyingAmount,
+            uint160 testSettlementSeed,
+            uint96 testExerciseAmount
         ) = engine.option(nextTokenId);
 
         assertTrue(engine.chainMap(keccak256(abi.encode(info))));
@@ -202,8 +202,8 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             settlementSeed: 1,
             underlyingAmount: 1 ether,
             exerciseAmount: 3000 ether,
-            exerciseTimestamp: uint64(block.timestamp),
-            expiryTimestamp: (uint64(block.timestamp) + 604800)
+            exerciseTimestamp: uint40(block.timestamp),
+            expiryTimestamp: (uint40(block.timestamp) + 604800)
         });
         engine.newChain(info);
     }
@@ -259,7 +259,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             assertTrue(true);
     }
 
-    function testFuzzWrite(uint256 amountWrite) public {
+    function testFuzzWrite(uint112 amountWrite) public {
         uint256 nextTokenId = engine.nextTokenId();
         uint256 wethBalanceEngine = IERC20(weth).balanceOf(address(engine));
         uint256 wethFeeTo = IERC20(weth).balanceOf(address(engine.feeTo()));
@@ -345,7 +345,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(engine.balanceOf(address(this), 1), 1);
     }
 
-    function testFuzzExercise(uint256 amountWrite, uint256 amountExercise)
+    function testFuzzExercise(uint112 amountWrite, uint112 amountExercise)
         public
     {
         // TODO(add checks after updating exercise())
@@ -405,7 +405,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(engine.balanceOf(address(this), 1), 1);
     }
 
-    function testFailExercise(uint256 amountWrite, uint256 amountExercise)
+    function testFailExercise(uint112 amountWrite, uint112 amountExercise)
         public
     {
         VM.assume(amountExercise > amountWrite);
@@ -441,7 +441,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         if (engine.tokenType(1) == Type.None) assertTrue(true);
     }
 
-    function testFuzzRedeem(uint256 amountWrite) public {
+    function testFuzzRedeem(uint112 amountWrite) public {
         // TODO(add checks after updating exercise())
         uint256 wethBalanceEngine = IERC20(weth).balanceOf(address(engine));
         uint256 daiBalanceEngine = IERC20(dai).balanceOf(address(engine));

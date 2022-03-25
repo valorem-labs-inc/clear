@@ -406,6 +406,15 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(engine.balanceOf(address(this), 1), 1);
     }
 
+    function testFailExercise(uint256 amountWrite, uint256 amountExercise) public {
+        
+        VM.assume(amountExercise > amountWrite);
+
+        engine.write(0, amountWrite);
+
+        engine.exercise(0, amountExercise);
+    }
+
     // TODO(a function to create random new chains for fuzzing)
     // TODO(testFuzzRedeem)
 }

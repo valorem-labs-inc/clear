@@ -16,57 +16,56 @@ import "solmate/utils/SafeTransferLib.sol";
    a broad swath of traditional options.
 */
 
-// TODO(Consider converting require strings to errors)
+// TODO(Consider converting require strings to errors for gas savings)
 // TODO(Branch later for non harmony VRF support)
 // TODO(Interface file to interact without looking at the internals)
 // TODO(Event design, architecture, implementation)
 // TODO(Adding a fee sweep mechanism rather than on every operation would save gas)
 // TODO(DRY code)
 // TODO(Optimize)
-
-// @notice This protocol does not support rebase tokens, or fee on transfer tokens
-
-// @dev This enumeration is used to determine the type of an ERC1155 subtoken in the engine.
-enum Type {
-    None,
-    Option,
-    Claim
-}
-
-// @dev This struct contains the data about an options chain associated with an ERC-1155 token.
-struct Option {
-    // The underlying asset to be received
-    address underlyingAsset;
-    // The timestamp after which this option may be exercised
-    uint40 exerciseTimestamp;
-    // The timestamp before which this option must be exercised
-    uint40 expiryTimestamp;
-    // The address of the asset needed for exercise
-    address exerciseAsset;
-    // The amount of the underlying asset contained within an option contract of this type
-    uint96 underlyingAmount;
-    // Random seed created at the time of option chain creation
-    uint160 settlementSeed;
-    // The amount of the exercise asset required to exercise this option
-    uint96 exerciseAmount;
-}
-
-// @dev This struct contains the data about a claim ERC-1155 NFT associated with an option chain.
-struct Claim {
-    // Which option was written
-    uint256 option;
-    // These are 1:1 contracts with the underlying Option struct
-    // The number of contracts written in this claim
-    uint112 amountWritten;
-    // The amount of contracts assigned for exercise to this claim
-    uint112 amountExercised;
-    // The two amounts above along with the option info, can be used to calculate the underlying assets
-    bool claimed;
-}
-
 // TODO(Gas optimized fees struct?)
 
+// @notice This settlement protocol does not support rebase tokens, or fee on transfer tokens
+
 contract OptionSettlementEngine is ERC1155 {
+    // @dev This enumeration is used to determine the type of an ERC1155 subtoken in the engine.
+    enum Type {
+        None,
+        Option,
+        Claim
+    }
+
+    // @dev This struct contains the data about an options chain associated with an ERC-1155 token.
+    struct Option {
+        // The underlying asset to be received
+        address underlyingAsset;
+        // The timestamp after which this option may be exercised
+        uint40 exerciseTimestamp;
+        // The timestamp before which this option must be exercised
+        uint40 expiryTimestamp;
+        // The address of the asset needed for exercise
+        address exerciseAsset;
+        // The amount of the underlying asset contained within an option contract of this type
+        uint96 underlyingAmount;
+        // Random seed created at the time of option chain creation
+        uint160 settlementSeed;
+        // The amount of the exercise asset required to exercise this option
+        uint96 exerciseAmount;
+    }
+
+    // @dev This struct contains the data about a claim ERC-1155 NFT associated with an option chain.
+    struct Claim {
+        // Which option was written
+        uint256 option;
+        // These are 1:1 contracts with the underlying Option struct
+        // The number of contracts written in this claim
+        uint112 amountWritten;
+        // The amount of contracts assigned for exercise to this claim
+        uint112 amountExercised;
+        // The two amounts above along with the option info, can be used to calculate the underlying assets
+        bool claimed;
+    }
+
     uint8 public immutable feeBps = 5;
 
     address public feeTo = 0x36273803306a3C22bc848f8Db761e974697ece0d;

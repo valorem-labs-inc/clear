@@ -173,6 +173,11 @@ contract OptionSettlementEngine is ERC1155 {
 
         Option storage optionRecord = option[optionId];
 
+        require(
+            optionRecord.expiryTimestamp > block.timestamp,
+            "Can't write expired options"
+        );
+
         uint256 rx_amount = amount * optionRecord.underlyingAmount;
         uint256 fee = ((rx_amount / 10000) * feeBps);
 

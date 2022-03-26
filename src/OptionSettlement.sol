@@ -169,9 +169,13 @@ contract OptionSettlementEngine is ERC1155 {
             option[optionId].settlementSeed != 0,
             "Settlement seed not populated"
         );
-        // TODO(We shouldn't be able to write an expired option)
 
         Option storage optionRecord = option[optionId];
+
+        require(
+            optionRecord.expiryTimestamp > block.timestamp,
+            "Can't write expired options"
+        );
 
         uint256 rx_amount = amount * optionRecord.underlyingAmount;
         uint256 fee = ((rx_amount / 10000) * feeBps);

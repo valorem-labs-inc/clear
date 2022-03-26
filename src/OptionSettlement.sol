@@ -16,57 +16,58 @@ import "solmate/utils/SafeTransferLib.sol";
    a broad swath of traditional options.
 */
 
-enum Type {
-    None,
-    Option,
-    Claim
-}
+// TODO(Consider converting require strings to errors for gas savings)
+// TODO(Branch later for non harmony VRF support)
+// TODO(Interface file to interact without looking at the internals)
+// TODO(Event design, architecture, implementation)
+// TODO(Adding a fee sweep mechanism rather than on every operation would save gas)
+// TODO(DRY code)
+// TODO(Optimize)
+// TODO(Gas optimized fees struct?)
 
-// TODO(Right now fee is taken on top of written amount and exercised amount, should the model be different?)
-// TODO(Consider converting require strings to errors)
-// TODO(An enum here indicating if the option is a put or a call would be redundant, but maybe useful?)
-// TODO(Consider rebase tokens, fee on transfer tokens, or other tokens which may break assumptions)
+// @notice This settlement protocol does not support rebase tokens, or fee on transfer tokens
 
-struct Option {
-    // The underlying asset to be received
-    address underlyingAsset;
-    // The timestamp after which this option may be exercised
-    uint40 exerciseTimestamp;
-    // The timestamp before which this option must be exercised
-    uint40 expiryTimestamp;
-    // The address of the asset needed for exercise
-    address exerciseAsset;
-    // The amount of the underlying asset contained within an option contract of this type
-    uint96 underlyingAmount;
-    // Random seed created at the time of option chain creation
-    uint160 settlementSeed;
-    // The amount of the exercise asset required to exercise this option
-    uint96 exerciseAmount;
-}
-
-struct Claim {
-    // Which option was written
-    uint256 option;
-    // These are 1:1 contracts with the underlying Option struct
-    // The number of contracts written in this claim
-    uint112 amountWritten;
-    // The amount of contracts assigned for exercise to this claim
-    uint112 amountExercised;
-    // The two amounts above along with the option info, can be used to calculate the underlying assets
-    bool claimed;
-}
-
-// TODO(Add VRF)
 contract OptionSettlementEngine is ERC1155 {
-    // TODO(Interface file to interact without looking at the internals)
+    // @dev This enumeration is used to determine the type of an ERC1155 subtoken in the engine.
+    enum Type {
+        None,
+        Option,
+        Claim
+    }
 
-    // TODO(Events for subgraph)
+    // @dev This struct contains the data about an options chain associated with an ERC-1155 token.
+    struct Option {
+        // The underlying asset to be received
+        address underlyingAsset;
+        // The timestamp after which this option may be exercised
+        uint40 exerciseTimestamp;
+        // The timestamp before which this option must be exercised
+        uint40 expiryTimestamp;
+        // The address of the asset needed for exercise
+        address exerciseAsset;
+        // The amount of the underlying asset contained within an option contract of this type
+        uint96 underlyingAmount;
+        // Random seed created at the time of option chain creation
+        uint160 settlementSeed;
+        // The amount of the exercise asset required to exercise this option
+        uint96 exerciseAmount;
+    }
 
-    // TODO(Do we need to track internal balances)
+    // @dev This struct contains the data about a claim ERC-1155 NFT associated with an option chain.
+    struct Claim {
+        // Which option was written
+        uint256 option;
+        // These are 1:1 contracts with the underlying Option struct
+        // The number of contracts written in this claim
+        uint112 amountWritten;
+        // The amount of contracts assigned for exercise to this claim
+        uint112 amountExercised;
+        // The two amounts above along with the option info, can be used to calculate the underlying assets
+        bool claimed;
+    }
 
     uint8 public immutable feeBps = 5;
 
-    // TODO(Implement setters for this and a real address)
     address public feeTo = 0x36273803306a3C22bc848f8Db761e974697ece0d;
 
     // To increment the next available token id
@@ -82,11 +83,49 @@ contract OptionSettlementEngine is ERC1155 {
     mapping(uint256 => uint256[]) internal optionToClaims;
 
     // TODO(Should this be a public uint256 lookup of the token id if exists?)
+    // If so, we need to reserve token 0 above
     // This is used to check if an Option chain already exists
     mapping(bytes32 => bool) public chainMap;
 
     // Accessor for claim ticket details
     mapping(uint256 => Claim) public claim;
+
+    mapping(address => uint256) public feeBalance;
+
+    function setFeeTo(address newFeeTo) public {
+        require(msg.sender == feeTo, "Must be present fee collector.");
+        feeTo = newFeeTo;
+    }
+
+    // TODO(Consider keeper here)
+    // TODO(Test)
+    function sweepFees(address[] memory tokens) public {
+        unchecked {
+            uint256 numTokens = tokens.length;
+            for (uint256 i = 0; i < numTokens; i++) {
+                uint256 fee = feeBalance[tokens[i]];
+                // TODO(Leave 1 wei here as a gas optimization)
+                if (fee > 0) {
+                    SafeTransferLib.safeTransfer(ERC20(tokens[i]), feeTo, fee);
+                    feeBalance[tokens[i]] = 0;
+                }
+            }
+        }
+        // TODO(Emit event about fees collected)
+    }
+
+    // https://docs.harmony.one/home/developers/tools/harmony-vrf
+    function vrf() internal view returns (bytes32 result) {
+        uint256[1] memory bn;
+        bn[0] = block.number;
+        assembly {
+            let memPtr := mload(0x40)
+            if iszero(staticcall(not(0), 0xff, bn, 0x20, memPtr, 0x20)) {
+                invalid()
+            }
+            result := mload(memPtr)
+        }
+    }
 
     // TODO(The URI should return relevant details about the contract or claim dep on ID)
     function uri(uint256 tokenId)
@@ -108,7 +147,6 @@ contract OptionSettlementEngine is ERC1155 {
         external
         returns (uint256 tokenId)
     {
-        // TODO(Transfer the link fee here)
         // Check that a duplicate chain doesn't exist, and if it does, revert
         bytes32 chainKey = keccak256(abi.encode(optionInfo));
         require(chainMap[chainKey] == false, "This option chain exists");
@@ -129,11 +167,8 @@ contract OptionSettlementEngine is ERC1155 {
             "Underlying == Exercise"
         );
 
-        // Zero out random number for gas savings and to await randomness
-        optionInfo.settlementSeed = 0;
-
-        // TODO(random number should be generated from vrf and stored to settlementSeed here)
-        optionInfo.settlementSeed = 42;
+        // Get random settlement seed from VRF
+        optionInfo.settlementSeed = uint160(uint256(vrf()));
 
         // Create option token and increment
         tokenType[nextTokenId] = Type.Option;
@@ -165,11 +200,6 @@ contract OptionSettlementEngine is ERC1155 {
 
     function write(uint256 optionId, uint112 amount) external {
         require(tokenType[optionId] == Type.Option, "Token is not an option");
-        require(
-            option[optionId].settlementSeed != 0,
-            "Settlement seed not populated"
-        );
-        // TODO(We shouldn't be able to write an expired option)
 
         Option storage optionRecord = option[optionId];
 
@@ -180,24 +210,15 @@ contract OptionSettlementEngine is ERC1155 {
 
         uint256 rx_amount = amount * optionRecord.underlyingAmount;
         uint256 fee = ((rx_amount / 10000) * feeBps);
+        address underlyingAsset = optionRecord.underlyingAsset;
 
         // Transfer the requisite underlying asset
         SafeTransferLib.safeTransferFrom(
-            ERC20(optionRecord.underlyingAsset),
+            ERC20(underlyingAsset),
             msg.sender,
             address(this),
             (rx_amount + fee)
         );
-
-        // TODO(Consider an internal balance counter here and aggregating these in a fee sweep)
-        // TODO(Ensure rounding down or precise math here)
-        // Transfer fee to writer
-        SafeTransferLib.safeTransfer(
-            ERC20(optionRecord.underlyingAsset),
-            feeTo,
-            fee
-        );
-        // TODO(Do we need any other internal balance counters?)
 
         uint256 claimId = nextTokenId;
 
@@ -225,6 +246,9 @@ contract OptionSettlementEngine is ERC1155 {
         });
         optionToClaims[optionId].push(claimId);
 
+        // TODO(Emit event about fees accrued)
+        feeBalance[underlyingAsset] += fee;
+
         // TODO(Emit event about the writing)
         // Increment the next token ID
         ++nextTokenId;
@@ -242,7 +266,6 @@ contract OptionSettlementEngine is ERC1155 {
         // Number of claims enqueued for this option
         uint256 claimsLen = optionToClaims[optionId].length;
 
-        // TODO(Is this needed?)
         require(claimsLen > 0, "No claims to assign.");
 
         // Counter for randomness
@@ -316,6 +339,7 @@ contract OptionSettlementEngine is ERC1155 {
         uint256 rx_amount = optionRecord.exerciseAmount * amount;
         uint256 tx_amount = optionRecord.underlyingAmount * amount;
         uint256 fee = ((rx_amount / 10000) * feeBps);
+        address exerciseAsset = optionRecord.exerciseAsset;
 
         // Transfer in the requisite exercise asset
         SafeTransferLib.safeTransferFrom(
@@ -323,14 +347,6 @@ contract OptionSettlementEngine is ERC1155 {
             msg.sender,
             address(this),
             (rx_amount + fee)
-        );
-
-        // TODO(Consider aggregating this)
-        // Transfer out protocol fee
-        SafeTransferLib.safeTransfer(
-            ERC20(optionRecord.exerciseAsset),
-            feeTo,
-            fee
         );
 
         // Transfer out the underlying
@@ -341,6 +357,9 @@ contract OptionSettlementEngine is ERC1155 {
         );
 
         assignExercise(optionId, amount, optionRecord.settlementSeed);
+
+        // TODO(Emit event about fees accrued)
+        feeBalance[exerciseAsset] += fee;
 
         _burn(msg.sender, optionId, amount);
         // TODO(Emit events for indexing and frontend)
@@ -386,6 +405,8 @@ contract OptionSettlementEngine is ERC1155 {
         }
 
         claimRecord.claimed = true;
+
+        // TODO(Emit events for indexing and frontend)
 
         _burn(msg.sender, claimId, 1);
     }

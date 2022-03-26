@@ -249,6 +249,9 @@ contract OptionSettlementEngine is ERC1155 {
         // Last index in the claims list
         uint256 lastIndex;
 
+        // The new length for the claims list
+        uint256 newLen;
+
         // While there are still options to exercise
         while (amount > 0) {
             // Get the claim number to assign
@@ -268,7 +271,7 @@ contract OptionSettlementEngine is ERC1155 {
                 amount -= amountWritten;
                 claimRecord.amountExercised = amountWritten;
                 // We pop the end off and overwrite the old slot
-                uint256 newLen = claimsLen - 1;
+                newLen = claimsLen - 1;
                 if (newLen > 0) {
                     overwrite = optionToClaims[optionId][newLen];
                     // Would be nice if I could pop onto the stack here

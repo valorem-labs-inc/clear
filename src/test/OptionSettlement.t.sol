@@ -43,7 +43,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     Vm public constant VM = Vm(HEVM_ADDRESS);
     OptionSettlementEngine public engine;
 
-    address immutable ac = 0x36273803306a3C22bc848f8Db761e974697ece0d;
+    address public immutable ac = 0x36273803306a3C22bc848f8Db761e974697ece0d;
 
     uint256 public wethTotalSupply;
     uint256 public daiTotalSupply;
@@ -52,7 +52,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     IERC20 public dai;
 
     using stdStorage for StdStorage;
-    StdStorage stdstore;
+    StdStorage public stdstore;
 
     function writeTokenBalance(
         address who,
@@ -244,6 +244,12 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             bool claimed
         ) = engine.claim(nextTokenId);
 
+        address[] memory feeTokens = new address[](2);
+        feeTokens[0] = address(weth);
+        feeTokens[1] = address(dai);
+
+        engine.sweepFees(feeTokens);
+
         assertEq(
             IERC20(weth).balanceOf(address(engine)),
             wethBalanceEngine + rxAmount
@@ -291,6 +297,12 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             bool claimed
         ) = engine.claim(nextTokenId);
 
+        address[] memory feeTokens = new address[](2);
+        feeTokens[0] = address(weth);
+        feeTokens[1] = address(dai);
+
+        engine.sweepFees(feeTokens);
+
         assertEq(
             IERC20(weth).balanceOf(address(engine)),
             wethBalanceEngine + rxAmount
@@ -333,6 +345,12 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         uint256 daiBalance = IERC20(dai).balanceOf(address(this));
 
         engine.exercise(0, 10);
+
+        address[] memory feeTokens = new address[](2);
+        feeTokens[0] = address(weth);
+        feeTokens[1] = address(dai);
+
+        engine.sweepFees(feeTokens);
 
         assertEq(
             IERC20(dai).balanceOf(address(engine.feeTo())),
@@ -383,6 +401,12 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         uint256 daiBalance = IERC20(dai).balanceOf(address(this));
 
         engine.exercise(0, amountExercise);
+
+        address[] memory feeTokens = new address[](2);
+        feeTokens[0] = address(weth);
+        feeTokens[1] = address(dai);
+
+        engine.sweepFees(feeTokens);
 
         assertEq(
             IERC20(weth).balanceOf(address(engine.feeTo())),
@@ -435,6 +459,12 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
         engine.write(0, 10);
 
+        address[] memory feeTokens = new address[](2);
+        feeTokens[0] = address(weth);
+        feeTokens[1] = address(dai);
+
+        engine.sweepFees(feeTokens);
+
         VM.warp(1e15);
 
         engine.redeem(1);
@@ -464,6 +494,12 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
         uint256 wethBalance = IERC20(weth).balanceOf(address(this));
         uint256 daiBalance = IERC20(dai).balanceOf(address(this));
+
+        address[] memory feeTokens = new address[](2);
+        feeTokens[0] = address(weth);
+        feeTokens[1] = address(dai);
+
+        engine.sweepFees(feeTokens);
 
         VM.warp(1e15);
 

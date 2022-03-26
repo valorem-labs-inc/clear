@@ -20,6 +20,9 @@ import "solmate/utils/SafeTransferLib.sol";
 // TODO(Branch later for non harmony VRF support)
 // TODO(Interface file to interact without looking at the internals)
 // TODO(Event design, architecture, implementation)
+// TODO(Adding a fee sweep mechanism rather than on every operation would save gas)
+// TODO(DRY code)
+// TODO(Optimize)
 
 // @notice This protocol does not support rebase tokens, or fee on transfer tokens
 
@@ -86,9 +89,27 @@ contract OptionSettlementEngine is ERC1155 {
     // Accessor for claim ticket details
     mapping(uint256 => Claim) public claim;
 
+    mapping(address => uint256) public feeBalance;
+
+    address[] public feeBalanceTokens;
+
     function setFeeTo(address newFeeTo) public {
         require(msg.sender == feeTo, "Must be present fee collector.");
         feeTo = newFeeTo;
+    }
+
+    // TODO(Consider keeper here)
+    // TODO(Test)
+    function sweepFees(address[] memory tokens) public {
+        unchecked {
+            uint256 numTokens = tokens.length;
+            for (uint256 i = 0; i < numTokens; i++) {
+                uint256 fee = feeBalance[tokens[i]];
+                if (fee > 0) {
+                    SafeTransferLib.safeTransfer(ERC20(tokens[i]), feeTo, fee);
+                }
+            }
+        }
     }
 
     // https://docs.harmony.one/home/developers/tools/harmony-vrf
@@ -177,11 +198,6 @@ contract OptionSettlementEngine is ERC1155 {
 
     function write(uint256 optionId, uint112 amount) external {
         require(tokenType[optionId] == Type.Option, "Token is not an option");
-        //require(
-        //    option[optionId].settlementSeed != 0,
-        //    "Settlement seed not populated"
-        //);
-        // TODO(We shouldn't be able to write an expired option)
 
         Option storage optionRecord = option[optionId];
 
@@ -192,24 +208,15 @@ contract OptionSettlementEngine is ERC1155 {
 
         uint256 rx_amount = amount * optionRecord.underlyingAmount;
         uint256 fee = ((rx_amount / 10000) * feeBps);
+        address underlyingAsset = optionRecord.underlyingAsset;
 
         // Transfer the requisite underlying asset
         SafeTransferLib.safeTransferFrom(
-            ERC20(optionRecord.underlyingAsset),
+            ERC20(underlyingAsset),
             msg.sender,
             address(this),
             (rx_amount + fee)
         );
-
-        // TODO(Consider an internal balance counter here and aggregating these in a fee sweep)
-        // TODO(Ensure rounding down or precise math here)
-        // Transfer fee to writer
-        SafeTransferLib.safeTransfer(
-            ERC20(optionRecord.underlyingAsset),
-            feeTo,
-            fee
-        );
-        // TODO(Do we need any other internal balance counters?)
 
         uint256 claimId = nextTokenId;
 
@@ -236,6 +243,7 @@ contract OptionSettlementEngine is ERC1155 {
             claimed: false
         });
         optionToClaims[optionId].push(claimId);
+        feeBalance[underlyingAsset] += fee;
 
         // TODO(Emit event about the writing)
         // Increment the next token ID
@@ -327,6 +335,7 @@ contract OptionSettlementEngine is ERC1155 {
         uint256 rx_amount = optionRecord.exerciseAmount * amount;
         uint256 tx_amount = optionRecord.underlyingAmount * amount;
         uint256 fee = ((rx_amount / 10000) * feeBps);
+        address exerciseAsset = optionRecord.exerciseAsset;
 
         // Transfer in the requisite exercise asset
         SafeTransferLib.safeTransferFrom(
@@ -334,13 +343,6 @@ contract OptionSettlementEngine is ERC1155 {
             msg.sender,
             address(this),
             (rx_amount + fee)
-        );
-
-        // Transfer out protocol fee
-        SafeTransferLib.safeTransfer(
-            ERC20(optionRecord.exerciseAsset),
-            feeTo,
-            fee
         );
 
         // Transfer out the underlying
@@ -351,6 +353,8 @@ contract OptionSettlementEngine is ERC1155 {
         );
 
         assignExercise(optionId, amount, optionRecord.settlementSeed);
+
+        feeBalance[exerciseAsset] += fee;
 
         _burn(msg.sender, optionId, amount);
         // TODO(Emit events for indexing and frontend)

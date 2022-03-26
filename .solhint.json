@@ -2,6 +2,8 @@
   "extends": "solhint:recommended", 
   "rules": {
     "compiler-version": ["error",">=0.8.0"], 
-    "avoid-low-level-calls": "off"
+    "no-inline-assembly": ["off",">=0.8.0"],
+    "avoid-low-level-calls": ["off",">=0.8.0"],
+    "not-rely-on-time": ["off",">=0.8.0"]
   }
 }

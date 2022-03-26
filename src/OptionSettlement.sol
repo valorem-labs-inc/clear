@@ -93,8 +93,6 @@ contract OptionSettlementEngine is ERC1155 {
 
     mapping(address => uint256) public feeBalance;
 
-    address[] public feeBalanceTokens;
-
     function setFeeTo(address newFeeTo) public {
         require(msg.sender == feeTo, "Must be present fee collector.");
         feeTo = newFeeTo;

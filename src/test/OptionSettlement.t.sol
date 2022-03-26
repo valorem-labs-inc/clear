@@ -2,7 +2,6 @@
 pragma solidity 0.8.11;
 
 import "ds-test/test.sol";
-// TODO(is this really useful for testing)
 import "forge-std/stdlib.sol";
 import "../interfaces/IERC20.sol";
 import "../interfaces/IWETH.sol";

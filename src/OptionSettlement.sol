@@ -17,6 +17,9 @@ import "solmate/utils/SafeTransferLib.sol";
 */
 
 // TODO(Consider converting require strings to errors)
+// TODO(Branch later for non harmony VRF support)
+// TODO(Interface file to interact without looking at the internals)
+// TODO(Event design, architecture, implementation)
 
 // @notice This protocol does not support rebase tokens, or fee on transfer tokens
 
@@ -58,12 +61,7 @@ struct Claim {
     bool claimed;
 }
 
-// TODO(Add VRF)
 contract OptionSettlementEngine is ERC1155 {
-    // TODO(Interface file to interact without looking at the internals)
-
-    // TODO(Events for subgraph)
-
     uint8 public immutable feeBps = 5;
 
     address public feeTo = 0x36273803306a3C22bc848f8Db761e974697ece0d;
@@ -93,7 +91,6 @@ contract OptionSettlementEngine is ERC1155 {
         feeTo = newFeeTo;
     }
 
-    // TODO(strategy for non harmony chains)
     // https://docs.harmony.one/home/developers/tools/harmony-vrf
     function vrf() internal view returns (bytes32 result) {
         uint256[1] memory bn;
@@ -127,7 +124,6 @@ contract OptionSettlementEngine is ERC1155 {
         external
         returns (uint256 tokenId)
     {
-        // TODO(Transfer the link fee here)
         // Check that a duplicate chain doesn't exist, and if it does, revert
         bytes32 chainKey = keccak256(abi.encode(optionInfo));
         require(chainMap[chainKey] == false, "This option chain exists");
@@ -258,7 +254,6 @@ contract OptionSettlementEngine is ERC1155 {
         // Number of claims enqueued for this option
         uint256 claimsLen = optionToClaims[optionId].length;
 
-        // TODO(Is this needed?)
         require(claimsLen > 0, "No claims to assign.");
 
         // Counter for randomness
@@ -341,7 +336,6 @@ contract OptionSettlementEngine is ERC1155 {
             (rx_amount + fee)
         );
 
-        // TODO(Consider aggregating this)
         // Transfer out protocol fee
         SafeTransferLib.safeTransfer(
             ERC20(optionRecord.exerciseAsset),
@@ -402,6 +396,8 @@ contract OptionSettlementEngine is ERC1155 {
         }
 
         claimRecord.claimed = true;
+
+        // TODO(Emit events for indexing and frontend)
 
         _burn(msg.sender, claimId, 1);
     }

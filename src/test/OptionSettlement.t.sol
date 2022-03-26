@@ -44,6 +44,8 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     Vm public constant VM = Vm(HEVM_ADDRESS);
     OptionSettlementEngine public engine;
 
+    address immutable ac = 0x36273803306a3C22bc848f8Db761e974697ece0d;
+
     uint256 public wethTotalSupply;
     uint256 public daiTotalSupply;
 
@@ -210,6 +212,13 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             expiryTimestamp: (uint40(block.timestamp) + 604800)
         });
         engine.newChain(info);
+    }
+
+    function testSetFeeTo(address some) public {
+        VM.startPrank(ac, ac);
+        engine.setFeeTo(some);
+        VM.stopPrank();
+        assert(engine.feeTo() == some);
     }
 
     function testUri() public view {

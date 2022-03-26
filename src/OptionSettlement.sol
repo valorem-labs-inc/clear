@@ -62,11 +62,8 @@ contract OptionSettlementEngine is ERC1155 {
 
     // TODO(Events for subgraph)
 
-    // TODO(Do we need to track internal balances)
-
     uint8 public immutable feeBps = 5;
 
-    // TODO(Implement setters for this and a real address)
     address public feeTo = 0x36273803306a3C22bc848f8Db761e974697ece0d;
 
     // To increment the next available token id
@@ -87,6 +84,11 @@ contract OptionSettlementEngine is ERC1155 {
 
     // Accessor for claim ticket details
     mapping(uint256 => Claim) public claim;
+
+    function setFeeTo(address newFeeTo) public {
+        require(msg.sender == feeTo, "Must be present fee collector.");
+        feeTo = newFeeTo;
+    }
 
     // TODO(The URI should return relevant details about the contract or claim dep on ID)
     function uri(uint256 tokenId)

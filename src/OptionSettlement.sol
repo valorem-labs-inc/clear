@@ -64,6 +64,8 @@ struct Claim {
     bool claimed;
 }
 
+// TODO(Gas optimized fees struct?)
+
 contract OptionSettlementEngine is ERC1155 {
     uint8 public immutable feeBps = 5;
 
@@ -105,11 +107,14 @@ contract OptionSettlementEngine is ERC1155 {
             uint256 numTokens = tokens.length;
             for (uint256 i = 0; i < numTokens; i++) {
                 uint256 fee = feeBalance[tokens[i]];
+                // TODO(Leave 1 wei here as a gas optimization)
                 if (fee > 0) {
                     SafeTransferLib.safeTransfer(ERC20(tokens[i]), feeTo, fee);
+                    feeBalance[tokens[i]] = 0;
                 }
             }
         }
+        // TODO(Emit event about fees collected)
     }
 
     // https://docs.harmony.one/home/developers/tools/harmony-vrf
@@ -243,6 +248,8 @@ contract OptionSettlementEngine is ERC1155 {
             claimed: false
         });
         optionToClaims[optionId].push(claimId);
+
+        // TODO(Emit event about fees accrued)
         feeBalance[underlyingAsset] += fee;
 
         // TODO(Emit event about the writing)
@@ -354,6 +361,7 @@ contract OptionSettlementEngine is ERC1155 {
 
         assignExercise(optionId, amount, optionRecord.settlementSeed);
 
+        // TODO(Emit event about fees accrued)
         feeBalance[exerciseAsset] += fee;
 
         _burn(msg.sender, optionId, amount);

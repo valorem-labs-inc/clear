@@ -276,17 +276,19 @@ contract OptionSettlementEngine is ERC1155 {
                 amount -= amountWritten;
                 claimRecord.amountExercised = amountWritten;
                 // We pop the end off and overwrite the old slot
-                newLen = claimsLen - 1;
-                if (newLen > 0) {
-                    overwrite = optionToClaims[optionId][newLen];
-                    // Would be nice if I could pop onto the stack here
-                    optionToClaims[optionId].pop();
-                    claimsLen = newLen;
-                    optionToClaims[optionId][lastIndex] = overwrite;
-                }
             } else {
                 claimRecord.amountExercised = amount;
                 amount = 0;
+            }
+            newLen = claimsLen - 1;
+            if (newLen > 0) {
+                overwrite = optionToClaims[optionId][newLen];
+                // Would be nice if I could pop onto the stack here
+                optionToClaims[optionId].pop();
+                claimsLen = newLen;
+                optionToClaims[optionId][lastIndex] = overwrite;
+            } else {
+                optionToClaims[optionId].pop();
             }
 
             // Increment for the next loop

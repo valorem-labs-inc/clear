@@ -41,6 +41,13 @@ interface IOptionSettlementEngine {
         bool claimed;
     }
 
+    struct Underlying {
+        address underlyingAsset;
+        int256 underlyingPosition;
+        address exerciseAsset;
+        int256 exercisePosition;
+    }
+
     // @notice The protocol fee, expressed in basis points
     // @return The fee in basis points
     function feeBps() external view returns (uint8);
@@ -78,7 +85,26 @@ interface IOptionSettlementEngine {
     // @notice Sweeps fees to the feeTo address if there are more than 0 wei for each address in tokens
     function sweepFees(address[] memory tokens) external;
 
+    // @notice Create a new options chain from optionInfo if it doesn't already exist
     function newChain(Option memory optionInfo)
         external
         returns (uint256 optionId);
+
+    // @notice write a new bundle of options contract and recieve options tokens and claim ticket
+    function write(uint256 optionId, uint112 amount)
+        external
+        returns (uint256 claimId);
+
+    // @notice exercise amount of optionId transfers and receives required amounts of tokens
+    function exercise(uint256 optionId, uint112 amount) external;
+
+    // @notice redeem a claim NFT, transfers the underlying tokens
+    function redeem(uint256 claimId) external;
+
+    // TODO(Nail down the structure here)
+    // @notice Information about the position underlying a token, useful for determining value
+    function underlying(uint256 tokenId)
+        external
+        view
+        returns (Underlying memory underlyingPositions);
 }

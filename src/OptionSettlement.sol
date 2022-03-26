@@ -127,8 +127,13 @@ contract OptionSettlementEngine is IOptionSettlementEngine, ERC1155 {
         external
         returns (uint256 optionId)
     {
-        // Check that a duplicate chain doesn't exist, and if it does, revert
+        // Ensure settlement seed is 0
+        optionInfo.settlementSeed = 0;
+
+        // Check that a duplicate chain doesn't exist
         bytes32 chainKey = keccak256(abi.encode(optionInfo));
+
+        // If it does, revert
         require(hashToOptionToken[chainKey] == 0, "This option chain exists");
 
         // Else, create new options chain
@@ -394,10 +399,20 @@ contract OptionSettlementEngine is IOptionSettlementEngine, ERC1155 {
         _burn(msg.sender, claimId, 1);
     }
 
-    function underlying(uint256 tokenId) external view {
-        require(tokenType[tokenId] != Type.None, "Token does not exist");
+    function underlying(uint256 tokenId)
+        external
+        view
+        returns (Underlying memory underlyingPositions)
+    {
         // TODO(Get info about underlying assets)
         // TODO(Get info about options contract)
         // TODO(Get info about a claim)
+        require(tokenType[tokenId] != Type.None, "Token does not exist");
+        underlyingPositions = Underlying({
+            underlyingAsset: address(0),
+            underlyingPosition: 0,
+            exerciseAsset: address(0),
+            exercisePosition: 0
+        });
     }
 }

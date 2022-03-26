@@ -16,17 +16,18 @@ import "solmate/utils/SafeTransferLib.sol";
    a broad swath of traditional options.
 */
 
+// TODO(Consider converting require strings to errors)
+
+// @notice This protocol does not support rebase tokens, or fee on transfer tokens
+
+// @dev This enumeration is used to determine the type of an ERC1155 subtoken in the engine.
 enum Type {
     None,
     Option,
     Claim
 }
 
-// TODO(Right now fee is taken on top of written amount and exercised amount, should the model be different?)
-// TODO(Consider converting require strings to errors)
-// TODO(An enum here indicating if the option is a put or a call would be redundant, but maybe useful?)
-// TODO(Consider rebase tokens, fee on transfer tokens, or other tokens which may break assumptions)
-
+// @dev This struct contains the data about an options chain associated with an ERC-1155 token.
 struct Option {
     // The underlying asset to be received
     address underlyingAsset;
@@ -44,6 +45,7 @@ struct Option {
     uint96 exerciseAmount;
 }
 
+// @dev This struct contains the data about a claim ERC-1155 NFT associated with an option chain.
 struct Claim {
     // Which option was written
     uint256 option;
@@ -79,6 +81,7 @@ contract OptionSettlementEngine is ERC1155 {
     mapping(uint256 => uint256[]) internal optionToClaims;
 
     // TODO(Should this be a public uint256 lookup of the token id if exists?)
+    // If so, we need to reserve token 0 above
     // This is used to check if an Option chain already exists
     mapping(bytes32 => bool) public chainMap;
 
@@ -88,6 +91,20 @@ contract OptionSettlementEngine is ERC1155 {
     function setFeeTo(address newFeeTo) public {
         require(msg.sender == feeTo, "Must be present fee collector.");
         feeTo = newFeeTo;
+    }
+
+    // TODO(strategy for non harmony chains)
+    // https://docs.harmony.one/home/developers/tools/harmony-vrf
+    function vrf() internal view returns (bytes32 result) {
+        uint256[1] memory bn;
+        bn[0] = block.number;
+        assembly {
+            let memPtr := mload(0x40)
+            if iszero(staticcall(not(0), 0xff, bn, 0x20, memPtr, 0x20)) {
+                invalid()
+            }
+            result := mload(memPtr)
+        }
     }
 
     // TODO(The URI should return relevant details about the contract or claim dep on ID)
@@ -131,11 +148,8 @@ contract OptionSettlementEngine is ERC1155 {
             "Underlying == Exercise"
         );
 
-        // Zero out random number for gas savings and to await randomness
-        optionInfo.settlementSeed = 0;
-
-        // TODO(random number should be generated from vrf and stored to settlementSeed here)
-        optionInfo.settlementSeed = 42;
+        // Get random settlement seed from VRF
+        optionInfo.settlementSeed = uint160(uint256(vrf()));
 
         // Create option token and increment
         tokenType[nextTokenId] = Type.Option;
@@ -167,10 +181,10 @@ contract OptionSettlementEngine is ERC1155 {
 
     function write(uint256 optionId, uint112 amount) external {
         require(tokenType[optionId] == Type.Option, "Token is not an option");
-        require(
-            option[optionId].settlementSeed != 0,
-            "Settlement seed not populated"
-        );
+        //require(
+        //    option[optionId].settlementSeed != 0,
+        //    "Settlement seed not populated"
+        //);
         // TODO(We shouldn't be able to write an expired option)
 
         Option storage optionRecord = option[optionId];

@@ -123,7 +123,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             uint40 testExpiryTimestamp,
             ,
             uint96 testUnderlyingAmount,
-            uint160 testSettlementSeed,
+            ,
             uint96 testExerciseAmount
         ) = engine.option(nextTokenId);
 
@@ -135,7 +135,6 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(testExpiryTimestamp, (uint40(block.timestamp) + 604800));
         assertEq(testUnderlyingAmount, 1 ether);
         assertEq(testExerciseAmount, 3100 ether);
-        assertEq(testSettlementSeed, 42);
 
         if (engine.tokenType(engine.nextTokenId()) == Type.Option)
             assertTrue(true);
@@ -178,7 +177,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             uint40 testExpiryTimestamp,
             ,
             uint96 testUnderlyingAmount,
-            uint160 testSettlementSeed,
+            ,
             uint96 testExerciseAmount
         ) = engine.option(nextTokenId);
 
@@ -190,7 +189,6 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(testExpiryTimestamp, expiryTimestamp);
         assertEq(testUnderlyingAmount, underlyingAmount);
         assertEq(testExerciseAmount, exerciseAmount);
-        assertEq(testSettlementSeed, 42);
 
         if (engine.tokenType(engine.nextTokenId()) == Type.Option)
             assertTrue(true);

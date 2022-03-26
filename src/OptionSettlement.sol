@@ -19,7 +19,6 @@ import "solmate/utils/SafeTransferLib.sol";
 
 // TODO(Consider converting require strings to errors for gas savings)
 // TODO(Branch later for non harmony VRF support)
-// TODO(Interface file to interact without looking at the internals)
 // TODO(Event design, architecture, implementation)
 // TODO(Adding a fee sweep mechanism rather than on every operation would save gas)
 // TODO(DRY code)

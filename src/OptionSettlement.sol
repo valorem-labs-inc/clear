@@ -72,12 +72,14 @@ contract OptionSettlementEngine is ERC1155 {
     // To increment the next available token id
     uint256 public nextTokenId;
 
-    // TODO(Null values here should return None from the enum, or design needs to change.)
     // Is this an option or a claim?
     mapping(uint256 => Type) public tokenType;
 
     // Accessor for Option contract details
     mapping(uint256 => Option) public option;
+
+    // The list of claims for an option
+    mapping(uint256 => uint256[]) internal optionToClaims;
 
     // TODO(Should this be a public uint256 lookup of the token id if exists?)
     // This is used to check if an Option chain already exists
@@ -167,6 +169,7 @@ contract OptionSettlementEngine is ERC1155 {
             option[optionId].settlementSeed != 0,
             "Settlement seed not populated"
         );
+        // TODO(We shouldn't be able to write an expired option)
 
         Option storage optionRecord = option[optionId];
 
@@ -215,13 +218,81 @@ contract OptionSettlementEngine is ERC1155 {
             amountExercised: 0,
             claimed: false
         });
+        optionToClaims[optionId].push(claimId);
 
         // TODO(Emit event about the writing)
         // Increment the next token ID
         ++nextTokenId;
     }
 
-    function exercise(uint256 optionId, uint256 amount) external {
+    function assignExercise(
+        uint256 optionId,
+        uint112 amount,
+        uint160 settlementSeed
+    ) internal {
+        // TODO(Fuzz this in testing and flush out any bugs)
+        // Initial storage pointer
+        Claim storage claimRecord;
+
+        // Number of claims enqueued for this option
+        uint256 claimsLen = optionToClaims[optionId].length;
+
+        // TODO(Is this needed?)
+        require(claimsLen > 0, "No claims to assign.");
+
+        // Counter for randomness
+        uint256 i;
+
+        // To keep track of the slot to overwrite
+        uint256 overwrite;
+
+        // Last index in the claims list
+        uint256 lastIndex;
+
+        // While there are still options to exercise
+        while (amount > 0) {
+            // Get the claim number to assign
+            uint256 claimNum;
+            if (claimsLen == 1) {
+                lastIndex = 0;
+                claimNum = optionToClaims[optionId][lastIndex];
+            } else {
+                lastIndex = settlementSeed % claimsLen;
+                claimNum = optionToClaims[optionId][lastIndex];
+            }
+
+            claimRecord = claim[claimNum];
+
+            uint112 amountWritten = claimRecord.amountWritten;
+            if (amountWritten <= amount) {
+                amount -= amountWritten;
+                claimRecord.amountExercised = amountWritten;
+                // We pop the end off and overwrite the old slot
+                uint256 newLen = claimsLen - 1;
+                if (newLen > 0) {
+                    overwrite = optionToClaims[optionId][newLen];
+                    // Would be nice if I could pop onto the stack here
+                    optionToClaims[optionId].pop();
+                    claimsLen = newLen;
+                    optionToClaims[optionId][lastIndex] = overwrite;
+                }
+            } else {
+                claimRecord.amountExercised = amount;
+                amount = 0;
+            }
+
+            // Increment for the next loop
+            settlementSeed = uint160(
+                uint256(keccak256(abi.encode(settlementSeed, i)))
+            );
+            i++;
+        }
+
+        // Update the settlement seed in storage for the next exercise.
+        option[optionId].settlementSeed = settlementSeed;
+    }
+
+    function exercise(uint256 optionId, uint112 amount) external {
         require(tokenType[optionId] == Type.Option, "Token is not an option");
 
         Option storage optionRecord = option[optionId];
@@ -259,7 +330,8 @@ contract OptionSettlementEngine is ERC1155 {
             tx_amount
         );
 
-        // TODO(Exercise assignment and claims update)
+        assignExercise(optionId, amount, optionRecord.settlementSeed);
+
         _burn(msg.sender, optionId, amount);
         // TODO(Emit events for indexing and frontend)
     }
@@ -303,7 +375,6 @@ contract OptionSettlementEngine is ERC1155 {
             );
         }
 
-        tokenType[claimId] = Type.None;
         claimRecord.claimed = true;
 
         _burn(msg.sender, claimId, 1);

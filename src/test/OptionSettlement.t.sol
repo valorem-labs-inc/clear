@@ -194,6 +194,10 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             assertTrue(true);
     }
 
+    function testTokenTypeNone() public view {
+        assert(engine.tokenType(3) == Type.None);
+    }
+
     function testFailDuplicateChain() public {
         // This should fail to create the second and duplicate options chain
         Option memory info = Option({

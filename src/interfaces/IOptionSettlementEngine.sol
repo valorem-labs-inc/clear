@@ -3,6 +3,51 @@ pragma solidity 0.8.11;
 
 // @author 0xAlcibiades
 interface IOptionSettlementEngine {
+    event FeeSwept(
+        address indexed token,
+        address indexed feeTo,
+        uint256 amount
+    );
+
+    event NewChain(
+        uint256 indexed optionId,
+        address indexed exerciseAsset,
+        address indexed underlyingAsset,
+        uint96 exerciseAmount,
+        uint96 underlyingAmount,
+        uint40 exerciseTimestamp,
+        uint40 expiryTimestamp
+    );
+
+    event OptionsExercised(
+        uint256 indexed optionId,
+        address indexed exercisee,
+        uint112 amount
+    );
+
+    event OptionsWritten(
+        uint256 indexed optionId,
+        address indexed writer,
+        uint256 claimId,
+        uint112 amount
+    );
+
+    event FeeAccrued(
+        address indexed asset,
+        address indexed payor,
+        uint256 amount
+    );
+
+    event ClaimRedeemed(
+        uint256 indexed claimId,
+        uint256 indexed optionId,
+        address indexed redeemer,
+        address exerciseAsset,
+        address underlyingAsset,
+        uint96 exerciseAmount,
+        uint96 underlyingAmount
+    );
+
     // @dev This enumeration is used to determine the type of an ERC1155 subtoken in the engine.
     enum Type {
         None,

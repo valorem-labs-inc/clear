@@ -20,7 +20,6 @@ import "solmate/utils/SafeTransferLib.sol";
 // TODO(Consider converting require strings to errors for gas savings)
 // TODO(Branch later for non harmony VRF support)
 // TODO(Event design, architecture, implementation)
-// TODO(Adding a fee sweep mechanism rather than on every operation would save gas)
 // TODO(DRY code)
 // TODO(Optimize)
 // TODO(Gas optimized fees struct?)
@@ -76,21 +75,32 @@ contract OptionSettlementEngine is IOptionSettlementEngine, ERC1155 {
         feeTo = newFeeTo;
     }
 
-    // TODO(Consider keeper here)
-    // TODO(Test)
     function sweepFees(address[] memory tokens) public {
+        address sendFeeTo = feeTo;
+        address token;
+        uint256 fee;
+        uint256 sweep;
+        uint256 numTokens = tokens.length;
+
         unchecked {
-            uint256 numTokens = tokens.length;
             for (uint256 i = 0; i < numTokens; i++) {
-                uint256 fee = feeBalance[tokens[i]];
-                // TODO(Leave 1 wei here as a gas optimization)
-                if (fee > 0) {
-                    SafeTransferLib.safeTransfer(ERC20(tokens[i]), feeTo, fee);
-                    feeBalance[tokens[i]] = 0;
+                // Get the token and balance to sweep
+                token = tokens[i];
+
+                fee = feeBalance[token];
+                // Leave 1 wei here as a gas optimization
+                if (fee > 1) {
+                    sweep = feeBalance[token] - 1;
+                    SafeTransferLib.safeTransfer(
+                        ERC20(token),
+                        sendFeeTo,
+                        sweep
+                    );
+                    feeBalance[token] = 1;
+                    emit FeeSwept(token, sendFeeTo, sweep);
                 }
             }
         }
-        // TODO(Emit event about fees collected)
     }
 
     // https://docs.harmony.one/home/developers/tools/harmony-vrf
@@ -173,13 +183,21 @@ contract OptionSettlementEngine is IOptionSettlementEngine, ERC1155 {
 
         _option[nextTokenId] = optionInfo;
 
-        // TODO(This should emit an event about the creation for indexing in a graph)
-
         optionId = nextTokenId;
 
         // Increment the next token id to be used
         ++nextTokenId;
         hashToOptionToken[chainKey] = optionId;
+
+        emit NewChain(
+            optionId,
+            optionInfo.exerciseAsset,
+            optionInfo.underlyingAsset,
+            optionInfo.exerciseAmount,
+            optionInfo.underlyingAmount,
+            optionInfo.exerciseTimestamp,
+            optionInfo.expiryTimestamp
+        );
     }
 
     function write(uint256 optionId, uint112 amount)
@@ -233,12 +251,13 @@ contract OptionSettlementEngine is IOptionSettlementEngine, ERC1155 {
         });
         unexercisedClaimsByOption[optionId].push(claimId);
 
-        // TODO(Emit event about fees accrued)
         feeBalance[underlyingAsset] += fee;
 
-        // TODO(Emit event about the writing)
         // Increment the next token ID
         ++nextTokenId;
+
+        emit FeeAccrued(underlyingAsset, msg.sender, fee);
+        emit OptionsWritten(optionId, msg.sender, claimId, amount);
     }
 
     function assignExercise(
@@ -246,7 +265,6 @@ contract OptionSettlementEngine is IOptionSettlementEngine, ERC1155 {
         uint112 amount,
         uint160 settlementSeed
     ) internal {
-        // TODO(Fuzz this in testing and flush out any bugs)
         // Initial storage pointer
         Claim storage claimRecord;
 
@@ -300,6 +318,7 @@ contract OptionSettlementEngine is IOptionSettlementEngine, ERC1155 {
             } else {
                 unexercisedClaimsByOption[optionId].pop();
             }
+            // TODO(Emit event about assignment?)
 
             // Increment for the next loop
             settlementSeed = uint160(
@@ -318,11 +337,11 @@ contract OptionSettlementEngine is IOptionSettlementEngine, ERC1155 {
         Option storage optionRecord = _option[optionId];
 
         // Require that we have reached the exercise timestamp
-
         require(
             optionRecord.exerciseTimestamp <= block.timestamp,
             "Too early to exercise"
         );
+
         uint256 rxAmount = optionRecord.exerciseAmount * amount;
         uint256 txAmount = optionRecord.underlyingAmount * amount;
         uint256 fee = ((rxAmount / 10000) * feeBps);
@@ -345,11 +364,12 @@ contract OptionSettlementEngine is IOptionSettlementEngine, ERC1155 {
 
         assignExercise(optionId, amount, optionRecord.settlementSeed);
 
-        // TODO(Emit event about fees accrued)
         feeBalance[exerciseAsset] += fee;
 
         _burn(msg.sender, optionId, amount);
-        // TODO(Emit events for indexing and frontend)
+
+        emit FeeAccrued(exerciseAsset, msg.sender, fee);
+        emit OptionsExercised(optionId, msg.sender, amount);
     }
 
     function redeem(uint256 claimId) external {
@@ -396,6 +416,8 @@ contract OptionSettlementEngine is IOptionSettlementEngine, ERC1155 {
         // TODO(Emit events for indexing and frontend)
 
         _burn(msg.sender, claimId, 1);
+
+        emit ClaimRedeemed(claimId, msg.sender);
     }
 
     function underlying(uint256 tokenId)

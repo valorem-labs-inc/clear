@@ -413,11 +413,17 @@ contract OptionSettlementEngine is IOptionSettlementEngine, ERC1155 {
 
         claimRecord.claimed = true;
 
-        // TODO(Emit events for indexing and frontend)
-
         _burn(msg.sender, claimId, 1);
 
-        emit ClaimRedeemed(claimId, msg.sender);
+        emit ClaimRedeemed(
+            claimId,
+            optionId,
+            msg.sender,
+            optionRecord.exerciseAsset,
+            optionRecord.underlyingAsset,
+            uint96(exerciseAmount),
+            uint96(underlyingAmount)
+        );
     }
 
     function underlying(uint256 tokenId)

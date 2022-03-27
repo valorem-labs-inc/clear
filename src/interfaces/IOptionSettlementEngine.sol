@@ -38,7 +38,15 @@ interface IOptionSettlementEngine {
         uint256 amount
     );
 
-    event ClaimRedeemed(uint256 indexed claimId, address indexed redeemer);
+    event ClaimRedeemed(
+        uint256 indexed claimId,
+        uint256 indexed optionId,
+        address indexed redeemer,
+        address exerciseAsset,
+        address underlyingAsset,
+        uint96 exerciseAmount,
+        uint96 underlyingAmount
+    );
 
     // @dev This enumeration is used to determine the type of an ERC1155 subtoken in the engine.
     enum Type {

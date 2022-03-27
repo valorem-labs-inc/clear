@@ -26,7 +26,7 @@ import "solmate/utils/SafeTransferLib.sol";
 
 // @notice This settlement protocol does not support rebase tokens, or fee on transfer tokens
 
-contract OptionSettlementEngine is IOptionSettlementEngine, ERC1155 {
+contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     // The protocol fee
     uint8 public immutable feeBps = 5;
 

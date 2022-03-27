@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BUSL 1.1
-pragma solidity 0.8.11;
+pragma solidity ^0.8.0;
 
+import "./IERC1155Metadata.sol";
+
+// TODO(The engine is IERC1155Metadata, but the solmate impl is not compatible with interface, re-implement)
 // @author 0xAlcibiades
 interface IOptionSettlementEngine {
     event FeeSwept(

@@ -19,10 +19,8 @@ import "solmate/utils/SafeTransferLib.sol";
 
 // TODO(Consider converting require strings to errors for gas savings)
 // TODO(Branch later for non harmony VRF support)
-// TODO(Event design, architecture, implementation)
-// TODO(DRY code)
-// TODO(Optimize)
-// TODO(Gas optimized fees struct?)
+// TODO(DRY code during testing)
+// TODO(Gas Optimize)
 
 // @notice This settlement protocol does not support rebase tokens, or fee on transfer tokens
 
@@ -124,7 +122,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         override
         returns (string memory)
     {
-        require(tokenType[tokenId] != Type.None, "Token does not exist");
+        if (tokenType[tokenId] != Type.None) {
+            revert TokenNotFound();
+        }
         // TODO(Implement metadata/uri builder)
         string memory json = Base64.encode(
             bytes(string(abi.encodePacked("{}")))
@@ -431,15 +431,33 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         view
         returns (Underlying memory underlyingPositions)
     {
-        // TODO(Get info about underlying assets)
-        // TODO(Get info about options contract)
-        // TODO(Get info about a claim)
-        require(tokenType[tokenId] != Type.None, "Token does not exist");
-        underlyingPositions = Underlying({
-            underlyingAsset: address(0),
-            underlyingPosition: 0,
-            exerciseAsset: address(0),
-            exercisePosition: 0
-        });
+        if (tokenType[tokenId] != Type.None) {
+            revert TokenNotFound();
+        }
+        else if (tokenType[tokenId] != Type.Option) {
+            Option storage optionRecord = _option[tokenId];
+            bool expired = (optionRecord.expiryTimestamp > block.timestamp);
+            underlyingPositions = Underlying({
+            underlyingAsset: optionRecord.underlyingAsset,
+            underlyingPosition: expired ? int256(0): int256(uint256(optionRecord.underlyingAmount)),
+            exerciseAsset: optionRecord.exerciseAsset,
+            exercisePosition: expired ? int256(0): -int256(uint256(optionRecord.exerciseAmount))
+            });
+        }
+        else {
+            Claim storage claimRecord = _claim[tokenId];
+            Option storage optionRecord = _option[claimRecord.option];
+            uint256 exerciseAmount = optionRecord.exerciseAmount *
+            claimRecord.amountExercised;
+            uint256 underlyingAmount = (optionRecord.underlyingAmount *
+            (claimRecord.amountWritten - claimRecord.amountExercised));
+            underlyingPositions = Underlying({
+            underlyingAsset: optionRecord.underlyingAsset,
+            underlyingPosition: int256(exerciseAmount),
+            exerciseAsset: optionRecord.exerciseAsset,
+            exercisePosition: int256(underlyingAmount)
+            });
+
+        }
     }
 }

@@ -152,7 +152,6 @@ interface IOptionSettlementEngine {
     // @notice redeem a claim NFT, transfers the underlying tokens
     function redeem(uint256 claimId) external;
 
-    // TODO(Nail down the structure here)
     // @notice Information about the position underlying a token, useful for determining value
     function underlying(uint256 tokenId)
         external

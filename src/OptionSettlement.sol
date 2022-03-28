@@ -114,7 +114,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
     }
 
-    // TODO(The URI should return relevant details about the contract or claim dep on ID)
     function uri(uint256 tokenId)
         public
         view
@@ -125,7 +124,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         if (tokenType[tokenId] != Type.None) {
             revert TokenNotFound();
         }
-        // TODO(Implement metadata/uri builder)
+        // TODO(Implement metadata/uri with frontend dev)
         string memory json = Base64.encode(
             bytes(string(abi.encodePacked("{}")))
         );

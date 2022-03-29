@@ -6,6 +6,9 @@ import "./IERC1155Metadata.sol";
 // TODO(The engine is IERC1155Metadata, but the solmate impl is not compatible with interface, re-implement)
 // @author 0xAlcibiades
 interface IOptionSettlementEngine {
+
+    error TokenNotFound();
+
     event FeeSwept(
         address indexed token,
         address indexed feeTo,
@@ -149,7 +152,6 @@ interface IOptionSettlementEngine {
     // @notice redeem a claim NFT, transfers the underlying tokens
     function redeem(uint256 claimId) external;
 
-    // TODO(Nail down the structure here)
     // @notice Information about the position underlying a token, useful for determining value
     function underlying(uint256 tokenId)
         external

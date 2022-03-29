@@ -432,31 +432,32 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     {
         if (tokenType[tokenId] != Type.None) {
             revert TokenNotFound();
-        }
-        else if (tokenType[tokenId] != Type.Option) {
+        } else if (tokenType[tokenId] != Type.Option) {
             Option storage optionRecord = _option[tokenId];
             bool expired = (optionRecord.expiryTimestamp > block.timestamp);
             underlyingPositions = Underlying({
-            underlyingAsset: optionRecord.underlyingAsset,
-            underlyingPosition: expired ? int256(0): int256(uint256(optionRecord.underlyingAmount)),
-            exerciseAsset: optionRecord.exerciseAsset,
-            exercisePosition: expired ? int256(0): -int256(uint256(optionRecord.exerciseAmount))
+                underlyingAsset: optionRecord.underlyingAsset,
+                underlyingPosition: expired
+                    ? int256(0)
+                    : int256(uint256(optionRecord.underlyingAmount)),
+                exerciseAsset: optionRecord.exerciseAsset,
+                exercisePosition: expired
+                    ? int256(0)
+                    : -int256(uint256(optionRecord.exerciseAmount))
             });
-        }
-        else {
+        } else {
             Claim storage claimRecord = _claim[tokenId];
             Option storage optionRecord = _option[claimRecord.option];
             uint256 exerciseAmount = optionRecord.exerciseAmount *
-            claimRecord.amountExercised;
+                claimRecord.amountExercised;
             uint256 underlyingAmount = (optionRecord.underlyingAmount *
-            (claimRecord.amountWritten - claimRecord.amountExercised));
+                (claimRecord.amountWritten - claimRecord.amountExercised));
             underlyingPositions = Underlying({
-            underlyingAsset: optionRecord.underlyingAsset,
-            underlyingPosition: int256(exerciseAmount),
-            exerciseAsset: optionRecord.exerciseAsset,
-            exercisePosition: int256(underlyingAmount)
+                underlyingAsset: optionRecord.underlyingAsset,
+                underlyingPosition: int256(exerciseAmount),
+                exerciseAsset: optionRecord.exerciseAsset,
+                exercisePosition: int256(underlyingAmount)
             });
-
         }
     }
 }

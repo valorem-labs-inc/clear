@@ -237,9 +237,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         bytes memory data = new bytes(0);
 
-        // Send tokens to writer
-        _batchMint(msg.sender, tokens, amounts, data);
-
         // Store info about the claim
         tokenType[claimId] = Type.Claim;
         _claim[claimId] = Claim({
@@ -257,6 +254,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         emit FeeAccrued(underlyingAsset, msg.sender, fee);
         emit OptionsWritten(optionId, msg.sender, claimId, amount);
+
+        // Send tokens to writer
+        _batchMint(msg.sender, tokens, amounts, data);
     }
 
     function assignExercise(

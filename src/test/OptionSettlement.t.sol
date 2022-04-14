@@ -43,12 +43,9 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     OptionSettlementEngine public engine;
 
     address public immutable ac = 0x36273803306a3C22bc848f8Db761e974697ece0d;
-    address public WETH =
-        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public DAI =
-        0x6B175474E89094C44Da98b954EedeAC495271d0F;
-    address public USDC = 
-        0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address public WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    address public USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     IERC20 public weth = IERC20(WETH);
     IERC20 public dai = IERC20(DAI);
     IERC20 public usdc = IERC20(USDC);
@@ -81,7 +78,6 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     }
 
     function setUp() public {
-
         dai = IERC20(DAI);
         usdc = IERC20(USDC);
         weth = IERC20(WETH);
@@ -89,14 +85,14 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         engine = new OptionSettlementEngine();
 
         option = IOptionSettlementEngine.Option({
-                underlyingAsset: WETH,
-                exerciseAsset: DAI,
-                settlementSeed: 1234567,
-                underlyingAmount: 1 ether,
-                exerciseAmount: 3000 ether,
-                exerciseTimestamp: uint40(block.timestamp),
-                expiryTimestamp: (uint40(block.timestamp) + 604800)
-            });
+            underlyingAsset: WETH,
+            exerciseAsset: DAI,
+            settlementSeed: 1234567,
+            underlyingAmount: 1 ether,
+            exerciseAmount: 3000 ether,
+            exerciseTimestamp: uint40(block.timestamp),
+            expiryTimestamp: (uint40(block.timestamp) + 604800)
+        });
         testOptionId = engine.newChain(option);
 
         // // Now we have 1B DAI and 1B USDC
@@ -109,8 +105,15 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         dai.approve(address(engine), type(uint256).max);
 
         // pre-load balances and approvals
-        address[6] memory recipients = [address(engine), alice, bob, carol, dave, eve];
-        for (uint i=0; i==6; i++) {
+        address[6] memory recipients = [
+            address(engine),
+            alice,
+            bob,
+            carol,
+            dave,
+            eve
+        ];
+        for (uint256 i = 0; i == 6; i++) {
             address recipient = recipients[i];
             writeTokenBalance(recipient, DAI, 1000000000 * 1e18);
             writeTokenBalance(recipient, USDC, 1000000000 * 1e6);
@@ -163,22 +166,12 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     ) public {
         VM.assume(amount1 > 0 && amount2 > 0 && amount3 > 0);
         VM.assume(amount2 > amount1 && amount2 > amount3);
-        VM.assume(
-            amount1 < 1000000 &&
-                amount2 < 1000000 &&
-                amount3 < 1000000
-        );
+        VM.assume(amount1 < 1000000 && amount2 < 1000000 && amount3 < 1000000);
 
         VM.startPrank(carol);
         engine.write(testOptionId, amount1);
         engine.setApprovalForAll(address(this), true);
-        engine.safeTransferFrom(
-            carol,
-            bob,
-            testOptionId,
-            amount1,
-            ""
-        );
+        engine.safeTransferFrom(carol, bob, testOptionId, amount1, "");
         VM.stopPrank();
 
         VM.startPrank(dave);
@@ -188,21 +181,14 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         VM.startPrank(eve);
         engine.write(testOptionId, amount3);
         engine.setApprovalForAll(address(this), true);
-        engine.safeTransferFrom(
-            eve,
-            alice,
-            testOptionId,
-            amount3,
-            ""
-        );
+        engine.safeTransferFrom(eve, alice, testOptionId, amount3, "");
         VM.stopPrank();
 
         VM.startPrank(bob);
         engine.exercise(testOptionId, amount1);
         VM.stopPrank();
 
-        IOptionSettlementEngine.Claim
-            memory claimRecord1 = engine.claim(3);
+        IOptionSettlementEngine.Claim memory claimRecord1 = engine.claim(3);
 
         assertEq(claimRecord1.amountExercised, amount1);
 
@@ -210,8 +196,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         engine.exercise(testOptionId, amount3);
         VM.stopPrank();
 
-        IOptionSettlementEngine.Claim
-            memory claimRecord2 = engine.claim(3);
+        IOptionSettlementEngine.Claim memory claimRecord2 = engine.claim(3);
 
         assertEq(claimRecord2.amountExercised, amount3);
     }
@@ -252,15 +237,12 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         uint256 optionId = engine.newChain(optionInfo);
         assertEq(optionId, 2);
 
-        IOptionSettlementEngine.Option
-            memory optionRecord = engine.option(
-                optionId
-            );
+        IOptionSettlementEngine.Option memory optionRecord = engine.option(
+            optionId
+        );
 
         assertEq(
-            engine.hashToOptionToken(
-                keccak256(abi.encode(optionInfo))
-            ),
+            engine.hashToOptionToken(keccak256(abi.encode(optionInfo))),
             optionId
         );
         assertEq(optionRecord.underlyingAsset, WETH);
@@ -271,10 +253,8 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(optionRecord.exerciseAmount, exerciseAmount);
         assertEq(optionRecord.settlementSeed, 0);
 
-        if (
-            engine.tokenType(optionId) ==
-            IOptionSettlementEngine.Type.Option
-        ) assertTrue(true);
+        if (engine.tokenType(optionId) == IOptionSettlementEngine.Type.Option)
+            assertTrue(true);
     }
 
     function testFuzzWrite(uint112 amountWrite) public {
@@ -287,37 +267,27 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         uint256 rxAmount = amountWrite * 1 ether;
         uint256 fee = ((rxAmount / 10000) * engine.feeBps());
 
-        uint256 claimId = engine.write(
-            testOptionId,
-            amountWrite
-        );
+        uint256 claimId = engine.write(testOptionId, amountWrite);
 
-        IOptionSettlementEngine.Claim
-            memory claimRecord = engine.claim(claimId);
+        IOptionSettlementEngine.Claim memory claimRecord = engine.claim(
+            claimId
+        );
 
         assertEq(
             weth.balanceOf(address(engine)),
             wethBalanceEngine + rxAmount + fee
         );
-        assertEq(
-            weth.balanceOf(address(this)),
-            wethBalance - rxAmount - fee
-        );
+        assertEq(weth.balanceOf(address(this)), wethBalance - rxAmount - fee);
 
-        assertEq(
-            engine.balanceOf(address(this), testOptionId),
-            amountWrite
-        );
+        assertEq(engine.balanceOf(address(this), testOptionId), amountWrite);
         assertEq(engine.balanceOf(address(this), claimId), 1);
         assertTrue(!claimRecord.claimed);
         assertEq(claimRecord.option, testOptionId);
         assertEq(claimRecord.amountWritten, amountWrite);
         assertEq(claimRecord.amountExercised, 0);
 
-        if (
-            engine.tokenType(claimId) ==
-            IOptionSettlementEngine.Type.Claim
-        ) assertTrue(true);
+        if (engine.tokenType(claimId) == IOptionSettlementEngine.Type.Claim)
+            assertTrue(true);
     }
 
     function testFuzzExercise(uint112 amountWrite, uint112 amountExercise)
@@ -340,15 +310,13 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         uint256 exerciseFee = (rxAmount / 10000) * engine.feeBps();
         uint256 writeFee = ((amountWrite * 1 ether) / 10000) * engine.feeBps();
 
-        uint256 claimId = engine.write(
-            testOptionId,
-            amountWrite
-        );
+        uint256 claimId = engine.write(testOptionId, amountWrite);
 
         engine.exercise(testOptionId, amountExercise);
 
-        IOptionSettlementEngine.Claim
-            memory claimRecord = engine.claim(claimId);
+        IOptionSettlementEngine.Claim memory claimRecord = engine.claim(
+            claimId
+        );
 
         assertTrue(!claimRecord.claimed);
         assertEq(claimRecord.option, testOptionId);
@@ -396,10 +364,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         uint256 exerciseFee = (rxAmount / 10000) * engine.feeBps();
         uint256 writeFee = ((amountWrite * 1 ether) / 10000) * engine.feeBps();
 
-        uint256 claimId = engine.write(
-            testOptionId,
-            amountWrite
-        );
+        uint256 claimId = engine.write(testOptionId, amountWrite);
 
         engine.exercise(testOptionId, amountExercise);
 
@@ -407,25 +372,17 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
         engine.redeem(claimId);
 
-        IOptionSettlementEngine.Claim
-            memory claimRecord = engine.claim(claimId);
-
-        assertEq(
-            weth.balanceOf(address(engine)),
-            wethBalanceEngine + writeFee
+        IOptionSettlementEngine.Claim memory claimRecord = engine.claim(
+            claimId
         );
+
+        assertEq(weth.balanceOf(address(engine)), wethBalanceEngine + writeFee);
         assertEq(
             dai.balanceOf(address(engine)),
             daiBalanceEngine + exerciseFee
         );
-        assertEq(
-            weth.balanceOf(address(this)),
-            (wethBalance - writeFee)
-        );
-        assertEq(
-            dai.balanceOf(address(this)),
-            daiBalance - exerciseFee
-        );
+        assertEq(weth.balanceOf(address(this)), (wethBalance - writeFee));
+        assertEq(dai.balanceOf(address(this)), daiBalance - exerciseFee);
         assertEq(
             engine.balanceOf(address(this), testOptionId),
             amountWrite - amountExercise
@@ -433,12 +390,9 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         assertEq(engine.balanceOf(address(this), claimId), 0);
         assertTrue(claimRecord.claimed);
 
-        if (
-            engine.tokenType(claimId) ==
-            IOptionSettlementEngine.Type.Claim
-        ) assertTrue(true);
+        if (engine.tokenType(claimId) == IOptionSettlementEngine.Type.Claim)
+            assertTrue(true);
     }
-
 
     /* --------------------------- URI Tests --------------------------- */
 

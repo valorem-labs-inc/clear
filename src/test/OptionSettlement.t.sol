@@ -43,9 +43,9 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     OptionSettlementEngine public engine;
 
     address public immutable ac = 0x36273803306a3C22bc848f8Db761e974697ece0d;
-    address public WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-    address public USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     IERC20 public weth = IERC20(WETH);
     IERC20 public dai = IERC20(DAI);
     IERC20 public usdc = IERC20(USDC);

@@ -91,7 +91,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         option = IOptionSettlementEngine.Option({
                 underlyingAsset: WETH,
                 exerciseAsset: DAI,
-                settlementSeed: 1,
+                settlementSeed: 1234567,
                 underlyingAmount: 1 ether,
                 exerciseAmount: 3000 ether,
                 exerciseTimestamp: uint40(block.timestamp),
@@ -100,10 +100,10 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         testOptionId = engine.newChain(option);
 
         // // Now we have 1B DAI and 1B USDC
-        // writeTokenBalance(address(this), DAI, 1000000000 * 1e18);
-        // writeTokenBalance(address(this), USDC, 1000000000 * 1e6);
+        writeTokenBalance(address(this), DAI, 1000000000 * 1e18);
+        writeTokenBalance(address(this), USDC, 1000000000 * 1e6);
         // // And 10 M WETH
-        // writeTokenBalance(address(this), WETH, 10000000 * 1e18);
+        writeTokenBalance(address(this), WETH, 10000000 * 1e18);
 
         weth.approve(address(engine), type(uint256).max);
         dai.approve(address(engine), type(uint256).max);
@@ -157,63 +157,63 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     }
 
     function testFailAssignExercise(
-        uint112 optionWrite1,
-        uint112 optionWrite2,
-        uint112 optionWrite3
+        uint112 amount1,
+        uint112 amount2,
+        uint112 amount3
     ) public {
-        VM.assume(optionWrite1 > 0 && optionWrite2 > 0 && optionWrite3 > 0);
-        VM.assume(optionWrite2 > optionWrite1 && optionWrite2 > optionWrite3);
+        VM.assume(amount1 > 0 && amount2 > 0 && amount3 > 0);
+        VM.assume(amount2 > amount1 && amount2 > amount3);
         VM.assume(
-            optionWrite1 < 1000000 &&
-                optionWrite2 < 1000000 &&
-                optionWrite3 < 1000000
+            amount1 < 1000000 &&
+                amount2 < 1000000 &&
+                amount3 < 1000000
         );
 
         VM.startPrank(carol);
-        engine.write(testOptionId, optionWrite1);
+        engine.write(testOptionId, amount1);
         engine.setApprovalForAll(address(this), true);
         engine.safeTransferFrom(
             carol,
             bob,
             testOptionId,
-            optionWrite1,
+            amount1,
             ""
         );
         VM.stopPrank();
 
         VM.startPrank(dave);
-        engine.write(testOptionId, optionWrite2);
+        engine.write(testOptionId, amount2);
         VM.stopPrank();
 
         VM.startPrank(eve);
-        engine.write(testOptionId, optionWrite3);
+        engine.write(testOptionId, amount3);
         engine.setApprovalForAll(address(this), true);
         engine.safeTransferFrom(
             eve,
             alice,
             testOptionId,
-            optionWrite3,
+            amount3,
             ""
         );
         VM.stopPrank();
 
         VM.startPrank(bob);
-        engine.exercise(testOptionId, optionWrite1);
+        engine.exercise(testOptionId, amount1);
         VM.stopPrank();
 
         IOptionSettlementEngine.Claim
             memory claimRecord1 = engine.claim(3);
 
-        assertEq(claimRecord1.amountExercised, optionWrite1);
+        assertEq(claimRecord1.amountExercised, amount1);
 
         VM.startPrank(alice);
-        engine.exercise(testOptionId, optionWrite3);
+        engine.exercise(testOptionId, amount3);
         VM.stopPrank();
 
         IOptionSettlementEngine.Claim
             memory claimRecord2 = engine.claim(3);
 
-        assertEq(claimRecord2.amountExercised, optionWrite3);
+        assertEq(claimRecord2.amountExercised, amount3);
     }
 
     function testFailDuplicateChain() public {

@@ -131,6 +131,35 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     }
 
     /* --------------------------- Pass Tests --------------------------- */
+
+    function testExerciseBeforeExpiry() public {
+        // Alice writes the option for bob to exercise
+        VM.startPrank(alice);
+        engine.write(testOptionId, 1);
+        engine.safeTransferFrom(alice, bob, testOptionId, 1, "");
+        VM.stopPrank();
+        // Fast-forward to right before expiry
+        VM.warp(option.expiryTimestamp - 1);
+        // Bob exercises
+        VM.startPrank(bob);
+        engine.exercise(testOptionId, 1);
+        VM.stopPrank();
+    }
+
+    function testExerciseAtExpiry() public {
+        // Alice writes the option for bob to exercise
+        VM.startPrank(alice);
+        engine.write(testOptionId, 1);
+        engine.safeTransferFrom(alice, bob, testOptionId, 1, "");
+        VM.stopPrank();
+        // Fast-forward to expiry
+        VM.warp(option.expiryTimestamp);
+        // Bob exercises
+        VM.startPrank(bob);
+        engine.exercise(testOptionId, 1);
+        VM.stopPrank();
+    }
+
     // function testPassExerciseSinglePartial() public {
 
     // }
@@ -148,6 +177,21 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     // }
 
     /* --------------------------- Fail Tests --------------------------- */
+
+    function testFailExerciseAfterExpiry() public {
+        // Alice writes the option for bob to exercise
+        VM.startPrank(alice);
+        engine.write(testOptionId, 1);
+        engine.safeTransferFrom(alice, bob, testOptionId, 1, "");
+        VM.stopPrank();
+        // Fast-forward to after expiry
+        VM.warp(option.expiryTimestamp + 1);
+        // Bob exercises
+        VM.startPrank(bob);
+        engine.exercise(testOptionId, 1);
+        VM.stopPrank();
+    }
+
 
     function testFailExercise(uint112 amountWrite, uint112 amountExercise)
         public
@@ -170,7 +214,6 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
         VM.startPrank(carol);
         engine.write(testOptionId, amount1);
-        engine.setApprovalForAll(address(this), true);
         engine.safeTransferFrom(carol, bob, testOptionId, amount1, "");
         VM.stopPrank();
 
@@ -180,7 +223,6 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
         VM.startPrank(eve);
         engine.write(testOptionId, amount3);
-        engine.setApprovalForAll(address(this), true);
         engine.safeTransferFrom(eve, alice, testOptionId, amount3, "");
         VM.stopPrank();
 

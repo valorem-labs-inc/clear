@@ -2,7 +2,8 @@
 pragma solidity 0.8.11;
 
 import "ds-test/test.sol";
-import "forge-std/stdlib.sol";
+import "forge-std/Vm.sol";
+import "forge-std/Test.sol";
 import "./interfaces/IERC20.sol";
 import "../OptionSettlement.sol";
 
@@ -191,7 +192,6 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         engine.exercise(testOptionId, 1);
         VM.stopPrank();
     }
-
 
     function testFailExercise(uint112 amountWrite, uint112 amountExercise)
         public

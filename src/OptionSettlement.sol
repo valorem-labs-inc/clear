@@ -299,7 +299,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             claimRecord = _claim[claimNum];
 
             uint112 amountWritten = claimRecord.amountWritten;
-            if (amountWritten <= amount) {
+            if (amountWritten < amount) {
                 amount -= amountWritten;
                 claimRecord.amountExercised = amountWritten;
                 // We pop the end off and overwrite the old slot

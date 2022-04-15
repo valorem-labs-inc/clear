@@ -335,9 +335,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         Option storage optionRecord = _option[optionId];
 
+        require(
+            optionRecord.expiryTimestamp > block.timestamp,
+            "Option expired"
+        );
         // Require that we have reached the exercise timestamp
         require(
-            optionRecord.exerciseTimestamp <= block.timestamp,
+            optionRecord.exerciseTimestamp < block.timestamp,
             "Too early to exercise"
         );
 

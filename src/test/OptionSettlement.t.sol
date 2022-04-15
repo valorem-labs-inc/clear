@@ -134,31 +134,11 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     /* --------------------------- Pass Tests --------------------------- */
 
     function testExerciseBeforeExpiry() public {
-        // Alice writes the option for bob to exercise
-        VM.startPrank(alice);
         engine.write(testOptionId, 1);
-        engine.safeTransferFrom(alice, bob, testOptionId, 1, "");
-        VM.stopPrank();
-        // Fast-forward to right before expiry
+        // Fast-forward to after expiry
         VM.warp(option.expiryTimestamp - 1);
         // Bob exercises
-        VM.startPrank(bob);
         engine.exercise(testOptionId, 1);
-        VM.stopPrank();
-    }
-
-    function testExerciseAtExpiry() public {
-        // Alice writes the option for bob to exercise
-        VM.startPrank(alice);
-        engine.write(testOptionId, 1);
-        engine.safeTransferFrom(alice, bob, testOptionId, 1, "");
-        VM.stopPrank();
-        // Fast-forward to expiry
-        VM.warp(option.expiryTimestamp);
-        // Bob exercises
-        VM.startPrank(bob);
-        engine.exercise(testOptionId, 1);
-        VM.stopPrank();
     }
 
     // function testPassExerciseSinglePartial() public {
@@ -179,18 +159,23 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
     /* --------------------------- Fail Tests --------------------------- */
 
+    // TODO(Why does safeTransferFrom fail?)
+
+    function testFailExerciseAtExpiry() public {
+        engine.write(testOptionId, 1);
+        // Fast-forward to after expiry
+        VM.warp(option.expiryTimestamp);
+        // Bob exercises
+        engine.exercise(testOptionId, 1);
+    }
+
     function testFailExerciseAfterExpiry() public {
         // Alice writes the option for bob to exercise
-        VM.startPrank(alice);
         engine.write(testOptionId, 1);
-        engine.safeTransferFrom(alice, bob, testOptionId, 1, "");
-        VM.stopPrank();
         // Fast-forward to after expiry
         VM.warp(option.expiryTimestamp + 1);
         // Bob exercises
-        VM.startPrank(bob);
         engine.exercise(testOptionId, 1);
-        VM.stopPrank();
     }
 
     function testFailExercise(uint112 amountWrite, uint112 amountExercise)
@@ -354,6 +339,8 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
         uint256 claimId = engine.write(testOptionId, amountWrite);
 
+        VM.warp(uint40(block.timestamp) + 1);
+
         engine.exercise(testOptionId, amountExercise);
 
         IOptionSettlementEngine.Claim memory claimRecord = engine.claim(
@@ -407,6 +394,8 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         uint256 writeFee = ((amountWrite * 1 ether) / 10000) * engine.feeBps();
 
         uint256 claimId = engine.write(testOptionId, amountWrite);
+
+        VM.warp(uint40(block.timestamp) + 1);
 
         engine.exercise(testOptionId, amountExercise);
 

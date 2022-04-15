@@ -6,19 +6,46 @@ import "./IERC1155Metadata.sol";
 // TODO(The engine is IERC1155Metadata, but the solmate impl is not compatible with interface, re-implement)
 // @author 0xAlcibiades
 interface IOptionSettlementEngine {
+    // The requested token is not found.
     error TokenNotFound(uint256 token);
+
+    // The caller doesn't have permission to access that function.
     error AccessControlViolation(address accessor, address permissioned);
+
+    // This options chain already exists and thus cannot be created.
     error OptionsChainExists(bytes32 hash);
+
+    // The expiry timestamp is less than 24 hours from now.
     error ExpiryTooSoon();
+
+    // The option exercise window is less than 24 hours long.
     error ExerciseWindowTooShort();
+
+    // The assets specified are invalid or duplicate.
     error InvalidAssets();
+
+    // The token specified is not an option.
     error InvalidOption(uint256 token);
+
+    // The token specified is not a claim.
     error InvalidClaim(uint256 token);
+
+    // The optionId specified expired at expiry.
     error ExpiredOption(uint256 optionId, uint40 expiry);
+
+    // This option cannot yet be exercised.
     error ExerciseTooEarly();
+
+    // This option has no claims written against it.
     error NoClaims();
+
+    // This account has no claims.
     error BalanceTooLow();
+
+    // This claimId has already been claimed.
     error AlreadyClaimed();
+
+    // You can't claim before expiry.
     error ClaimTooSoon();
 
     event FeeSwept(

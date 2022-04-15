@@ -160,6 +160,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     /* --------------------------- Fail Tests --------------------------- */
 
     // TODO(Why does safeTransferFrom fail?)
+    // Likely approvals need to be set
 
     function testFailExerciseAtExpiry() public {
         engine.write(testOptionId, 1);

@@ -17,8 +17,6 @@ import "solmate/utils/SafeTransferLib.sol";
    a broad swath of traditional options.
 */
 
-// TODO(Consider converting require strings to errors for gas savings)
-// TODO(Branch later for non harmony VRF support)
 // TODO(DRY code during testing)
 // TODO(Gas Optimize)
 
@@ -69,7 +67,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     function setFeeTo(address newFeeTo) public {
-        require(msg.sender == feeTo, "Must be present fee collector.");
+        if (msg.sender != feeTo) {
+            revert AccessControlViolation(msg.sender, feeTo);
+        }
         feeTo = newFeeTo;
     }
 
@@ -122,7 +122,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         returns (string memory)
     {
         if (tokenType[tokenId] != Type.None) {
-            revert TokenNotFound();
+            revert TokenNotFound(tokenId);
         }
         // TODO(Implement metadata/uri with frontend dev)
         string memory json = Base64.encode(
@@ -142,43 +142,46 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         bytes32 chainKey = keccak256(abi.encode(optionInfo));
 
         // If it does, revert
-        require(hashToOptionToken[chainKey] == 0, "This option chain exists");
+        if (hashToOptionToken[chainKey] != 0) {
+            revert OptionsChainExists(chainKey);
+        }
 
-        // Else, create new options chain
+        // Make sure that expiry is at least 24 hours from now
+        if (optionInfo.expiryTimestamp < (block.timestamp + 86400)) {
+            revert ExpiryTooSoon();
+        }
 
-        require(
-            optionInfo.expiryTimestamp >= (block.timestamp + 86400),
-            "Expiry < 24 hours from now."
-        );
-        require(
-            optionInfo.expiryTimestamp >=
-                (optionInfo.exerciseTimestamp + 86400),
-            "Exercise < 24 hours from exp"
-        );
-        require(
-            optionInfo.exerciseAsset != optionInfo.underlyingAsset,
-            "Underlying == Exercise"
-        );
+        // Ensure the exercise window is at least 24 hours
+        if (
+            optionInfo.expiryTimestamp < (optionInfo.exerciseTimestamp + 86400)
+        ) {
+            revert ExerciseWindowTooShort();
+        }
 
+        // The exercise and underlying assets cant be the same
+        if (optionInfo.exerciseAsset == optionInfo.underlyingAsset) {
+            revert InvalidAssets();
+        }
+
+        // TODO(Implementation for non harmony blockchains)
         // Get random settlement seed from VRF
         optionInfo.settlementSeed = uint160(uint256(vrf()));
 
         // Create option token and increment
         tokenType[nextTokenId] = Type.Option;
 
+        // TODO(Is this check really needed?)
         // Check that both tokens are ERC20 by instantiating them and checking supply
         ERC20 underlyingToken = ERC20(optionInfo.underlyingAsset);
         ERC20 exerciseToken = ERC20(optionInfo.exerciseAsset);
 
         // Check total supplies and ensure the option will be exercisable
-        require(
-            underlyingToken.totalSupply() >= optionInfo.underlyingAmount,
-            "Invalid Supply"
-        );
-        require(
-            exerciseToken.totalSupply() >= optionInfo.exerciseAmount,
-            "Invalid Supply"
-        );
+        if (
+            underlyingToken.totalSupply() < optionInfo.underlyingAmount ||
+            exerciseToken.totalSupply() < optionInfo.exerciseAmount
+        ) {
+            revert InvalidAssets();
+        }
 
         _option[nextTokenId] = optionInfo;
 
@@ -203,14 +206,15 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         external
         returns (uint256 claimId)
     {
-        require(tokenType[optionId] == Type.Option, "Token is not an option");
+        if (tokenType[optionId] != Type.Option) {
+            revert InvalidOption(optionId);
+        }
 
         Option storage optionRecord = _option[optionId];
 
-        require(
-            optionRecord.expiryTimestamp > block.timestamp,
-            "Can't write expired options"
-        );
+        if (optionRecord.expiryTimestamp <= block.timestamp) {
+            revert ExpiredOption(optionId, optionRecord.expiryTimestamp);
+        }
 
         uint256 rxAmount = amount * optionRecord.underlyingAmount;
         uint256 fee = ((rxAmount / 10000) * feeBps);
@@ -264,13 +268,15 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint112 amount,
         uint160 settlementSeed
     ) internal {
-        // Initial storage pointer
-        Claim storage claimRecord;
-
         // Number of claims enqueued for this option
         uint256 claimsLen = unexercisedClaimsByOption[optionId].length;
 
-        require(claimsLen > 0, "No claims to assign.");
+        if (claimsLen == 0) {
+            revert NoClaims();
+        }
+
+        // Initial storage pointer
+        Claim storage claimRecord;
 
         // Counter for randomness
         uint256 i;
@@ -298,13 +304,15 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
             claimRecord = _claim[claimNum];
 
-            uint112 amountWritten = claimRecord.amountWritten;
-            if (amountWritten < amount) {
-                amount -= amountWritten;
-                claimRecord.amountExercised = amountWritten;
+            uint112 amountAvailiable = claimRecord.amountWritten -
+                claimRecord.amountExercised;
+            uint112 amountPresentlyExercised;
+            if (amountAvailiable < amount) {
+                amount -= amountAvailiable;
+                amountPresentlyExercised = amountAvailiable;
                 // We pop the end off and overwrite the old slot
             } else {
-                claimRecord.amountExercised = amount;
+                amountPresentlyExercised = amount;
                 amount = 0;
             }
             newLen = claimsLen - 1;
@@ -317,7 +325,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             } else {
                 unexercisedClaimsByOption[optionId].pop();
             }
-            // TODO(Emit event about assignment?)
+            claimRecord.amountExercised += amountPresentlyExercised;
+            emit ExerciseAssigned(claimNum, optionId, amountPresentlyExercised);
 
             // Increment for the next loop
             settlementSeed = uint160(
@@ -331,19 +340,19 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     function exercise(uint256 optionId, uint112 amount) external {
-        require(tokenType[optionId] == Type.Option, "Token is not an option");
+        if (tokenType[optionId] != Type.Option) {
+            revert InvalidOption(optionId);
+        }
 
         Option storage optionRecord = _option[optionId];
 
-        require(
-            optionRecord.expiryTimestamp > block.timestamp,
-            "Option expired"
-        );
+        if (optionRecord.expiryTimestamp <= block.timestamp) {
+            revert ExpiredOption(optionId, optionRecord.expiryTimestamp);
+        }
         // Require that we have reached the exercise timestamp
-        require(
-            optionRecord.exerciseTimestamp < block.timestamp,
-            "Too early to exercise"
-        );
+        if (optionRecord.exerciseTimestamp >= block.timestamp) {
+            revert ExerciseTooEarly();
+        }
 
         uint256 rxAmount = optionRecord.exerciseAmount * amount;
         uint256 txAmount = optionRecord.underlyingAmount * amount;
@@ -376,22 +385,28 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     function redeem(uint256 claimId) external {
-        require(tokenType[claimId] == Type.Claim, "Token is not an claim");
+        if (tokenType[claimId] != Type.Claim) {
+            revert InvalidClaim(claimId);
+        }
 
         uint256 balance = this.balanceOf(msg.sender, claimId);
-        require(balance == 1, "no claim token");
+
+        if (balance != 1) {
+            revert BalanceTooLow();
+        }
 
         Claim storage claimRecord = _claim[claimId];
 
-        require(!claimRecord.claimed, "Already Claimed");
+        if (claimRecord.claimed) {
+            revert AlreadyClaimed();
+        }
 
         uint256 optionId = claimRecord.option;
         Option storage optionRecord = _option[optionId];
 
-        require(
-            optionRecord.expiryTimestamp <= block.timestamp,
-            "Not expired yet"
-        );
+        if (optionRecord.expiryTimestamp > block.timestamp) {
+            revert ClaimTooSoon();
+        }
 
         uint256 exerciseAmount = optionRecord.exerciseAmount *
             claimRecord.amountExercised;
@@ -435,7 +450,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         returns (Underlying memory underlyingPositions)
     {
         if (tokenType[tokenId] != Type.None) {
-            revert TokenNotFound();
+            revert TokenNotFound(tokenId);
         } else if (tokenType[tokenId] != Type.Option) {
             Option storage optionRecord = _option[tokenId];
             bool expired = (optionRecord.expiryTimestamp > block.timestamp);

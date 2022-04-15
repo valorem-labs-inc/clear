@@ -6,7 +6,20 @@ import "./IERC1155Metadata.sol";
 // TODO(The engine is IERC1155Metadata, but the solmate impl is not compatible with interface, re-implement)
 // @author 0xAlcibiades
 interface IOptionSettlementEngine {
-    error TokenNotFound();
+    error TokenNotFound(uint256 token);
+    error AccessControlViolation(address accessor, address permissioned);
+    error OptionsChainExists(bytes32 hash);
+    error ExpiryTooSoon();
+    error ExerciseWindowTooShort();
+    error InvalidAssets();
+    error InvalidOption(uint256 token);
+    error InvalidClaim(uint256 token);
+    error ExpiredOption(uint256 optionId, uint40 expiry);
+    error ExerciseTooEarly();
+    error NoClaims();
+    error BalanceTooLow();
+    error AlreadyClaimed();
+    error ClaimTooSoon();
 
     event FeeSwept(
         address indexed token,
@@ -51,6 +64,12 @@ interface IOptionSettlementEngine {
         address underlyingAsset,
         uint96 exerciseAmount,
         uint96 underlyingAmount
+    );
+
+    event ExerciseAssigned(
+        uint256 indexed claimId,
+        uint256 indexed optionId,
+        uint112 amountAssigned
     );
 
     // @dev This enumeration is used to determine the type of an ERC1155 subtoken in the engine.

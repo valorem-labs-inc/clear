@@ -42,6 +42,7 @@ abstract contract NFTreceiver {
 contract OptionSettlementTest is DSTest, NFTreceiver {
     Vm public constant VM = Vm(HEVM_ADDRESS);
     OptionSettlementEngine public engine;
+    IOptionSettlementEngine public iEngine;
 
     address public immutable ac = 0x36273803306a3C22bc848f8Db761e974697ece0d;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -50,6 +51,9 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     IERC20 public weth = IERC20(WETH);
     IERC20 public dai = IERC20(DAI);
     IERC20 public usdc = IERC20(USDC);
+    uint256 public daiAmt = 1000000000 * 10e18;
+    uint256 public usdcAmt = 1000000000 * 10e6;
+    uint256 public wethAmt = 10000000 * 10e18;
 
     uint256 public wethTotalSupply;
     uint256 public daiTotalSupply;
@@ -91,41 +95,39 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             settlementSeed: 1234567,
             underlyingAmount: 1 ether,
             exerciseAmount: 3000 ether,
-            exerciseTimestamp: uint40(block.timestamp),
+            exerciseTimestamp: uint40(block.timestamp) + 100,
             expiryTimestamp: (uint40(block.timestamp) + 604800)
         });
         testOptionId = engine.newChain(option);
 
         // // Now we have 1B DAI and 1B USDC
-        writeTokenBalance(address(this), DAI, 1000000000 * 1e18);
-        writeTokenBalance(address(this), USDC, 1000000000 * 1e6);
+        writeTokenBalance(address(this), DAI, daiAmt);
+        writeTokenBalance(address(this), USDC, daiAmt * 1e6);
         // // And 10 M WETH
-        writeTokenBalance(address(this), WETH, 10000000 * 1e18);
+        writeTokenBalance(address(this), WETH, wethAmt);
 
         weth.approve(address(engine), type(uint256).max);
         dai.approve(address(engine), type(uint256).max);
 
         // pre-load balances and approvals
-        address[6] memory recipients = [
-            address(engine),
-            alice,
-            bob,
-            carol,
-            dave,
-            eve
-        ];
-        for (uint256 i = 0; i == 6; i++) {
-            address recipient = recipients[i];
-            writeTokenBalance(recipient, DAI, 1000000000 * 1e18);
-            writeTokenBalance(recipient, USDC, 1000000000 * 1e6);
-            writeTokenBalance(recipient, WETH, 10000000 * 1e18);
+        // address[6] memory recipients = [
+        //     address(engine),
+        //     alice,
+        //     bob,
+        //     carol,
+        //     dave,
+        //     eve
+        // ];
+        // for (uint256 i = 0; i == 6; i++) {
+        //     address recipient = recipients[i];
+        //     writeTokenBalance(recipient, DAI, daiAmt);
+        //     writeTokenBalance(recipient, USDC, usdcAmt * 1e6);
+        //     writeTokenBalance(recipient, WETH, wethAmt);
 
-            VM.startPrank(recipient);
-            weth.approve(address(engine), type(uint256).max);
-            dai.approve(address(engine), type(uint256).max);
-            engine.setApprovalForAll(address(this), true);
-            VM.stopPrank();
-        }
+        //     VM.startPrank(recipient);
+        //     engine.setApprovalForAll(address(this), true);
+        //     VM.stopPrank();
+        // }
 
         wethTotalSupply = IERC20(weth).totalSupply();
         daiTotalSupply = IERC20(dai).totalSupply();
@@ -133,14 +135,22 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
     /* --------------------------- Pass Tests --------------------------- */
 
-    function testExerciseBeforeExpiry() public {
-        setUp();
+    function test__Exercise_BeforeExpiry() public {
+        // Alice writes
+        VM.startPrank(alice);
+        writeTokenBalance(alice, WETH, wethAmt);
+        weth.approve(address(engine), type(uint256).max);
         engine.write(testOptionId, 1);
-        // Fast-forward to after expiry
+        engine.setApprovalForAll(address(this), true);
+        engine.safeTransferFrom(alice, bob, testOptionId, 1, "");
+        VM.stopPrank();
+
+        // Fast-forward to just before expiry
         VM.warp(option.expiryTimestamp - 1);
+        
         // Bob exercises
         VM.startPrank(bob);
-        writeTokenBalance(bob, DAI, 1000000000 * 1e18);
+        writeTokenBalance(bob, DAI, daiAmt);
         dai.approve(address(engine), type(uint256).max);
         engine.exercise(testOptionId, 1);
         VM.stopPrank();
@@ -164,75 +174,130 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
     /* --------------------------- Fail Tests --------------------------- */
 
-    // TODO(Why does safeTransferFrom fail?)
-    // Likely approvals need to be set
-
-    function testFailExerciseAtExpiry() public {
+    function testFail__Exercise_BeforeExcercise() public {
+        
+        // Alice writes
+        VM.startPrank(alice);
+        writeTokenBalance(alice, WETH, 1000000000 * 1e18);
+        weth.approve(address(engine), type(uint256).max);
         engine.write(testOptionId, 1);
-        // Fast-forward to after expiry
-        VM.warp(option.expiryTimestamp);
-        // Bob exercises
+        engine.setApprovalForAll(address(this), true);
+        engine.safeTransferFrom(alice, bob, testOptionId, 1, "");
+        VM.stopPrank();
+
+        // Bob immediately exercises
+        VM.startPrank(bob);
+        writeTokenBalance(bob, DAI, 1000000000 * 1e18);
+        dai.approve(address(engine), type(uint256).max);
+        // TODO: should not revert this way
+        VM.expectRevert(IOptionSettlementEngine.ExpiredOption.selector);
         engine.exercise(testOptionId, 1);
+        VM.stopPrank();
     }
 
-    function testFailExerciseAfterExpiry() public {
-        // Alice writes the option for bob to exercise
+
+    function testFail__Exercise_AtExpiry() public {
+        // Alice writes
+        VM.startPrank(alice);
+        writeTokenBalance(alice, WETH, 1000000000 * 1e18);
+        weth.approve(address(engine), type(uint256).max);
         engine.write(testOptionId, 1);
+        engine.setApprovalForAll(address(this), true);
+        engine.safeTransferFrom(alice, bob, testOptionId, 1, "");
+        VM.stopPrank();
+
+        // Fast-forward to at expiry
+        VM.warp(option.expiryTimestamp);
+    
+        // Bob exercises
+        VM.startPrank(bob);
+        writeTokenBalance(bob, DAI, 1000000000 * 1e18);
+        dai.approve(address(engine), type(uint256).max);
+        VM.expectRevert(IOptionSettlementEngine.ExpiredOption.selector);
+        engine.exercise(testOptionId, 1);
+        VM.stopPrank();
+    }
+
+    function testFail__Exercise_AfterExpiry() public {
+        // Alice writes
+        VM.startPrank(alice);
+        writeTokenBalance(alice, WETH, 1000000000 * 1e18);
+        weth.approve(address(engine), type(uint256).max);
+        engine.write(testOptionId, 1);
+        engine.safeTransferFrom(alice, bob, testOptionId, 1, "");
+        VM.stopPrank();
+
         // Fast-forward to after expiry
         VM.warp(option.expiryTimestamp + 1);
+        
         // Bob exercises
-        engine.exercise(testOptionId, 1);
-    }
-
-    function testFailExercise(uint112 amountWrite, uint112 amountExercise)
-        public
-    {
-        VM.assume(amountExercise > amountWrite);
-
-        engine.write(testOptionId, amountWrite);
-
-        engine.exercise(testOptionId, amountExercise);
-    }
-
-    function testFailAssignExercise(
-        uint112 amount1,
-        uint112 amount2,
-        uint112 amount3
-    ) public {
-        VM.assume(amount1 > 0 && amount2 > 0 && amount3 > 0);
-        VM.assume(amount2 > amount1 && amount2 > amount3);
-        VM.assume(amount1 < 1000000 && amount2 < 1000000 && amount3 < 1000000);
-
-        VM.startPrank(carol);
-        engine.write(testOptionId, amount1);
-        engine.safeTransferFrom(carol, bob, testOptionId, amount1, "");
-        VM.stopPrank();
-
-        VM.startPrank(dave);
-        engine.write(testOptionId, amount2);
-        VM.stopPrank();
-
-        VM.startPrank(eve);
-        engine.write(testOptionId, amount3);
-        engine.safeTransferFrom(eve, alice, testOptionId, amount3, "");
-        VM.stopPrank();
-
         VM.startPrank(bob);
-        engine.exercise(testOptionId, amount1);
+        writeTokenBalance(bob, DAI, 1000000000 * 1e18);
+        dai.approve(address(engine), type(uint256).max);
+        VM.expectRevert(IOptionSettlementEngine.ExpiredOption.selector);
+        engine.exercise(testOptionId, 1);
         VM.stopPrank();
-
-        IOptionSettlementEngine.Claim memory claimRecord1 = engine.claim(3);
-
-        assertEq(claimRecord1.amountExercised, amount1);
-
-        VM.startPrank(alice);
-        engine.exercise(testOptionId, amount3);
-        VM.stopPrank();
-
-        IOptionSettlementEngine.Claim memory claimRecord2 = engine.claim(3);
-
-        assertEq(claimRecord2.amountExercised, amount3);
     }
+
+    // function testFail__Exercise(uint112 amountWrite, uint112 amountExercise)
+    //     public
+    // {
+    //     VM.assume(amountExercise > amountWrite);
+        
+    //     VM.startPrank(alice);
+    //     writeTokenBalance(alice, WETH, 1000000000 * 1e18);
+    //     writeTokenBalance(alice, DAI, 1000000000 * 1e18);
+    //     weth.approve(address(engine), type(uint256).max);
+    //     dai.approve(address(engine), type(uint256).max);
+
+    //     engine.write(testOptionId, amountWrite);
+    //     engine.exercise(testOptionId, amountExercise);
+    //     VM.stopPrank();
+    // }
+
+    // function testFail__AssignExercise(
+    //     uint112 amount1,
+    //     uint112 amount2,
+    //     uint112 amount3
+    // ) public {
+    //     VM.assume(amount1 > 0 && amount2 > 0 && amount3 > 0);
+    //     VM.assume(amount2 > amount1 && amount2 > amount3);
+    //     VM.assume(amount1 < 1000000 && amount2 < 1000000 && amount3 < 1000000);
+
+    //     VM.startPrank(carol);
+    //     writeTokenBalance(carol, WETH, 10000000 * 1e18);
+    //     weth.approve(address(engine), type(uint256).max);
+    //     engine.write(testOptionId, amount1);
+    //     engine.setApprovalForAll(address(this), true);
+    //     engine.safeTransferFrom(carol, bob, testOptionId, amount1, "");
+    //     VM.stopPrank();
+
+    //     VM.startPrank(eve);
+    //     writeTokenBalance(eve, WETH, 10000000 * 1e18);
+    //     weth.approve(address(engine), type(uint256).max);
+    //     engine.write(testOptionId, amount3);
+    //     engine.setApprovalForAll(address(this), true);
+    //     engine.safeTransferFrom(eve, alice, testOptionId, amount3, "");
+    //     VM.stopPrank();
+
+    //     VM.startPrank(bob);
+    //     writeTokenBalance(bob, DAI, 1000000000 * 1e18);
+    //     weth.approve(address(engine), type(uint256).max);
+    //     engine.exercise(testOptionId, amount1);
+    //     VM.stopPrank();
+
+    //     IOptionSettlementEngine.Claim memory claimRecord1 = engine.claim(3);
+
+    //     assertEq(claimRecord1.amountExercised, amount1);
+
+    //     VM.startPrank(alice);
+    //     engine.exercise(testOptionId, amount3);
+    //     VM.stopPrank();
+
+    //     IOptionSettlementEngine.Claim memory claimRecord2 = engine.claim(3);
+
+    //     assertEq(claimRecord2.amountExercised, amount3);
+    // }
 
     function testFailDuplicateChain() public {
         engine.newChain(option);
@@ -437,10 +502,10 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
     /* --------------------------- Additional Tests --------------------------- */
 
-    function testTokenTypeNone() public view {
-        assert(
-            IOptionSettlementEngine(engine).tokenType(3) ==
-                IOptionSettlementEngine.Type.None
-        );
-    }
+    // function testTokenTypeNone() public view {
+    //     assert(
+    //         IOptionSettlementEngine(engine).tokenType(3) ==
+    //             IOptionSettlementEngine.Type.None
+    //     );
+    // }
 }

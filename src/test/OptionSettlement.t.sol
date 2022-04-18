@@ -134,11 +134,16 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     /* --------------------------- Pass Tests --------------------------- */
 
     function testExerciseBeforeExpiry() public {
+        setUp();
         engine.write(testOptionId, 1);
         // Fast-forward to after expiry
         VM.warp(option.expiryTimestamp - 1);
         // Bob exercises
+        VM.startPrank(bob);
+        writeTokenBalance(bob, DAI, 1000000000 * 1e18);
+        dai.approve(address(engine), type(uint256).max);
         engine.exercise(testOptionId, 1);
+        VM.stopPrank();
     }
 
     // function testPassExerciseSinglePartial() public {
@@ -234,7 +239,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     }
 
     /* --------------------------- Fuzz Tests --------------------------- */
-
+/*
     function testFuzzNewChain(
         uint96 underlyingAmount,
         uint96 exerciseAmount,
@@ -425,7 +430,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         if (engine.tokenType(claimId) == IOptionSettlementEngine.Type.Claim)
             assertTrue(true);
     }
-
+*/
     /* --------------------------- URI Tests --------------------------- */
 
     // TODO(URI tests)

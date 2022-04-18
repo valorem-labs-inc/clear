@@ -222,13 +222,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         address underlyingAsset = optionRecord.underlyingAsset;
 
         // Transfer the requisite underlying asset
-        // SafeTransferLib.safeTransferFrom(
-        //     ERC20(underlyingAsset),
-        //     msg.sender,
-        //     address(this),
-        //     (rxAmount + fee)
-        // );
-        ERC20(underlyingAsset).transferFrom(msg.sender, address(this), rxAmount + fee);
+        SafeTransferLib.safeTransferFrom(
+            ERC20(underlyingAsset),
+            msg.sender,
+            address(this),
+            (rxAmount + fee)
+        );
 
         claimId = nextTokenId;
 
@@ -363,20 +362,18 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Transfer in the requisite exercise asset
         SafeTransferLib.safeTransferFrom(
-            ERC20(exerciseAsset),
+            ERC20(optionRecord.exerciseAsset),
             msg.sender,
             address(this),
             (rxAmount + fee)
         );
-        // ERC20(exerciseAsset).transferFrom(msg.sender, address(this), rxAmount + fee);
 
         // Transfer out the underlying
-        // SafeTransferLib.safeTransfer(
-        //     ERC20(optionRecord.underlyingAsset),
-        //     msg.sender,
-        //     txAmount
-        // );
-        ERC20(optionRecord.underlyingAsset).transfer(msg.sender, txAmount);
+        SafeTransferLib.safeTransfer(
+            ERC20(optionRecord.underlyingAsset),
+            msg.sender,
+            txAmount
+        );
 
         assignExercise(optionId, amount, optionRecord.settlementSeed);
 

@@ -92,7 +92,7 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
         option = IOptionSettlementEngine.Option({
             underlyingAsset: WETH,
             exerciseAsset: DAI,
-            settlementSeed: 1234567,
+            settlementSeed: 1234,
             underlyingAmount: 1 ether,
             exerciseAmount: 3000 ether,
             exerciseTimestamp: uint40(block.timestamp) + 100,
@@ -135,6 +135,10 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
     /* --------------------------- Pass Tests --------------------------- */
 
+    function test__Write() public {
+
+    }
+
     function test__Exercise_BeforeExpiry() public {
         // Alice writes
         VM.startPrank(alice);
@@ -173,6 +177,81 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     // }
 
     /* --------------------------- Fail Tests --------------------------- */
+
+    function testFail__newChain_optionsChainExists() public {
+        VM.expectRevert(IOptionSettlementEngine.OptionsChainExists.selector);
+        engine.newChain(option);
+    }
+
+    function testFail__newChain_expiryTooSoon() public {
+        // TODO: this doesn't work
+        IOptionSettlementEngine.Option memory newOption = IOptionSettlementEngine.Option({
+            underlyingAsset: WETH,
+            exerciseAsset: DAI,
+            settlementSeed: 1234,
+            underlyingAmount: 1 ether,
+            exerciseAmount: 3000 ether,
+            exerciseTimestamp: uint40(block.timestamp),
+            expiryTimestamp: (uint40(block.timestamp) + 86399)
+        });
+        VM.expectRevert(IOptionSettlementEngine.ExpiryTooSoon.selector);
+        engine.newChain(newOption);
+    }
+
+    function testFail__newChain_exerciseWindowTooShort() public {
+        // TODO: this doesn't work
+        IOptionSettlementEngine.Option memory newOption = IOptionSettlementEngine.Option({
+            underlyingAsset: WETH,
+            exerciseAsset: DAI,
+            settlementSeed: 1234,
+            underlyingAmount: 1 ether,
+            exerciseAmount: 3000 ether,
+            exerciseTimestamp: uint40(block.timestamp) + 100000,
+            expiryTimestamp: (uint40(block.timestamp) + 186399)
+        });
+        VM.expectRevert(IOptionSettlementEngine.ExerciseWindowTooShort.selector);
+        engine.newChain(newOption);
+    }
+
+    function testFail__newChain_invalidAssets() public {
+        // TODO: this doesn't work
+        IOptionSettlementEngine.Option memory newOption = IOptionSettlementEngine.Option({
+            underlyingAsset: DAI,
+            exerciseAsset: DAI,
+            settlementSeed: 1234,
+            underlyingAmount: 1 ether,
+            exerciseAmount: 3000 ether,
+            exerciseTimestamp: uint40(block.timestamp),
+            expiryTimestamp: (uint40(block.timestamp) + 100000)
+        });
+        VM.expectRevert(IOptionSettlementEngine.InvalidAssets.selector);
+        engine.newChain(newOption);
+    }
+    //
+
+    // TODO: test InvalidAssets()
+
+    function testFail__Write_InvalidOption() public {
+        VM.expectRevert(IOptionSettlementEngine.InvalidOption.selector);
+        engine.write(testOptionId + 1, 1);
+    }
+
+    function testFail__Write_ExpiredOption() public {
+        IOptionSettlementEngine.Option memory newOption = option;
+        newOption.expiryTimestamp = uint40(block.timestamp);
+        VM.expectRevert(IOptionSettlementEngine.ExpiredOption.selector);
+        engine.write(testOptionId + 1, 1);
+    }
+    
+
+    function testFail__assignExercise() public {
+        // Fast-forward to a time the option can be exercised
+        VM.warp(200);
+        // Exercise an option before anyone has written it        
+        VM.expectRevert(IOptionSettlementEngine.NoClaims.selector);
+        engine.exercise(testOptionId, 1);
+    }
+
 
     function testFail__Exercise_BeforeExcercise() public {
         
@@ -298,10 +377,6 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
     //     assertEq(claimRecord2.amountExercised, amount3);
     // }
-
-    function testFailDuplicateChain() public {
-        engine.newChain(option);
-    }
 
     /* --------------------------- Fuzz Tests --------------------------- */
 /*

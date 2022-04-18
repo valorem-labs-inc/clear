@@ -95,8 +95,8 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             settlementSeed: 1234,
             underlyingAmount: 1 ether,
             exerciseAmount: 3000 ether,
-            exerciseTimestamp: uint40(block.timestamp) + 100,
-            expiryTimestamp: (uint40(block.timestamp) + 604800)
+            exerciseTimestamp: uint40(block.timestamp + 100),
+            expiryTimestamp: uint40(block.timestamp + 604800)
         });
         testOptionId = engine.newChain(option);
 
@@ -185,45 +185,32 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
     function testFail__newChain_expiryTooSoon() public {
         // TODO: this doesn't work
-        IOptionSettlementEngine.Option memory newOption = IOptionSettlementEngine.Option({
-            underlyingAsset: WETH,
-            exerciseAsset: DAI,
-            settlementSeed: 1234,
-            underlyingAmount: 1 ether,
-            exerciseAmount: 3000 ether,
-            exerciseTimestamp: uint40(block.timestamp),
-            expiryTimestamp: (uint40(block.timestamp) + 86399)
-        });
+        IOptionSettlementEngine.Option memory newOption = option;
+        // Decrease the exercise timestamp to make option timeframe > 24h
+        newOption.exerciseTimestamp -= 100;
+        // Set expiry to just less than 24h from now
+        newOption.expiryTimestamp = uint40(block.timestamp + 86399);
         VM.expectRevert(IOptionSettlementEngine.ExpiryTooSoon.selector);
         engine.newChain(newOption);
     }
 
     function testFail__newChain_exerciseWindowTooShort() public {
         // TODO: this doesn't work
-        IOptionSettlementEngine.Option memory newOption = IOptionSettlementEngine.Option({
-            underlyingAsset: WETH,
-            exerciseAsset: DAI,
-            settlementSeed: 1234,
-            underlyingAmount: 1 ether,
-            exerciseAmount: 3000 ether,
-            exerciseTimestamp: uint40(block.timestamp) + 100000,
-            expiryTimestamp: (uint40(block.timestamp) + 186399)
-        });
+        IOptionSettlementEngine.Option memory newOption = option;
+        uint256 sometimeInFuture = block.timestamp +100000;
+        // Move exercise time to a future time
+        newOption.exerciseTimestamp = uint40(sometimeInFuture);
+        // Set expiry to < 24h from exercise time
+        newOption.expiryTimestamp = uint40(sometimeInFuture + 86399);
         VM.expectRevert(IOptionSettlementEngine.ExerciseWindowTooShort.selector);
         engine.newChain(newOption);
     }
 
     function testFail__newChain_invalidAssets() public {
         // TODO: this doesn't work
-        IOptionSettlementEngine.Option memory newOption = IOptionSettlementEngine.Option({
-            underlyingAsset: DAI,
-            exerciseAsset: DAI,
-            settlementSeed: 1234,
-            underlyingAmount: 1 ether,
-            exerciseAmount: 3000 ether,
-            exerciseTimestamp: uint40(block.timestamp),
-            expiryTimestamp: (uint40(block.timestamp) + 100000)
-        });
+        IOptionSettlementEngine.Option memory newOption = option;
+        newOption.underlyingAsset = DAI;
+        newOption.exerciseAsset = DAI;
         VM.expectRevert(IOptionSettlementEngine.InvalidAssets.selector);
         engine.newChain(newOption);
     }

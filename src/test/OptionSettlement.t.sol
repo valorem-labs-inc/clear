@@ -135,4 +135,14 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
     function testFeeBps() public {
         assertEq(engine.feeBps(), 5);
     }
+
+    function testFeeTo() public {
+        assertEq(engine.feeTo(), FEE_TO);
+    }
+
+    function testSetFeeTo() public {
+        assertEq(engine.feeTo(), FEE_TO);
+        VM.expectRevert();
+        engine.setFeeTo(ALICE);
+    }
 }

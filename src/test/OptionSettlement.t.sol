@@ -114,7 +114,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             DAVE,
             EVE
         ];
-        for (uint256 i = 0; i == 5; i++) {
+        for (uint256 i = 0; i < 6; i++) {
             address recipient = recipients[i];
             writeTokenBalance(recipient, DAI_A, 1000000000 * 1e18);
             writeTokenBalance(recipient, USDC_A, 1000000000 * 1e6);
@@ -144,8 +144,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function testBalances() public {
-        // TODO(https://github.com/foundry-rs/forge-std/issues/40)
-        writeTokenBalance(ALICE, DAI_A, 1000000000 * 1e18);
         assertEq(DAI.balanceOf(ALICE), 1000000000 * 1e18);
     }
 }

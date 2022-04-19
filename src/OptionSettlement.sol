@@ -361,7 +361,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Transfer in the requisite exercise asset
         SafeTransferLib.safeTransferFrom(
-            ERC20(optionRecord.exerciseAsset),
+            ERC20(exerciseAsset),
             msg.sender,
             address(this),
             (rxAmount + fee)

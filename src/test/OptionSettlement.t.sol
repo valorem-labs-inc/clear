@@ -204,7 +204,35 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.newChain(option);
     }
 
-    function testFail__newChain_invalidAssets() public {
+    // function testFail__newChain_invalidAssets() public {
+    //     IOptionSettlementEngine.Option memory option = IOptionSettlementEngine
+    //         .Option({
+    //             underlyingAsset: WETH_A,
+    //             exerciseAsset: WETH_A,
+    //             settlementSeed: 1234567,
+    //             underlyingAmount: 1 ether,
+    //             exerciseAmount: 3000 ether,
+    //             exerciseTimestamp: testExerciseTimestamp,
+    //             expiryTimestamp: testExpiryTimestamp
+    //         });
+    //     vm.expectRevert(IOptionSettlementEngine.InvalidAssets.selector);
+    //     engine.newChain(option);
+    // }
+
+    // TODO: test InvalidAssets()
+
+    function testFail_assignExercise() public {
+        // Exercise an option before anyone has written it        
+        vm.expectRevert(IOptionSettlementEngine.NoClaims.selector);
+        engine.exercise(testOptionId, 1);
+    }
+
+    function testFail_Write_InvalidOption() public {
+        vm.expectRevert(IOptionSettlementEngine.InvalidOption.selector);
+        engine.write(testOptionId + 1, 1);
+    }
+    
+    function testFail_Exercise_BeforeExcercise() public {
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine
             .Option({
                 underlyingAsset: WETH_A,
@@ -212,10 +240,55 @@ contract OptionSettlementTest is Test, NFTreceiver {
                 settlementSeed: 1234567,
                 underlyingAmount: 1 ether,
                 exerciseAmount: 3000 ether,
-                exerciseTimestamp: testExerciseTimestamp,
-                expiryTimestamp: testExpiryTimestamp
+                exerciseTimestamp: testExerciseTimestamp + 1,
+                expiryTimestamp: testExpiryTimestamp + 1
             });
-        vm.expectRevert(IOptionSettlementEngine.InvalidAssets.selector);
-        engine.newChain(option);
+        uint256 badOptionId = engine.newChain(option);
+
+        // Alice writes
+        vm.startPrank(ALICE);
+        engine.write(badOptionId, 1);
+        engine.safeTransferFrom(ALICE, BOB, badOptionId, 1, "");
+        vm.stopPrank();
+
+        // Bob immediately exercises before exerciseTimestamp
+        vm.startPrank(BOB);
+        vm.expectRevert(IOptionSettlementEngine.ExpiredOption.selector);
+        engine.exercise(badOptionId, 1);
+        vm.stopPrank();
+    }
+
+    function testFail_Exercise_AtExpiry() public {
+        // Alice writes
+        vm.startPrank(ALICE);
+        engine.write(testOptionId, 1);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
+        vm.stopPrank();
+
+        // Fast-forward to at expiry
+        vm.warp(testExpiryTimestamp);
+    
+        // Bob exercises
+        vm.startPrank(BOB);
+        vm.expectRevert(IOptionSettlementEngine.ExpiredOption.selector);
+        engine.exercise(testOptionId, 1);
+        vm.stopPrank();
+    }
+
+    function testFail_Exercise_AfterExpiry() public {
+        // Alice writes
+        vm.startPrank(ALICE);
+        engine.write(testOptionId, 1);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
+        vm.stopPrank();
+
+        // Fast-forward to after expiry
+        vm.warp(testExpiryTimestamp + 1);
+    
+        // Bob exercises
+        vm.startPrank(BOB);
+        vm.expectRevert(IOptionSettlementEngine.ExpiredOption.selector);
+        engine.exercise(testOptionId, 1);
+        vm.stopPrank();
     }
 }

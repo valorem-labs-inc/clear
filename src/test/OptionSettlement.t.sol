@@ -40,8 +40,9 @@ abstract contract NFTreceiver {
     }
 }
 
-contract OptionSettlementTest is DSTest, NFTreceiver {
-    Vm public constant VM = Vm(HEVM_ADDRESS);
+contract OptionSettlementTest is Test, NFTreceiver {
+    using stdStorage for StdStorage;
+
     OptionSettlementEngine public engine;
 
     // Tokens
@@ -66,9 +67,6 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
     // Test option
     uint256 public testOptionId;
-
-    using stdStorage for StdStorage;
-    StdStorage public stdstore;
 
     function writeTokenBalance(
         address who,
@@ -116,19 +114,17 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
             DAVE,
             EVE
         ];
-        for (uint256 i = 0; i == 6; i++) {
+        for (uint256 i = 0; i == 5; i++) {
             address recipient = recipients[i];
             writeTokenBalance(recipient, DAI_A, 1000000000 * 1e18);
             writeTokenBalance(recipient, USDC_A, 1000000000 * 1e6);
             writeTokenBalance(recipient, WETH_A, 10000000 * 1e18);
-
-            VM.startPrank(recipient);
+            vm.startPrank(recipient);
             WETH.approve(address(engine), type(uint256).max);
             DAI.approve(address(engine), type(uint256).max);
             USDC.approve(address(engine), type(uint256).max);
-            // TODO(Why)
             engine.setApprovalForAll(address(this), true);
-            VM.stopPrank();
+            vm.stopPrank();
         }
     }
 
@@ -142,7 +138,14 @@ contract OptionSettlementTest is DSTest, NFTreceiver {
 
     function testSetFeeTo() public {
         assertEq(engine.feeTo(), FEE_TO);
-        VM.expectRevert();
+        // TODO(https://github.com/foundry-rs/foundry/issues/1360)
+        vm.expectRevert();
         engine.setFeeTo(ALICE);
+    }
+
+    function testBalances() public {
+        // TODO(https://github.com/foundry-rs/forge-std/issues/40)
+        writeTokenBalance(ALICE, DAI_A, 1000000000 * 1e18);
+        assertEq(DAI.balanceOf(ALICE), 1000000000 * 1e18);
     }
 }

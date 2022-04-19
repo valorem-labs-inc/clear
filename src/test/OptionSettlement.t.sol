@@ -138,9 +138,13 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function testSetFeeTo() public {
         assertEq(engine.feeTo(), FEE_TO);
-        // TODO(https://github.com/foundry-rs/foundry/issues/1360)
-        vm.expectRevert();
+        vm.startPrank(FEE_TO);
         engine.setFeeTo(ALICE);
+        vm.stopPrank();
+        assertEq(engine.feeTo(), ALICE);
+        // TODO(https://github.com/foundry-rs/foundry/issues/1360)
+        //vm.expectRevert();
+        //engine.setFeeTo(ALICE);
     }
 
     function testBalances() public {

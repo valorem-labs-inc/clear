@@ -67,6 +67,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     // Test option
     uint256 public testOptionId;
+    uint40 public testExerciseTimestamp;
+    uint256 public testDuration = 1 days;
+    uint40 public testExpiryTimestamp;
 
     function writeTokenBalance(
         address who,
@@ -83,6 +86,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function setUp() public {
         engine = new OptionSettlementEngine();
 
+        testExerciseTimestamp = uint40(block.timestamp);
+        testExpiryTimestamp = uint40(block.timestamp + testDuration);
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine
             .Option({
                 underlyingAsset: WETH_A,
@@ -90,8 +95,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
                 settlementSeed: 1234567,
                 underlyingAmount: 1 ether,
                 exerciseAmount: 3000 ether,
-                exerciseTimestamp: uint40(block.timestamp),
-                expiryTimestamp: (uint40(block.timestamp) + 604800)
+                exerciseTimestamp: testExerciseTimestamp,
+                expiryTimestamp: testExpiryTimestamp
             });
         testOptionId = engine.newChain(option);
 
@@ -128,13 +133,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
         }
     }
 
-    function testFeeBps() public {
-        assertEq(engine.feeBps(), 5);
-    }
-
-    function testFeeTo() public {
-        assertEq(engine.feeTo(), FEE_TO);
-    }
+    // **********************************************************************
+    //                            PASS TESTS
+    // **********************************************************************
 
     function testSetFeeTo() public {
         assertEq(engine.feeTo(), FEE_TO);
@@ -146,7 +147,75 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(engine.feeTo(), ALICE);
     }
 
-    function testBalances() public {
-        assertEq(DAI.balanceOf(ALICE), 1000000000 * 1e18);
+    function test_Exercise_BeforeExpiry() public {
+        // Alice writes
+        vm.startPrank(ALICE);
+        engine.write(testOptionId, 1);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
+        vm.stopPrank();
+
+        // Fast-forward to just before expiry
+        vm.warp(testExpiryTimestamp - 1);
+        
+        // Bob exercises
+        vm.startPrank(BOB);
+        engine.exercise(testOptionId, 1);
+        vm.stopPrank();
+    }
+
+    function test_Write_AdditionalAmount() public {
+        IOptionSettlementEngine.Claim memory claim;
+
+        // Alice writes 1
+        vm.startPrank(ALICE);
+        uint256 claimId1 = engine.write(testOptionId, 1);
+        // Then writes another
+        uint256 claimId2 = engine.write(testOptionId, 1);
+        vm.stopPrank();
+
+        claim = engine.claim(claimId1);
+        assertEq(claim.option, testOptionId);
+        assertEq(claim.amountWritten, 1);
+        assertEq(claim.amountExercised, 0);
+        if (claim.claimed == false) assertTrue(true);
+        
+        claim = engine.claim(claimId2);
+        assertEq(claim.option, testOptionId);
+        assertEq(claim.amountWritten, 1);
+        assertTrue(!claim.claimed);    
+    }
+
+
+    // **********************************************************************
+    //                            FAIL TESTS
+    // **********************************************************************
+   function testFail_newChain_optionsChainExists() public {
+        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine
+            .Option({
+                underlyingAsset: WETH_A,
+                exerciseAsset: DAI_A,
+                settlementSeed: 1234567,
+                underlyingAmount: 1 ether,
+                exerciseAmount: 3000 ether,
+                exerciseTimestamp: testExerciseTimestamp,
+                expiryTimestamp: testExpiryTimestamp
+            });
+        vm.expectRevert(IOptionSettlementEngine.OptionsChainExists.selector);
+        engine.newChain(option);
+    }
+
+    function testFail__newChain_invalidAssets() public {
+        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine
+            .Option({
+                underlyingAsset: WETH_A,
+                exerciseAsset: WETH_A,
+                settlementSeed: 1234567,
+                underlyingAmount: 1 ether,
+                exerciseAmount: 3000 ether,
+                exerciseTimestamp: testExerciseTimestamp,
+                expiryTimestamp: testExpiryTimestamp
+            });
+        vm.expectRevert(IOptionSettlementEngine.InvalidAssets.selector);
+        engine.newChain(option);
     }
 }

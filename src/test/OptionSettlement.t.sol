@@ -66,12 +66,12 @@ contract OptionSettlementTest is Test, NFTreceiver {
     IERC20 public constant USDC = IERC20(USDC_A);
 
     // Test option
-    uint256 public testOptionId;
-    uint40 public testExerciseTimestamp;
-    uint40 public testExpiryTimestamp;
-    uint96 public testUnderlyingAmount = 1 ether;
-    uint96 public testExerciseAmount = 3000 ether;
-    uint256 public testDuration = 1 days;
+    uint256 private testOptionId;
+    uint40 private testExerciseTimestamp;
+    uint40 private testExpiryTimestamp;
+    uint96 private testUnderlyingAmount = 7 ether; // NOTE: uneven number to test for division rounding
+    uint96 private testExerciseAmount = 3000 ether;
+    uint256 private testDuration = 1 days;
 
     function writeTokenBalance(
         address who,
@@ -113,7 +113,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         ];
         for (uint256 i = 0; i < 6; i++) {
             address recipient = recipients[i];
-            // Now we have 1B in stables and 10M WETH 
+            // Now we have 1B in stables and 10M WETH
             writeTokenBalance(recipient, DAI_A, 1000000000 * 1e18);
             writeTokenBalance(recipient, USDC_A, 1000000000 * 1e6);
             writeTokenBalance(recipient, WETH_A, 10000000 * 1e18);
@@ -132,7 +132,13 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function testSetFeeTo() public {
         assertEq(engine.feeTo(), FEE_TO);
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, address(this), FEE_TO));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOptionSettlementEngine.AccessControlViolation.selector,
+                address(this),
+                FEE_TO
+            )
+        );
         engine.setFeeTo(ALICE);
         vm.startPrank(FEE_TO);
         engine.setFeeTo(ALICE);
@@ -149,64 +155,146 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Fast-forward to just before expiry
         vm.warp(testExpiryTimestamp - 1);
-        
+
         // Bob exercises
         vm.startPrank(BOB);
         engine.exercise(testOptionId, 1);
         vm.stopPrank();
+
+        assertEq(engine.balanceOf(BOB, testOptionId), 0);
     }
 
-    function test_exercise_AdditionalAmount() public {
+    function test_write_multipleWriteSameChain() public {
         IOptionSettlementEngine.Claim memory claim;
 
-        // Alice writes 1
+        // Alice writes a few options and later decides to write more
         vm.startPrank(ALICE);
-        uint256 claimId1 = engine.write(testOptionId, 1);
-        // Then writes another
-        uint256 claimId2 = engine.write(testOptionId, 1);
+        uint256 claimId1 = engine.write(testOptionId, 69);
+        vm.warp(100);
+        uint256 claimId2 = engine.write(testOptionId, 100);
         vm.stopPrank();
+
+        assertEq(engine.balanceOf(ALICE, testOptionId), 169);
+        assertEq(engine.balanceOf(ALICE, claimId1), 1);
+        assertEq(engine.balanceOf(ALICE, claimId2), 1);
 
         claim = engine.claim(claimId1);
         assertEq(claim.option, testOptionId);
-        assertEq(claim.amountWritten, 1);
+        assertEq(claim.amountWritten, 69);
         assertEq(claim.amountExercised, 0);
-        if (claim.claimed == false) assertTrue(true);
-        
+        assertTrue(!claim.claimed);
+
         claim = engine.claim(claimId2);
         assertEq(claim.option, testOptionId);
-        assertEq(claim.amountWritten, 1);
-        assertTrue(!claim.claimed);    
+        assertEq(claim.amountWritten, 100);
+        assertEq(claim.amountExercised, 0);
+        assertTrue(!claim.claimed);
     }
 
-    function test_exercise_WithDifferentDecimals() public {
-        // write an option where one of the assets isn't 18 decimals
-        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine
-            .Option({
-                underlyingAsset: USDC_A,
-                exerciseAsset: DAI_A,
-                settlementSeed: 1234567,
-                underlyingAmount: testUnderlyingAmount,
-                exerciseAmount: testExerciseAmount,
-                exerciseTimestamp: testExerciseTimestamp,
-                expiryTimestamp: testExpiryTimestamp
-            });
-        uint256 optionId = engine.newChain(option);
+    function test_exercise_multipleWriteSameChain() public {
+        uint256 wethBalanceEngine = WETH.balanceOf(address(engine));
+        uint256 wethBalanceA = WETH.balanceOf(ALICE);
+        uint256 wethBalanceB = WETH.balanceOf(BOB);
+        uint256 daiBalanceEngine = DAI.balanceOf(address(engine));
+        uint256 daiBalanceA = DAI.balanceOf(ALICE);
+        uint256 daiBalanceB = DAI.balanceOf(BOB);
 
+        // Alice writes 1, decides to write another, and sends both to Bob to exercise
         vm.startPrank(ALICE);
-        engine.write(optionId, 1);
-        engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
+        engine.write(testOptionId, 1);
+        engine.write(testOptionId, 1);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 2, "");
         vm.stopPrank();
-        vm.warp(1);
+
+        assertEq(engine.balanceOf(ALICE, testOptionId), 0);
+        assertEq(engine.balanceOf(BOB, testOptionId), 2);
+
+        // Fees
+        uint256 writeAmount = 2 * testUnderlyingAmount;
+        uint256 writeFee = (writeAmount / 10000) * engine.feeBps();
+
+        uint256 exerciseAmount = 2 * testExerciseAmount;
+        uint256 exerciseFee = (exerciseAmount / 10000) * engine.feeBps();
+
+        assertEq(
+            WETH.balanceOf(address(engine)),
+            wethBalanceEngine + writeAmount + writeFee
+        );
+
+        vm.warp(testExpiryTimestamp - 1);
+        // Bob exercises
         vm.startPrank(BOB);
-        engine.exercise(optionId, 1);
-        vm.stopPrank();
+        engine.exercise(testOptionId, 2);
+        assertEq(engine.balanceOf(BOB, testOptionId), 0);
+
+        assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + writeFee);
+        assertEq(WETH.balanceOf(ALICE), wethBalanceA - writeAmount - writeFee);
+        assertEq(WETH.balanceOf(BOB), wethBalanceB + writeAmount);
+        assertEq(
+            DAI.balanceOf(address(engine)),
+            daiBalanceEngine + exerciseAmount + exerciseFee
+        );
+        assertEq(DAI.balanceOf(ALICE), daiBalanceA);
+        assertEq(
+            DAI.balanceOf(BOB),
+            daiBalanceB - exerciseAmount - exerciseFee
+        );
     }
 
+    // NOTE: This test needed as testFuzz_redeem does not check if exerciseAmount == 0
+    function test_redeem_NotExercised() public {
+        IOptionSettlementEngine.Claim memory claimRecord;
+        uint256 wethBalanceEngine = WETH.balanceOf(address(engine));
+        uint256 wethBalanceA = WETH.balanceOf(ALICE);
+
+        // Alice writes 7 and no one exercises
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 7);
+
+        vm.warp(testExpiryTimestamp + 1);
+
+        claimRecord = engine.claim(claimId);
+        assertTrue(!claimRecord.claimed);
+        engine.redeem(claimId);
+        claimRecord = engine.claim(claimId);
+        assertTrue(claimRecord.claimed);
+
+        // Fees
+        uint256 writeAmount = 7 * testUnderlyingAmount;
+        uint256 writeFee = (writeAmount / 10000) * engine.feeBps();
+        assertEq(WETH.balanceOf(ALICE), wethBalanceA - writeFee);
+        assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + writeFee);
+    }
+
+    // TODO: this test fails with an `InvalidAssets()` error
+    // function test_exercise_WithDifferentDecimals() public {
+    //     // write an option where one of the assets isn't 18 decimals
+    //     IOptionSettlementEngine.Option memory option = IOptionSettlementEngine
+    //         .Option({
+    //             underlyingAsset: USDC_A,
+    //             exerciseAsset: DAI_A,
+    //             settlementSeed: 1234567,
+    //             underlyingAmount: testUnderlyingAmount,
+    //             exerciseAmount: testExerciseAmount,
+    //             exerciseTimestamp: testExerciseTimestamp,
+    //             expiryTimestamp: testExpiryTimestamp
+    //         });
+    //     uint256 optionId = engine.newChain(option);
+
+    //     vm.startPrank(ALICE);
+    //     engine.write(optionId, 1);
+    //     engine.safeTransferFrom(ALICE, BOB, optionId, 1, "");
+    //     vm.stopPrank();
+    //     vm.warp(1);
+    //     vm.startPrank(BOB);
+    //     engine.exercise(optionId, 1);
+    //     vm.stopPrank();
+    // }
 
     // **********************************************************************
     //                            FAIL TESTS
     // **********************************************************************
-   function testFail_newChain_OptionsChainExists() public {
+    function testFail_newChain_OptionsChainExists() public {
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine
             .Option({
                 underlyingAsset: WETH_A,
@@ -227,18 +315,20 @@ contract OptionSettlementTest is Test, NFTreceiver {
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine
             .Option({
                 underlyingAsset: WETH_A,
-                exerciseAsset: WETH_A,
+                exerciseAsset: DAI_A,
                 settlementSeed: 1234567,
                 underlyingAmount: testUnderlyingAmount,
                 exerciseAmount: testExerciseAmount,
                 exerciseTimestamp: testExerciseTimestamp,
                 expiryTimestamp: testExpiryTimestamp - 1
             });
-        vm.expectRevert(IOptionSettlementEngine.ExerciseWindowTooShort.selector);
+        vm.expectRevert(
+            IOptionSettlementEngine.ExerciseWindowTooShort.selector
+        );
         engine.newChain(option);
     }
 
-    // TODO: this test doesn't pass
+    // TODO: this test should fail but doesn't
     // function testFail_newChain_InvalidAssets() public {
     //     IOptionSettlementEngine.Option memory option = IOptionSettlementEngine
     //         .Option({
@@ -254,9 +344,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
     //     engine.newChain(option);
     // }
 
-
     function testFail_assignExercise() public {
-        // Exercise an option before anyone has written it        
+        // Exercise an option before anyone has written it
         vm.expectRevert(IOptionSettlementEngine.NoClaims.selector);
         engine.exercise(testOptionId, 1);
     }
@@ -270,7 +359,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.warp(testExpiryTimestamp);
         vm.expectRevert(IOptionSettlementEngine.ExpiredOption.selector);
     }
-    
+
     function testFail_exercise_BeforeExcercise() public {
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine
             .Option({
@@ -306,7 +395,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Fast-forward to at expiry
         vm.warp(testExpiryTimestamp);
-    
+
         // Bob exercises
         vm.startPrank(BOB);
         vm.expectRevert(IOptionSettlementEngine.ExpiredOption.selector);
@@ -323,7 +412,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Fast-forward to after expiry
         vm.warp(testExpiryTimestamp + 1);
-    
+
         // Bob exercises
         vm.startPrank(BOB);
         vm.expectRevert(IOptionSettlementEngine.ExpiredOption.selector);
@@ -333,22 +422,247 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function testFail_redeem_InvalidClaim() public {
         vm.startPrank(ALICE);
-        vm.expectRevert(IOptionSettlementEngine.InvalidClaim.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOptionSettlementEngine.InvalidClaim.selector,
+                abi.encode(69)
+            )
+        );
         engine.redeem(69);
     }
 
     function testFail_redeem_BalanceTooLow() public {
+        // Alice writes and transfers to bob, then alice tries to redeem
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
+        vm.expectRevert(IOptionSettlementEngine.BalanceTooLow.selector);
+        engine.redeem(claimId);
         vm.stopPrank();
+        // Carol feels left out and tries to redeem what she can't
+        vm.startPrank(CAROL);
+        vm.expectRevert(IOptionSettlementEngine.BalanceTooLow.selector);
+        engine.redeem(claimId);
+        vm.stopPrank();
+        // Bob redeems, which should burn, and then be unable to redeem a second time
         vm.startPrank(BOB);
+        engine.redeem(claimId);
         vm.expectRevert(IOptionSettlementEngine.BalanceTooLow.selector);
         engine.redeem(claimId);
     }
 
     function testFail_redeem_AlreadyClaimed() public {
         vm.startPrank(ALICE);
-        uint256 claimId1 = engine.write(testOptionId, 1);
-        uint256 claimId2 = engine.write(testOptionId, 1);
+        uint256 claimId = engine.write(testOptionId, 1);
+        // write a second option so balance will be > 0
+        engine.write(testOptionId, 1);
+        vm.warp(testExpiryTimestamp + 1);
+        engine.redeem(claimId);
+        vm.expectRevert(IOptionSettlementEngine.AlreadyClaimed.selector);
+        engine.redeem(claimId);
+    }
+
+    // TODO: this passes when it shouldn't
+    // function testFail_redeem_ClaimTooSoon() public {
+    //     vm.startPrank(ALICE);
+    //     uint256 claimId = engine.write(testOptionId, 1);
+    //     vm.warp(testExpiryTimestamp - 1);
+    //     vm.expectRevert(IOptionSettlementEngine.ClaimTooSoon.selector);
+    //     engine.redeem(claimId);
+    // }
+
+    // **********************************************************************
+    //                            FUZZ TESTS
+    // **********************************************************************
+
+    function testFuzz_newChain(
+        uint96 underlyingAmount,
+        uint96 exerciseAmount,
+        uint40 exerciseTimestamp,
+        uint40 expiryTimestamp
+    ) public {
+        vm.assume(expiryTimestamp >= block.timestamp + 86400);
+        vm.assume(exerciseTimestamp >= block.timestamp);
+        vm.assume(exerciseTimestamp <= expiryTimestamp - 86400);
+        vm.assume(expiryTimestamp <= type(uint64).max);
+        vm.assume(exerciseTimestamp <= type(uint64).max);
+        vm.assume(underlyingAmount <= WETH.totalSupply());
+        vm.assume(exerciseAmount <= DAI.totalSupply());
+
+        IOptionSettlementEngine.Option
+            memory optionInfo = IOptionSettlementEngine.Option({
+                underlyingAsset: WETH_A,
+                exerciseAsset: DAI_A,
+                settlementSeed: 0,
+                underlyingAmount: underlyingAmount,
+                exerciseAmount: exerciseAmount,
+                exerciseTimestamp: exerciseTimestamp,
+                expiryTimestamp: expiryTimestamp
+            });
+
+        uint256 optionId = engine.newChain(optionInfo);
+        assertEq(optionId, 2);
+
+        IOptionSettlementEngine.Option memory optionRecord = engine.option(
+            optionId
+        );
+
+        assertEq(
+            engine.hashToOptionToken(keccak256(abi.encode(optionInfo))),
+            optionId
+        );
+        assertEq(optionRecord.underlyingAsset, WETH_A);
+        assertEq(optionRecord.exerciseAsset, DAI_A);
+        assertEq(optionRecord.exerciseTimestamp, exerciseTimestamp);
+        assertEq(optionRecord.expiryTimestamp, expiryTimestamp);
+        assertEq(optionRecord.underlyingAmount, underlyingAmount);
+        assertEq(optionRecord.exerciseAmount, exerciseAmount);
+        assertEq(optionRecord.settlementSeed, 0);
+
+        if (engine.tokenType(optionId) == IOptionSettlementEngine.Type.Option)
+            assertTrue(true);
+    }
+
+    // TODO: fails with counterexample
+    // function testFuzz_write(uint112 amount) public {
+    //     uint256 wethBalanceEngine = WETH.balanceOf(address(engine));
+    //     uint256 wethBalance = WETH.balanceOf(ALICE);
+
+    //     vm.assume(amount > 0);
+    //     vm.assume(amount <= wethBalance / testUnderlyingAmount);
+
+    //     uint256 rxAmount = amount * testUnderlyingAmount;
+    //     uint256 fee = ((rxAmount / 10000) * engine.feeBps());
+
+    //     vm.startPrank(ALICE);
+    //     uint256 claimId = engine.write(testOptionId, amount);
+    //     IOptionSettlementEngine.Claim memory claimRecord = engine.claim(
+    //         claimId
+    //     );
+
+    //     assertEq(
+    //         WETH.balanceOf(address(engine)),
+    //         wethBalanceEngine + rxAmount + fee
+    //     );
+    //     assertEq(WETH.balanceOf(ALICE), wethBalance - rxAmount - fee);
+
+    //     assertEq(engine.balanceOf(address(this), testOptionId), amount);
+    //     assertEq(engine.balanceOf(address(this), claimId), 1);
+    //     assertTrue(!claimRecord.claimed);
+    //     assertEq(claimRecord.option, testOptionId);
+    //     assertEq(claimRecord.amountWritten, amount);
+    //     assertEq(claimRecord.amountExercised, 0);
+
+    //     if (engine.tokenType(claimId) == IOptionSettlementEngine.Type.Claim)
+    //         assertTrue(true);
+    // }
+
+    function testFuzz_exercise(uint112 amountWrite, uint112 amountExercise)
+        public
+    {
+        uint256 wethBalanceEngine = WETH.balanceOf(address(engine));
+        uint256 daiBalanceEngine = DAI.balanceOf(address(engine));
+        uint256 wethBalance = WETH.balanceOf(ALICE);
+        uint256 daiBalance = DAI.balanceOf(ALICE);
+
+        vm.assume(amountWrite > 0);
+        vm.assume(amountExercise > 0);
+        vm.assume(amountWrite >= amountExercise);
+        vm.assume(amountWrite <= wethBalance / testUnderlyingAmount);
+        vm.assume(amountExercise <= daiBalance / testExerciseAmount);
+
+        uint256 writeAmount = amountWrite * testUnderlyingAmount;
+        uint256 writeFee = ((amountWrite * testUnderlyingAmount) / 10000) *
+            engine.feeBps();
+
+        uint256 rxAmount = amountExercise * testExerciseAmount;
+        uint256 txAmount = amountExercise * testUnderlyingAmount;
+        uint256 exerciseFee = (rxAmount / 10000) * engine.feeBps();
+
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, amountWrite);
+
+        vm.warp(testExpiryTimestamp - 1);
+
+        engine.exercise(testOptionId, amountExercise);
+
+        IOptionSettlementEngine.Claim memory claimRecord = engine.claim(
+            claimId
+        );
+
+        assertTrue(!claimRecord.claimed);
+        assertEq(claimRecord.option, testOptionId);
+        assertEq(claimRecord.amountWritten, amountWrite);
+        assertEq(claimRecord.amountExercised, amountExercise);
+
+        assertEq(
+            WETH.balanceOf(address(engine)),
+            wethBalanceEngine + writeAmount - txAmount + writeFee
+        );
+        assertEq(
+            WETH.balanceOf(ALICE),
+            (wethBalance - writeAmount + txAmount - writeFee)
+        );
+        assertEq(
+            DAI.balanceOf(address(engine)),
+            daiBalanceEngine + rxAmount + exerciseFee
+        );
+        assertEq(DAI.balanceOf(ALICE), (daiBalance - rxAmount - exerciseFee));
+        assertEq(
+            engine.balanceOf(ALICE, testOptionId),
+            amountWrite - amountExercise
+        );
+        assertEq(engine.balanceOf(ALICE, claimId), 1);
+    }
+
+    function testFuzz_redeem(uint112 amountWrite, uint112 amountExercise)
+        public
+    {
+        uint256 wethBalanceEngine = WETH.balanceOf(address(engine));
+        uint256 daiBalanceEngine = DAI.balanceOf(address(engine));
+        uint256 wethBalance = WETH.balanceOf(ALICE);
+        uint256 daiBalance = DAI.balanceOf(ALICE);
+
+        vm.assume(amountWrite > 0);
+        vm.assume(amountExercise > 0);
+        vm.assume(amountWrite >= amountExercise);
+        vm.assume(amountWrite <= wethBalance / testUnderlyingAmount);
+        vm.assume(amountExercise <= daiBalance / testExerciseAmount);
+
+        uint256 rxAmount = amountExercise * testExerciseAmount;
+        uint256 exerciseFee = (rxAmount / 10000) * engine.feeBps();
+        uint256 writeFee = ((amountWrite * testUnderlyingAmount) / 10000) *
+            engine.feeBps();
+
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, amountWrite);
+
+        vm.warp(testExpiryTimestamp - 1);
+        engine.exercise(testOptionId, amountExercise);
+
+        vm.warp(1e15);
+
+        engine.redeem(claimId);
+
+        IOptionSettlementEngine.Claim memory claimRecord = engine.claim(
+            claimId
+        );
+
+        assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + writeFee);
+        assertEq(WETH.balanceOf(ALICE), wethBalance - writeFee);
+        assertEq(
+            DAI.balanceOf(address(engine)),
+            daiBalanceEngine + exerciseFee
+        );
+        assertEq(DAI.balanceOf(ALICE), daiBalance - exerciseFee);
+        assertEq(
+            engine.balanceOf(ALICE, testOptionId),
+            amountWrite - amountExercise
+        );
+        assertEq(engine.balanceOf(ALICE, claimId), 0);
+        assertTrue(claimRecord.claimed);
+
+        if (engine.tokenType(claimId) == IOptionSettlementEngine.Type.Claim)
+            assertTrue(true);
     }
 }

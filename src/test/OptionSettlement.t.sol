@@ -303,8 +303,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.newChain(option);
     }
 
-    // TODO: this test should fail but doesn't
-    function testFailNewChainInvalidAssets() public {
+    function testNewChainInvalidAssets() public {
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine
             .Option({
                 underlyingAsset: DAI_A,
@@ -437,11 +436,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.redeem(claimId);
     }
 
-    // TODO: this test should fail but doesn't
-    function testFailRedeemClaimTooSoon() public {
+    function testRedeemClaimTooSoon() public {
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
-        vm.warp(testExpiryTimestamp - 1);
+        vm.warp(testExerciseTimestamp - 1);
         vm.expectRevert(IOptionSettlementEngine.ClaimTooSoon.selector);
         engine.redeem(claimId);
     }

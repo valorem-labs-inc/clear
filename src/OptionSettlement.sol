@@ -158,7 +158,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert ExerciseWindowTooShort();
         }
 
-        // The exercise and underlying assets cant be the same
+        // The exercise and underlying assets can't be the same
         if (optionInfo.exerciseAsset == optionInfo.underlyingAsset) {
             revert InvalidAssets();
         }

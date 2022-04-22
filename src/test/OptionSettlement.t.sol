@@ -102,7 +102,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // pre-load balances and approvals
         address[4] memory recipients = [address(engine), ALICE, BOB, CAROL];
-        for (uint256 i = 0; i < 6; i++) {
+        for (uint256 i = 0; i < 4; i++) {
             address recipient = recipients[i];
             // Now we have 1B in stables and 10M WETH
             writeTokenBalance(recipient, DAI_A, 1000000000 * 1e18);

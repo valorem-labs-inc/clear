@@ -24,7 +24,7 @@ interface IOptionSettlementEngine {
     error ExerciseWindowTooShort();
 
     // The assets specified are invalid or duplicate.
-    error InvalidAssets();
+    error InvalidAssets(address asset1, address asset2);
 
     // The token specified is not an option.
     error InvalidOption(uint256 token);

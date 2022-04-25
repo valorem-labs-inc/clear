@@ -160,7 +160,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // The exercise and underlying assets can't be the same
         if (optionInfo.exerciseAsset == optionInfo.underlyingAsset) {
-            revert InvalidAssets();
+            revert InvalidAssets(
+                optionInfo.exerciseAsset,
+                optionInfo.underlyingAsset
+            );
         }
 
         // TODO(Implementation for non harmony blockchains)
@@ -180,7 +183,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             underlyingToken.totalSupply() < optionInfo.underlyingAmount ||
             exerciseToken.totalSupply() < optionInfo.exerciseAmount
         ) {
-            revert InvalidAssets();
+            revert InvalidAssets(optionInfo.underlyingAsset, optionInfo.exerciseAsset);
         }
 
         _option[nextTokenId] = optionInfo;

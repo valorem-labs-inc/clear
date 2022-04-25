@@ -183,7 +183,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             underlyingToken.totalSupply() < optionInfo.underlyingAmount ||
             exerciseToken.totalSupply() < optionInfo.exerciseAmount
         ) {
-            revert InvalidAssets(optionInfo.underlyingAsset, optionInfo.exerciseAsset);
+            revert InvalidAssets(
+                optionInfo.underlyingAsset,
+                optionInfo.exerciseAsset
+            );
         }
 
         _option[nextTokenId] = optionInfo;

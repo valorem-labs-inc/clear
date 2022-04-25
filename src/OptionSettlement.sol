@@ -101,19 +101,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
     }
 
-    // https://docs.harmony.one/home/developers/tools/harmony-vrf
-    function vrf() internal view returns (bytes32 result) {
-        uint256[1] memory bn;
-        bn[0] = block.number;
-        assembly {
-            let memPtr := mload(0x40)
-            if iszero(staticcall(not(0), 0xff, bn, 0x20, memPtr, 0x20)) {
-                invalid()
-            }
-            result := mload(memPtr)
-        }
-    }
-
     function uri(uint256 tokenId)
         public
         view
@@ -166,9 +153,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             );
         }
 
-        // TODO(Implementation for non harmony blockchains)
-        // Get random settlement seed from VRF
-        optionInfo.settlementSeed = uint160(uint256(vrf()));
+        // Use the chainKey to seed entropy
+        optionInfo.settlementSeed = uint160(uint256(chainKey));
 
         // Create option token and increment
         tokenType[nextTokenId] = Type.Option;

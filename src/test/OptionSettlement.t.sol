@@ -496,7 +496,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(optionRecord.expiryTimestamp, expiryTimestamp);
         assertEq(optionRecord.underlyingAmount, underlyingAmount);
         assertEq(optionRecord.exerciseAmount, exerciseAmount);
-        assertEq(optionRecord.settlementSeed, 0);
 
         if (engine.tokenType(optionId) == IOptionSettlementEngine.Type.Option)
             assertTrue(true);

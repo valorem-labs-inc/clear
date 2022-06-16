@@ -198,7 +198,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         vm.warp(testExpiryTimestamp - 1);
         // Bob exercises
-        vm.startPrank(BOB);
+        vm.prank(BOB);
         engine.exercise(testOptionId, 2);
         assertEq(engine.balanceOf(BOB, testOptionId), 0);
 
@@ -214,6 +214,27 @@ contract OptionSettlementTest is Test, NFTreceiver {
             DAI.balanceOf(BOB),
             daiBalanceB - exerciseAmount - exerciseFee
         );
+    }
+
+    function testExerciseIncompleteExercise() public {
+        // Alice writes
+        vm.startPrank(ALICE);
+        engine.write(testOptionId, 100);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 100, "");
+        vm.stopPrank();
+
+        // Fast-forward to just before expiry
+        vm.warp(testExpiryTimestamp - 1);
+
+        // Bob exercises
+        vm.startPrank(BOB);
+        engine.exercise(testOptionId, 50);
+
+        // Bob exercises again
+        engine.exercise(testOptionId, 50);
+        vm.stopPrank();
+
+        assertEq(engine.balanceOf(BOB, testOptionId), 0);
     }
 
     // NOTE: This test needed as testFuzz_redeem does not check if exerciseAmount == 0

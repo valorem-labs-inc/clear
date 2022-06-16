@@ -303,20 +303,20 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 amount -= amountAvailiable;
                 amountPresentlyExercised = amountAvailiable;
                 // We pop the end off and overwrite the old slot
+
+                newLen = claimsLen - 1;
+                unexercisedClaimsByOption[optionId].pop();
+                if (newLen > 0) {
+                    overwrite = unexercisedClaimsByOption[optionId][newLen];
+                    // Would be nice if I could pop onto the stack here
+                    claimsLen = newLen;
+                    unexercisedClaimsByOption[optionId][lastIndex] = overwrite;
+                }
             } else {
                 amountPresentlyExercised = amount;
                 amount = 0;
             }
-            newLen = claimsLen - 1;
-            if (newLen > 0) {
-                overwrite = unexercisedClaimsByOption[optionId][newLen];
-                // Would be nice if I could pop onto the stack here
-                unexercisedClaimsByOption[optionId].pop();
-                claimsLen = newLen;
-                unexercisedClaimsByOption[optionId][lastIndex] = overwrite;
-            } else {
-                unexercisedClaimsByOption[optionId].pop();
-            }
+
             claimRecord.amountExercised += amountPresentlyExercised;
             emit ExerciseAssigned(claimNum, optionId, amountPresentlyExercised);
 

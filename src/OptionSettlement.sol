@@ -441,9 +441,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         view
         returns (Underlying memory underlyingPositions)
     {
-        if (tokenType[tokenId] != Type.None) {
+        if (tokenType[tokenId] == Type.None) {
             revert TokenNotFound(tokenId);
-        } else if (tokenType[tokenId] != Type.Option) {
+        } else if (tokenType[tokenId] == Type.Option) {
             Option storage optionRecord = _option[tokenId];
             bool expired = (optionRecord.expiryTimestamp > block.timestamp);
             underlyingPositions = Underlying({

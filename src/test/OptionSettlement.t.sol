@@ -287,6 +287,22 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.stopPrank();
     }
 
+    function testUnderlyingWhenNotExercised() public {
+        // Alice writes 7 and no one exercises
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 7);
+
+        vm.warp(testExpiryTimestamp + 1);
+
+        IOptionSettlementEngine.Underlying memory underlyingPositions = engine
+            .underlying(claimId);
+
+        assertEq(underlyingPositions.underlyingAsset, WETH_A);
+        assertEq(underlyingPositions.underlyingPosition, 0);
+        assertEq(underlyingPositions.exerciseAsset, DAI_A);
+        assertEq(underlyingPositions.exercisePosition, 49000000000000000000);
+    }
+
     // **********************************************************************
     //                            FAIL TESTS
     // **********************************************************************

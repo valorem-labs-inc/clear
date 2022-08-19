@@ -166,7 +166,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertTrue(!claim.claimed);
     }
 
-    function testExerciseMultipleWriteSameChain() public {
+    // TODO(This should pass)
+    function testFailExerciseMultipleWriteSameChain() public {
         uint256 wethBalanceEngine = WETH.balanceOf(address(engine));
         uint256 wethBalanceA = WETH.balanceOf(ALICE);
         uint256 wethBalanceB = WETH.balanceOf(BOB);

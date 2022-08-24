@@ -125,7 +125,7 @@ library NFTGenerator {
                     "<text x='16px' y='236px' font-size='14' letter-spacing='0.01em' fill='#fff' font-family='Helvetica'>EXERCISE DATE</text>",
                     _generateTimestampString(params.exerciseTimestamp, 16, 260),
                     "<text x='200px' y='236px' font-size='14' letter-spacing='0.01em' fill='#fff' font-family='Helvetica'>EXPIRY DATE</text>",
-                    _generateTimestampString(params.exerciseTimestamp, 200, 260)
+                    _generateTimestampString(params.expiryTimestamp, 200, 260)
                 )
             );
     }

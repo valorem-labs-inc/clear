@@ -39,7 +39,7 @@ library NFTGenerator {
                 abi.encodePacked(
                     "<svg width='400' height='300' viewBox='0 0 400 300' xmlns='http://www.w3.org/2000/svg'>",
                     "<rect width='100%' height='100%' rx='12' ry='12'  fill='#3E5DC7' />",
-                    "<g transform='scale(5), translate(25, 30)' fill-opacity='0.15'>",
+                    "<g transform='scale(5), translate(25, 18)' fill-opacity='0.15'>",
                     "<path xmlns='http://www.w3.org/2000/svg' d='M69.3577 14.5031H29.7265L39.6312 0H0L19.8156 29L29.7265 14.5031L39.6312 29H19.8156H0L19.8156 58L39.6312 29L49.5421 43.5031L69.3577 14.5031Z' fill='white'/>",
                     "</g>",
                     _generateHeaderSection(

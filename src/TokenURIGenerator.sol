@@ -1,16 +1,21 @@
 // SPDX-License-Identifier: BUSL 1.1
 pragma solidity 0.8.11;
 
+import "base64/Base64.sol";
 import "solmate/tokens/ERC20.sol";
 
 import "./interfaces/IOptionSettlementEngine.sol";
 
-library NFTGenerator {
-    struct GenerateNFTParams {
+library TokenURIGenerator {
+    struct TokenURIParams {
         // The underlying asset to be received
         address underlyingAsset;
+        // The symbol of the underlying asset
+        string underlyingSymbol;
         // The address of the asset needed for exercise
         address exerciseAsset;
+        // The symbol of the underlying asset
+        string exerciseSymbol;
         // The timestamp after which this option may be exercised
         uint40 exerciseTimestamp;
         // The timestamp before which this option must be exercised
@@ -23,15 +28,92 @@ library NFTGenerator {
         IOptionSettlementEngine.Type tokenType;
     }
 
-    function generateNFT(GenerateNFTParams memory params)
+    function constructTokenURI(TokenURIParams memory params)
         public
         view
         returns (string memory)
     {
-        string memory underlyingSymbol = ERC20(params.underlyingAsset).symbol();
-        uint8 underlyingDecimals = ERC20(params.underlyingAsset).decimals();
+        string memory svg = generateNFT(params);
 
-        string memory exerciseSymbol = ERC20(params.exerciseAsset).symbol();
+        /* solhint-disable quotes */
+        return
+            string(
+                abi.encodePacked(
+                    "data:application/json;base64,",
+                    Base64.encode(
+                        abi.encodePacked(
+                            '{"name":"',
+                            generateName(params),
+                            '", "description": "',
+                            generateDescription(params),
+                            '", "image": "data:image/svg+xml;base64,',
+                            Base64.encode(bytes(svg)),
+                            '"}'
+                        )
+                    )
+                )
+            );
+        /* solhint-enable quotes */
+    }
+
+    function generateName(TokenURIParams memory params)
+        public
+        pure
+        returns (string memory)
+    {
+        (uint256 month, uint256 day, uint256 year) = _getDateUnits(
+            params.expiryTimestamp
+        );
+
+        bytes memory yearDigits = bytes(_toString(year));
+        bytes memory monthDigits = bytes(_toString(month));
+        bytes memory dayDigits = bytes(_toString(day));
+
+        return
+            string(
+                abi.encodePacked(
+                    _escapeQuotes(params.underlyingSymbol),
+                    _escapeQuotes(params.exerciseSymbol),
+                    yearDigits[2],
+                    yearDigits[3],
+                    monthDigits.length == 2
+                        ? monthDigits[0]
+                        : bytes1(uint8(48)),
+                    monthDigits.length == 2 ? monthDigits[1] : monthDigits[0],
+                    dayDigits.length == 2 ? dayDigits[0] : bytes1(uint8(48)),
+                    dayDigits.length == 2 ? dayDigits[1] : dayDigits[0],
+                    "C"
+                )
+            );
+    }
+
+    function generateDescription(TokenURIParams memory params)
+        public
+        pure
+        returns (string memory)
+    {
+        return
+            string(
+                abi.encodePacked(
+                    "NFT representing a Valorem options contract. ",
+                    params.underlyingSymbol,
+                    " Address: ",
+                    addressToString(params.underlyingAsset),
+                    ". ",
+                    params.exerciseSymbol,
+                    " Address: ",
+                    addressToString(params.exerciseAsset),
+                    "."
+                )
+            );
+    }
+
+    function generateNFT(TokenURIParams memory params)
+        public
+        view
+        returns (string memory)
+    {
+        uint8 underlyingDecimals = ERC20(params.underlyingAsset).decimals();
         uint8 exerciseDecimals = ERC20(params.exerciseAsset).decimals();
 
         return
@@ -43,16 +125,16 @@ library NFTGenerator {
                     "<path xmlns='http://www.w3.org/2000/svg' d='M69.3577 14.5031H29.7265L39.6312 0H0L19.8156 29L29.7265 14.5031L39.6312 29H19.8156H0L19.8156 58L39.6312 29L49.5421 43.5031L69.3577 14.5031Z' fill='white'/>",
                     "</g>",
                     _generateHeaderSection(
-                        underlyingSymbol,
-                        exerciseSymbol,
+                        params.underlyingSymbol,
+                        params.exerciseSymbol,
                         params.tokenType
                     ),
                     _generateAmountsSection(
                         params.underlyingAmount,
-                        underlyingSymbol,
+                        params.underlyingSymbol,
                         underlyingDecimals,
                         params.exerciseAmount,
-                        exerciseSymbol,
+                        params.exerciseSymbol,
                         exerciseDecimals
                     ),
                     _generateDateSection(params),
@@ -114,7 +196,7 @@ library NFTGenerator {
             );
     }
 
-    function _generateDateSection(GenerateNFTParams memory params)
+    function _generateDateSection(TokenURIParams memory params)
         internal
         pure
         returns (string memory)
@@ -285,6 +367,34 @@ library NFTGenerator {
         return _generateDecimalString(params);
     }
 
+    function _getDateUnits(uint256 _timestamp)
+        internal
+        pure
+        returns (
+            uint256 month,
+            uint256 day,
+            uint256 year
+        )
+    {
+        int256 z = int256(_timestamp) / 86400 + 719468;
+        int256 era = (z >= 0 ? z : z - 146096) / 146097;
+        int256 doe = z - era * 146097;
+        int256 yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+        int256 y = yoe + era * 400;
+        int256 doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+        int256 mp = (5 * doy + 2) / 153;
+        int256 d = doy - (153 * mp + 2) / 5 + 1;
+        int256 m = mp + (mp < 10 ? int256(3) : -9);
+
+        if (m <= 2) {
+            y += 1;
+        }
+
+        month = uint256(m);
+        day = uint256(d);
+        year = uint256(y);
+    }
+
     function _generateDateString(uint256 _timestamp)
         internal
         pure
@@ -349,5 +459,61 @@ library NFTGenerator {
             value /= 10;
         }
         return string(buffer);
+    }
+
+    function _escapeQuotes(string memory symbol)
+        internal
+        pure
+        returns (string memory)
+    {
+        bytes memory symbolBytes = bytes(symbol);
+        uint8 quotesCount = 0;
+        for (uint8 i = 0; i < symbolBytes.length; i++) {
+            // solhint-disable quotes
+            if (symbolBytes[i] == '"') {
+                quotesCount++;
+            }
+        }
+        if (quotesCount > 0) {
+            bytes memory escapedBytes = new bytes(
+                symbolBytes.length + (quotesCount)
+            );
+            uint256 index;
+            for (uint8 i = 0; i < symbolBytes.length; i++) {
+                // solhint-disable quotes
+                if (symbolBytes[i] == '"') {
+                    escapedBytes[index++] = "\\";
+                }
+                escapedBytes[index++] = symbolBytes[i];
+            }
+            return string(escapedBytes);
+        }
+        return symbol;
+    }
+
+    bytes16 internal constant ALPHABET = "0123456789abcdef";
+
+    function toHexString(uint256 value, uint256 length)
+        internal
+        pure
+        returns (string memory)
+    {
+        bytes memory buffer = new bytes(2 * length + 2);
+        buffer[0] = "0";
+        buffer[1] = "x";
+        for (uint256 i = 2 * length + 1; i > 1; --i) {
+            buffer[i] = ALPHABET[value & 0xf];
+            value >>= 4;
+        }
+        require(value == 0, "Strings: hex length insufficient");
+        return string(buffer);
+    }
+
+    function addressToString(address addr)
+        internal
+        pure
+        returns (string memory)
+    {
+        return toHexString(uint256(uint160(addr)), 20);
     }
 }

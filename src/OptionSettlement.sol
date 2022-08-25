@@ -6,7 +6,7 @@ import "solmate/tokens/ERC20.sol";
 import "solmate/tokens/ERC1155.sol";
 import "./interfaces/IOptionSettlementEngine.sol";
 import "solmate/utils/SafeTransferLib.sol";
-import "./NFTGenerator.sol";
+import "./TokenURIGenerator.sol";
 
 /**
    Valorem Options V1 is a DeFi money lego enabling writing covered call and covered put, physically settled, options.
@@ -122,25 +122,20 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             optionInfo = _option[tokenId];
         }
 
-        string memory svg = NFTGenerator.generateNFT(
-            NFTGenerator.GenerateNFTParams({
+        TokenURIGenerator.TokenURIParams memory params = TokenURIGenerator
+            .TokenURIParams({
                 underlyingAsset: optionInfo.underlyingAsset,
+                underlyingSymbol: ERC20(optionInfo.underlyingAsset).symbol(),
                 exerciseAsset: optionInfo.exerciseAsset,
+                exerciseSymbol: ERC20(optionInfo.exerciseAsset).symbol(),
                 exerciseTimestamp: optionInfo.exerciseTimestamp,
                 expiryTimestamp: optionInfo.expiryTimestamp,
                 underlyingAmount: optionInfo.underlyingAmount,
                 exerciseAmount: optionInfo.exerciseAmount,
                 tokenType: _type
-            })
-        );
+            });
 
-        return
-            string(
-                abi.encodePacked(
-                    "data:image/svg+xml;base64,",
-                    Base64.encode(bytes(svg))
-                )
-            );
+        return TokenURIGenerator.constructTokenURI(params);
     }
 
     function newChain(Option memory optionInfo)

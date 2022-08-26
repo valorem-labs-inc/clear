@@ -6,6 +6,7 @@ import "solmate/tokens/ERC20.sol";
 import "solmate/tokens/ERC1155.sol";
 import "./interfaces/IOptionSettlementEngine.sol";
 import "solmate/utils/SafeTransferLib.sol";
+import "./TokenURIGenerator.sol";
 
 /**
    Valorem Options V1 is a DeFi money lego enabling writing covered call and covered put, physically settled, options.
@@ -108,14 +109,33 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         override
         returns (string memory)
     {
-        if (tokenType[tokenId] != Type.None) {
+        Type _type = tokenType[tokenId];
+        Option memory optionInfo;
+
+        if (_type == Type.None) {
             revert TokenNotFound(tokenId);
+        } else if (_type == Type.Claim) {
+            Claim memory claimInfo = _claim[tokenId];
+
+            optionInfo = _option[claimInfo.option];
+        } else {
+            optionInfo = _option[tokenId];
         }
-        // TODO(Implement metadata/uri with frontend dev)
-        string memory json = Base64.encode(
-            bytes(string(abi.encodePacked("{}")))
-        );
-        return string(abi.encodePacked("data:application/json;base64,", json));
+
+        TokenURIGenerator.TokenURIParams memory params = TokenURIGenerator
+            .TokenURIParams({
+                underlyingAsset: optionInfo.underlyingAsset,
+                underlyingSymbol: ERC20(optionInfo.underlyingAsset).symbol(),
+                exerciseAsset: optionInfo.exerciseAsset,
+                exerciseSymbol: ERC20(optionInfo.exerciseAsset).symbol(),
+                exerciseTimestamp: optionInfo.exerciseTimestamp,
+                expiryTimestamp: optionInfo.expiryTimestamp,
+                underlyingAmount: optionInfo.underlyingAmount,
+                exerciseAmount: optionInfo.exerciseAmount,
+                tokenType: _type
+            });
+
+        return TokenURIGenerator.constructTokenURI(params);
     }
 
     function newChain(Option memory optionInfo)

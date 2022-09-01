@@ -9,14 +9,14 @@ import "solmate/utils/SafeTransferLib.sol";
 import "./TokenURIGenerator.sol";
 
 /**
-   Valorem Options V1 is a DeFi money lego enabling writing covered call and covered put, physically settled, options.
-   All written options are fully collateralized against an ERC-20 underlying asset and exercised with an
-   ERC-20 exercise asset using a chainlink VRF random number per unique option type for fair settlement. Options contracts
-   are issued as fungible ERC-1155 tokens, with each token representing a contract. Option writers are additionally issued
-   an ERC-1155 NFT representing a lot of contracts written for claiming collateral and exercise assignment. This design
-   eliminates the need for market price oracles, and allows for permission-less writing, and gas efficient transfer, of
-   a broad swath of traditional options.
-*/
+ * Valorem Options V1 is a DeFi money lego enabling writing covered call and covered put, physically settled, options.
+ * All written options are fully collateralized against an ERC-20 underlying asset and exercised with an
+ * ERC-20 exercise asset using a chainlink VRF random number per unique option type for fair settlement. Options contracts
+ * are issued as fungible ERC-1155 tokens, with each token representing a contract. Option writers are additionally issued
+ * an ERC-1155 NFT representing a lot of contracts written for claiming collateral and exercise assignment. This design
+ * eliminates the need for market price oracles, and allows for permission-less writing, and gas efficient transfer, of
+ * a broad swath of traditional options.
+ */
 
 // TODO(DRY code during testing)
 // TODO(Gas Optimize)
@@ -51,19 +51,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     // Accessor for claim ticket details
     mapping(uint256 => Claim) internal _claim;
 
-    function option(uint256 tokenId)
-        external
-        view
-        returns (Option memory optionInfo)
-    {
+    function option(uint256 tokenId) external view returns (Option memory optionInfo) {
         optionInfo = _option[tokenId];
     }
 
-    function claim(uint256 tokenId)
-        external
-        view
-        returns (Claim memory claimInfo)
-    {
+    function claim(uint256 tokenId) external view returns (Claim memory claimInfo) {
         claimInfo = _claim[tokenId];
     }
 
@@ -90,11 +82,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 // Leave 1 wei here as a gas optimization
                 if (fee > 1) {
                     sweep = feeBalance[token] - 1;
-                    SafeTransferLib.safeTransfer(
-                        ERC20(token),
-                        sendFeeTo,
-                        sweep
-                    );
+                    SafeTransferLib.safeTransfer(ERC20(token), sendFeeTo, sweep);
                     feeBalance[token] = 1;
                     emit FeeSwept(token, sendFeeTo, sweep);
                 }
@@ -102,13 +90,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
     }
 
-    function uri(uint256 tokenId)
-        public
-        view
-        virtual
-        override
-        returns (string memory)
-    {
+    function uri(uint256 tokenId) public view virtual override returns (string memory) {
         Type _type = tokenType[tokenId];
         Option memory optionInfo;
 
@@ -122,26 +104,22 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             optionInfo = _option[tokenId];
         }
 
-        TokenURIGenerator.TokenURIParams memory params = TokenURIGenerator
-            .TokenURIParams({
-                underlyingAsset: optionInfo.underlyingAsset,
-                underlyingSymbol: ERC20(optionInfo.underlyingAsset).symbol(),
-                exerciseAsset: optionInfo.exerciseAsset,
-                exerciseSymbol: ERC20(optionInfo.exerciseAsset).symbol(),
-                exerciseTimestamp: optionInfo.exerciseTimestamp,
-                expiryTimestamp: optionInfo.expiryTimestamp,
-                underlyingAmount: optionInfo.underlyingAmount,
-                exerciseAmount: optionInfo.exerciseAmount,
-                tokenType: _type
-            });
+        TokenURIGenerator.TokenURIParams memory params = TokenURIGenerator.TokenURIParams({
+            underlyingAsset: optionInfo.underlyingAsset,
+            underlyingSymbol: ERC20(optionInfo.underlyingAsset).symbol(),
+            exerciseAsset: optionInfo.exerciseAsset,
+            exerciseSymbol: ERC20(optionInfo.exerciseAsset).symbol(),
+            exerciseTimestamp: optionInfo.exerciseTimestamp,
+            expiryTimestamp: optionInfo.expiryTimestamp,
+            underlyingAmount: optionInfo.underlyingAmount,
+            exerciseAmount: optionInfo.exerciseAmount,
+            tokenType: _type
+        });
 
         return TokenURIGenerator.constructTokenURI(params);
     }
 
-    function newChain(Option memory optionInfo)
-        external
-        returns (uint256 optionId)
-    {
+    function newChain(Option memory optionInfo) external returns (uint256 optionId) {
         // Ensure settlement seed is 0
         optionInfo.settlementSeed = 0;
 
@@ -159,18 +137,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
 
         // Ensure the exercise window is at least 24 hours
-        if (
-            optionInfo.expiryTimestamp < (optionInfo.exerciseTimestamp + 86400)
-        ) {
+        if (optionInfo.expiryTimestamp < (optionInfo.exerciseTimestamp + 86400)) {
             revert ExerciseWindowTooShort();
         }
 
         // The exercise and underlying assets can't be the same
         if (optionInfo.exerciseAsset == optionInfo.underlyingAsset) {
-            revert InvalidAssets(
-                optionInfo.exerciseAsset,
-                optionInfo.underlyingAsset
-            );
+            revert InvalidAssets(optionInfo.exerciseAsset, optionInfo.underlyingAsset);
         }
 
         // Use the chainKey to seed entropy
@@ -186,13 +159,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Check total supplies and ensure the option will be exercisable
         if (
-            underlyingToken.totalSupply() < optionInfo.underlyingAmount ||
-            exerciseToken.totalSupply() < optionInfo.exerciseAmount
+            underlyingToken.totalSupply() < optionInfo.underlyingAmount
+                || exerciseToken.totalSupply() < optionInfo.exerciseAmount
         ) {
-            revert InvalidAssets(
-                optionInfo.underlyingAsset,
-                optionInfo.exerciseAsset
-            );
+            revert InvalidAssets(optionInfo.underlyingAsset, optionInfo.exerciseAsset);
         }
 
         _option[nextTokenId] = optionInfo;
@@ -211,13 +181,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             optionInfo.underlyingAmount,
             optionInfo.exerciseTimestamp,
             optionInfo.expiryTimestamp
-        );
+            );
     }
 
-    function write(uint256 optionId, uint112 amount)
-        external
-        returns (uint256 claimId)
-    {
+    function write(uint256 optionId, uint112 amount) external returns (uint256 claimId) {
         if (tokenType[optionId] != Type.Option) {
             revert InvalidOption(optionId);
         }
@@ -233,12 +200,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         address underlyingAsset = optionRecord.underlyingAsset;
 
         // Transfer the requisite underlying asset
-        SafeTransferLib.safeTransferFrom(
-            ERC20(underlyingAsset),
-            msg.sender,
-            address(this),
-            (rxAmount + fee)
-        );
+        SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
 
         claimId = nextTokenId;
 
@@ -255,12 +217,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Store info about the claim
         tokenType[claimId] = Type.Claim;
-        _claim[claimId] = Claim({
-            option: optionId,
-            amountWritten: amount,
-            amountExercised: 0,
-            claimed: false
-        });
+        _claim[claimId] = Claim({option: optionId, amountWritten: amount, amountExercised: 0, claimed: false});
         unexercisedClaimsByOption[optionId].push(claimId);
 
         feeBalance[underlyingAsset] += fee;
@@ -275,11 +232,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         _batchMint(msg.sender, tokens, amounts, data);
     }
 
-    function assignExercise(
-        uint256 optionId,
-        uint112 amount,
-        uint160 settlementSeed
-    ) internal {
+    function assignExercise(uint256 optionId, uint112 amount, uint160 settlementSeed) internal {
         // Number of claims enqueued for this option
         uint256 claimsLen = unexercisedClaimsByOption[optionId].length;
 
@@ -316,8 +269,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
             claimRecord = _claim[claimNum];
 
-            uint112 amountAvailiable = claimRecord.amountWritten -
-                claimRecord.amountExercised;
+            uint112 amountAvailiable = claimRecord.amountWritten - claimRecord.amountExercised;
             uint112 amountPresentlyExercised;
             if (amountAvailiable < amount) {
                 amount -= amountAvailiable;
@@ -341,9 +293,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             emit ExerciseAssigned(claimNum, optionId, amountPresentlyExercised);
 
             // Increment for the next loop
-            settlementSeed = uint160(
-                uint256(keccak256(abi.encode(settlementSeed, i)))
-            );
+            settlementSeed = uint160(uint256(keccak256(abi.encode(settlementSeed, i))));
             i++;
         }
 
@@ -372,19 +322,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         address exerciseAsset = optionRecord.exerciseAsset;
 
         // Transfer in the requisite exercise asset
-        SafeTransferLib.safeTransferFrom(
-            ERC20(exerciseAsset),
-            msg.sender,
-            address(this),
-            (rxAmount + fee)
-        );
+        SafeTransferLib.safeTransferFrom(ERC20(exerciseAsset), msg.sender, address(this), (rxAmount + fee));
 
         // Transfer out the underlying
-        SafeTransferLib.safeTransfer(
-            ERC20(optionRecord.underlyingAsset),
-            msg.sender,
-            txAmount
-        );
+        SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, txAmount);
 
         assignExercise(optionId, amount, optionRecord.settlementSeed);
 
@@ -420,25 +361,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert ClaimTooSoon();
         }
 
-        uint256 exerciseAmount = optionRecord.exerciseAmount *
-            claimRecord.amountExercised;
-        uint256 underlyingAmount = (optionRecord.underlyingAmount *
-            (claimRecord.amountWritten - claimRecord.amountExercised));
+        uint256 exerciseAmount = optionRecord.exerciseAmount * claimRecord.amountExercised;
+        uint256 underlyingAmount =
+            (optionRecord.underlyingAmount * (claimRecord.amountWritten - claimRecord.amountExercised));
 
         if (exerciseAmount > 0) {
-            SafeTransferLib.safeTransfer(
-                ERC20(optionRecord.exerciseAsset),
-                msg.sender,
-                exerciseAmount
-            );
+            SafeTransferLib.safeTransfer(ERC20(optionRecord.exerciseAsset), msg.sender, exerciseAmount);
         }
 
         if (underlyingAmount > 0) {
-            SafeTransferLib.safeTransfer(
-                ERC20(optionRecord.underlyingAsset),
-                msg.sender,
-                underlyingAmount
-            );
+            SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, underlyingAmount);
         }
 
         claimRecord.claimed = true;
@@ -453,14 +385,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             optionRecord.underlyingAsset,
             uint96(exerciseAmount),
             uint96(underlyingAmount)
-        );
+            );
     }
 
-    function underlying(uint256 tokenId)
-        external
-        view
-        returns (Underlying memory underlyingPositions)
-    {
+    function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions) {
         if (tokenType[tokenId] == Type.None) {
             revert TokenNotFound(tokenId);
         } else if (tokenType[tokenId] == Type.Option) {
@@ -468,21 +396,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             bool expired = (optionRecord.expiryTimestamp > block.timestamp);
             underlyingPositions = Underlying({
                 underlyingAsset: optionRecord.underlyingAsset,
-                underlyingPosition: expired
-                    ? int256(0)
-                    : int256(uint256(optionRecord.underlyingAmount)),
+                underlyingPosition: expired ? int256(0) : int256(uint256(optionRecord.underlyingAmount)),
                 exerciseAsset: optionRecord.exerciseAsset,
-                exercisePosition: expired
-                    ? int256(0)
-                    : -int256(uint256(optionRecord.exerciseAmount))
+                exercisePosition: expired ? int256(0) : -int256(uint256(optionRecord.exerciseAmount))
             });
         } else {
             Claim storage claimRecord = _claim[tokenId];
             Option storage optionRecord = _option[claimRecord.option];
-            uint256 exerciseAmount = optionRecord.exerciseAmount *
-                claimRecord.amountExercised;
-            uint256 underlyingAmount = (optionRecord.underlyingAmount *
-                (claimRecord.amountWritten - claimRecord.amountExercised));
+            uint256 exerciseAmount = optionRecord.exerciseAmount * claimRecord.amountExercised;
+            uint256 underlyingAmount =
+                (optionRecord.underlyingAmount * (claimRecord.amountWritten - claimRecord.amountExercised));
             underlyingPositions = Underlying({
                 underlyingAsset: optionRecord.underlyingAsset,
                 underlyingPosition: int256(exerciseAmount),

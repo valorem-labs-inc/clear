@@ -11,34 +11,19 @@ contract VolatilityOracle {
         uint8 write;
     }
 
-    mapping(IUniswapV3Pool => Volatility.PoolMetadata)
-        public cachedPoolMetadata;
+    mapping(IUniswapV3Pool => Volatility.PoolMetadata) public cachedPoolMetadata;
 
-    mapping(IUniswapV3Pool => Volatility.FeeGrowthGlobals[25])
-        public feeGrowthGlobals;
+    mapping(IUniswapV3Pool => Volatility.FeeGrowthGlobals[25]) public feeGrowthGlobals;
 
     mapping(IUniswapV3Pool => Indices) public feeGrowthGlobalsIndices;
 
     function cachePoolMetadata(IUniswapV3Pool pool) external {
         Volatility.PoolMetadata memory poolMetadata;
 
-        (
-            ,
-            ,
-            uint16 observationIndex,
-            uint16 observationCardinality,
-            ,
-            uint8 feeProtocol,
-
-        ) = pool.slot0();
+        (,, uint16 observationIndex, uint16 observationCardinality,, uint8 feeProtocol,) = pool.slot0();
 
         poolMetadata.maxSecondsAgo =
-            (UniV3Oracle.getMaxSecondsAgo(
-                pool,
-                observationIndex,
-                observationCardinality
-            ) * 3) /
-            5;
+            (UniV3Oracle.getMaxSecondsAgo(pool, observationIndex, observationCardinality) * 3) / 5;
 
         uint24 fee = pool.fee();
         poolMetadata.gamma0 = fee;
@@ -56,29 +41,18 @@ contract VolatilityOracle {
         cachedPoolMetadata[pool] = poolMetadata;
     }
 
-    function volatilityForPool(IUniswapV3Pool pool)
-        external
-        returns (uint256 IV)
-    {
-        (uint160 sqrtPriceX96, int24 tick, , , , , ) = pool.slot0();
+    function volatilityForPool(IUniswapV3Pool pool) external returns (uint256 IV) {
+        (uint160 sqrtPriceX96, int24 tick,,,,,) = pool.slot0();
 
-        Volatility.FeeGrowthGlobals[25]
-            storage feeGrowthGlobal = feeGrowthGlobals[pool];
+        Volatility.FeeGrowthGlobals[25] storage feeGrowthGlobal = feeGrowthGlobals[pool];
 
         Indices memory idxs = _loadIndicesAndSelectRead(pool, feeGrowthGlobal);
 
         Volatility.FeeGrowthGlobals memory current;
-        (IV, current) = _volatilityForPool(
-            pool,
-            sqrtPriceX96,
-            tick,
-            feeGrowthGlobal[idxs.read]
-        );
+        (IV, current) = _volatilityForPool(pool, sqrtPriceX96, tick, feeGrowthGlobal[idxs.read]);
 
         // Write to storage
-        if (
-            current.timestamp - 1 hours > feeGrowthGlobal[idxs.write].timestamp
-        ) {
+        if (current.timestamp - 1 hours > feeGrowthGlobal[idxs.write].timestamp) {
             idxs.write = (idxs.write + 1) % 25;
             feeGrowthGlobals[pool][idxs.write] = current;
         }
@@ -105,55 +79,37 @@ contract VolatilityOracle {
             secondsAgo = 1 days;
         }
         // Throws if secondsAgo == 0
-        (
-            int24 arithmeticMeanTick,
-            uint160 secondsPerLiquidityX128
-        ) = UniV3Oracle.consult(_pool, secondsAgo);
+        (int24 arithmeticMeanTick, uint160 secondsPerLiquidityX128) = UniV3Oracle.consult(_pool, secondsAgo);
 
-        current = Volatility.FeeGrowthGlobals(
-            _pool.feeGrowthGlobal0X128(),
-            _pool.feeGrowthGlobal1X128(),
-            uint32(block.timestamp)
-        );
+        current =
+            Volatility.FeeGrowthGlobals(_pool.feeGrowthGlobal0X128(), _pool.feeGrowthGlobal1X128(), uint32(block.timestamp));
 
         IV = Volatility.volatilityForPool(
             poolMetadata,
-            Volatility.PoolData(
-                _sqrtPriceX96,
-                _tick,
-                arithmeticMeanTick,
-                secondsPerLiquidityX128,
-                secondsAgo,
-                _pool.liquidity()
-            ),
+            Volatility.PoolData(_sqrtPriceX96, _tick, arithmeticMeanTick, secondsPerLiquidityX128, secondsAgo, _pool.liquidity()),
             _previous,
             current
         );
     }
 
-    function _loadIndicesAndSelectRead(
-        IUniswapV3Pool _pool,
-        Volatility.FeeGrowthGlobals[25] storage _feeGrowthGlobal
-    ) private view returns (Indices memory) {
+    function _loadIndicesAndSelectRead(IUniswapV3Pool _pool, Volatility.FeeGrowthGlobals[25] storage _feeGrowthGlobal)
+        private
+        view
+        returns (Indices memory)
+    {
         Indices memory idxs = feeGrowthGlobalsIndices[_pool];
-        uint32 timingError = _timingError(
-            block.timestamp - _feeGrowthGlobal[idxs.read].timestamp
-        );
+        uint32 timingError = _timingError(block.timestamp - _feeGrowthGlobal[idxs.read].timestamp);
 
-        for (
-            uint8 counter = idxs.read + 1;
-            counter < idxs.read + 25;
-            counter++
-        ) {
+        for (uint8 counter = idxs.read + 1; counter < idxs.read + 25; counter++) {
             uint8 newReadIndex = counter % 25;
-            uint32 newTimingError = _timingError(
-                block.timestamp - _feeGrowthGlobal[newReadIndex].timestamp
-            );
+            uint32 newTimingError = _timingError(block.timestamp - _feeGrowthGlobal[newReadIndex].timestamp);
 
             if (newTimingError < timingError) {
                 idxs.read = newReadIndex;
                 timingError = newTimingError;
-            } else break;
+            } else {
+                break;
+            }
         }
 
         return idxs;

@@ -169,7 +169,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testUri() public {
         string memory result = engine.uri(testOptionId);
 
-        vm.writeFile("./src/test/encodeduri", result);
+        // vm.writeFile("./src/test/encodeduri", result);
     }
 
     // TODO(This should pass)

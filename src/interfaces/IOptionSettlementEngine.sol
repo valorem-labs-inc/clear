@@ -50,11 +50,7 @@ interface IOptionSettlementEngine {
     // You can't claim before expiry.
     error ClaimTooSoon();
 
-    event FeeSwept(
-        address indexed token,
-        address indexed feeTo,
-        uint256 amount
-    );
+    event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);
 
     event NewChain(
         uint256 indexed optionId,
@@ -66,24 +62,11 @@ interface IOptionSettlementEngine {
         uint40 expiryTimestamp
     );
 
-    event OptionsExercised(
-        uint256 indexed optionId,
-        address indexed exercisee,
-        uint112 amount
-    );
+    event OptionsExercised(uint256 indexed optionId, address indexed exercisee, uint112 amount);
 
-    event OptionsWritten(
-        uint256 indexed optionId,
-        address indexed writer,
-        uint256 claimId,
-        uint112 amount
-    );
+    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 claimId, uint112 amount);
 
-    event FeeAccrued(
-        address indexed asset,
-        address indexed payor,
-        uint256 amount
-    );
+    event FeeAccrued(address indexed asset, address indexed payor, uint256 amount);
 
     event ClaimRedeemed(
         uint256 indexed claimId,
@@ -95,11 +78,7 @@ interface IOptionSettlementEngine {
         uint96 underlyingAmount
     );
 
-    event ExerciseAssigned(
-        uint256 indexed claimId,
-        uint256 indexed optionId,
-        uint112 amountAssigned
-    );
+    event ExerciseAssigned(uint256 indexed claimId, uint256 indexed optionId, uint112 amountAssigned);
 
     // @dev This enumeration is used to determine the type of an ERC1155 subtoken in the engine.
     enum Type {
@@ -160,38 +139,25 @@ interface IOptionSettlementEngine {
     function tokenType(uint256 tokenId) external view returns (Type);
 
     // @return The optionInfo Option struct for tokenId
-    function option(uint256 tokenId)
-        external
-        view
-        returns (Option memory optionInfo);
+    function option(uint256 tokenId) external view returns (Option memory optionInfo);
 
     // @return The claimInfo Claim struct for claimId
-    function claim(uint256 tokenId)
-        external
-        view
-        returns (Claim memory claimInfo);
+    function claim(uint256 tokenId) external view returns (Claim memory claimInfo);
 
     // @notice Updates the address fees can be swept to
     function setFeeTo(address newFeeTo) external;
 
     // @return The tokenId if it exists, else 0
-    function hashToOptionToken(bytes32 hash)
-        external
-        view
-        returns (uint256 optionId);
+    function hashToOptionToken(bytes32 hash) external view returns (uint256 optionId);
 
     // @notice Sweeps fees to the feeTo address if there are more than 0 wei for each address in tokens
     function sweepFees(address[] memory tokens) external;
 
     // @notice Create a new options chain from optionInfo if it doesn't already exist
-    function newChain(Option memory optionInfo)
-        external
-        returns (uint256 optionId);
+    function newChain(Option memory optionInfo) external returns (uint256 optionId);
 
     // @notice write a new bundle of options contract and recieve options tokens and claim ticket
-    function write(uint256 optionId, uint112 amount)
-        external
-        returns (uint256 claimId);
+    function write(uint256 optionId, uint112 amount) external returns (uint256 claimId);
 
     // @notice exercise amount of optionId transfers and receives required amounts of tokens
     function exercise(uint256 optionId, uint112 amount) external;
@@ -200,8 +166,5 @@ interface IOptionSettlementEngine {
     function redeem(uint256 claimId) external;
 
     // @notice Information about the position underlying a token, useful for determining value
-    function underlying(uint256 tokenId)
-        external
-        view
-        returns (Underlying memory underlyingPositions);
+    function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions);
 }

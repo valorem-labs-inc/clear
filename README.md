@@ -162,7 +162,9 @@ function feeTo() external view returns (address);
 
 Returns the token `Type` enum for a given `tokenId`.
 
-```function tokenType(uint256 tokenId) external view returns (Type);```
+```solidity
+function tokenType(uint256 tokenId) external view returns (Type);
+```
 
 
 ##### option

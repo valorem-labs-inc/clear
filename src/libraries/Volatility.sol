@@ -3,7 +3,7 @@ pragma solidity 0.8.11;
 
 import "solmate/utils/FixedPointMathLib.sol";
 
-import "./FixedPoint96.sol";
+import "v3-core/contracts/libraries/FixedPoint96.sol";
 import "./FullMath.sol";
 import "./TickMath.sol";
 

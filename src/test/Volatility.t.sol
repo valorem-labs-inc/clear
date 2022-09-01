@@ -5,7 +5,7 @@ import "ds-test/test.sol";
 import "forge-std/Vm.sol";
 import "forge-std/Test.sol";
 
-import "../interfaces/IUniswapV3Pool.sol";
+import "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "../libraries/Volatility.sol";
 import "../libraries/UniV3Oracle.sol";
 import "../VolatilityOracle.sol";

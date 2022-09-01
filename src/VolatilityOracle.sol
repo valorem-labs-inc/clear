@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL 1.1
 pragma solidity 0.8.11;
 
-import "./interfaces/IUniswapV3Pool.sol";
 import "./libraries/Volatility.sol";
 import "./libraries/UniV3Oracle.sol";
 

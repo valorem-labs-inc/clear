@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL 1.1
 pragma solidity 0.8.11;
 
-import "../interfaces/IUniswapV3Pool.sol";
+import "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 library UniV3Oracle {
     function consult(IUniswapV3Pool pool, uint32 secondsAgo)

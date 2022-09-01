@@ -144,10 +144,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertTrue(!claim.claimed);
     }
 
-    function testUri() public {
-        string memory result = engine.uri(testOptionId);
-
-        vm.writeFile("./src/test/encodeduri", result);
+    function testTokenURI() public view {
+        // TODO(We should assert here what we expect to see)
+        engine.uri(testOptionId);
     }
 
     // TODO(This should pass)

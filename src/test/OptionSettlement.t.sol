@@ -452,9 +452,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint96 exerciseAmount,
         uint40 exerciseTimestamp,
         uint40 expiryTimestamp
-    )
-        public
-    {
+    ) public {
         vm.assume(expiryTimestamp >= block.timestamp + 86400);
         vm.assume(exerciseTimestamp >= block.timestamp);
         vm.assume(exerciseTimestamp <= expiryTimestamp - 86400);

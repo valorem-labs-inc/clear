@@ -119,11 +119,7 @@ library TokenURIGenerator {
         string memory _underlyingSymbol,
         string memory _exerciseSymbol,
         IOptionSettlementEngine.Type _tokenType
-    )
-        internal
-        pure
-        returns (string memory)
-    {
+    ) internal pure returns (string memory) {
         return string(
             abi.encodePacked(
                 abi.encodePacked(
@@ -134,8 +130,10 @@ library TokenURIGenerator {
                     "</text>"
                 ),
                 _tokenType == IOptionSettlementEngine.Type.Option
-                    ? "<text x='16px' y='80px' font-size='16' fill='#fff' font-family='Helvetica' font-weight='300'>Long Call</text>"
-                    : "<text x='16px' y='80px' font-size='16' fill='#fff' font-family='Helvetica' font-weight='300'>Short Call</text>"
+                    ?
+                    "<text x='16px' y='80px' font-size='16' fill='#fff' font-family='Helvetica' font-weight='300'>Long Call</text>"
+                    :
+                    "<text x='16px' y='80px' font-size='16' fill='#fff' font-family='Helvetica' font-weight='300'>Short Call</text>"
             )
         );
     }
@@ -147,11 +145,7 @@ library TokenURIGenerator {
         uint256 _exerciseAmount,
         string memory _exerciseSymbol,
         uint8 _exerciseDecimals
-    )
-        internal
-        pure
-        returns (string memory)
-    {
+    ) internal pure returns (string memory) {
         return string(
             abi.encodePacked(
                 "<text x='16px' y='116px' font-size='14' letter-spacing='0.01em' fill='#fff' font-family='Helvetica'>UNDERLYING ASSET</text>",

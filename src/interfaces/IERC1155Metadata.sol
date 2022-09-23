@@ -110,8 +110,7 @@ interface IERC1155Metadata is IERC165 {
         uint256[] calldata ids,
         uint256[] calldata amounts,
         bytes calldata data
-    )
-        external;
+    ) external;
 
     function uri(uint256 id) external view returns (string memory);
 }

@@ -162,7 +162,9 @@ function feeTo() external view returns (address);
 
 Returns the token `Type` enum for a given `tokenId`.
 
-```function tokenType(uint256 tokenId) external view returns (Type);```
+```solidity
+function tokenType(uint256 tokenId) external view returns (Type);
+```
 
 
 ##### option
@@ -251,7 +253,9 @@ function exercise(uint256 optionId, uint112 amount) external;
 Redeems `claimId` for the underlying asset(s) if `msg.sender` is the caller and
 the options chain for the claim has reached expiry. Burns the claim NFT on success.
 
-```function redeem(uint256 claimId) external;```
+```solidity
+function redeem(uint256 claimId) external;
+```
 
 ##### underlying
 

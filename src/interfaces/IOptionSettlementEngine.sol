@@ -4,54 +4,94 @@ pragma solidity ^0.8.0;
 import "./IERC1155Metadata.sol";
 
 // TODO(The engine is IERC1155Metadata, but the solmate impl is not compatible with interface, re-implement)
-// @title A settlement engine for options
-// @author 0xAlcibiades
+/// @title A settlement engine for options
+/// @author 0xAlcibiades
 interface IOptionSettlementEngine {
-    // The requested token is not found.
-    // @param token token requested.
+    /**
+     * @notice The requested token is not found.
+     * @param token token requested.
+     */
     error TokenNotFound(uint256 token);
 
-    // The caller doesn't have permission to access that function.
+    /**
+     * @notice The caller doesn't have permission to access that function.
+     * @param accessor The requesting address.
+     * @param permissioned The address which has the requisite permissions.
+     */
     error AccessControlViolation(address accessor, address permissioned);
 
-    // This options chain already exists and thus cannot be created.
+    /**
+     * @notice This options chain already exists and thus cannot be created.
+     * @param hash The hash of the options chain.
+     */
     error OptionsChainExists(bytes32 hash);
 
-    // The expiry timestamp is less than 24 hours from now.
+    /// @notice The expiry timestamp is less than 24 hours from now.
     error ExpiryTooSoon();
 
-    // The option exercise window is less than 24 hours long.
+    /// @notice The option exercise window is less than 24 hours long.
     error ExerciseWindowTooShort();
 
-    // The assets specified are invalid or duplicate.
+    /**
+     * @notice The assets specified are invalid or duplicate.
+     * @param asset1 Supplied asset.
+     * @param asset2 Supplied asset.
+     */
     error InvalidAssets(address asset1, address asset2);
 
-    // The token specified is not an option.
+    /**
+     * @notice The token specified is not an option.
+     * @param token The supplied token.
+     */
     error InvalidOption(uint256 token);
 
-    // The token specified is not a claim.
+    /**
+     * @notice The token specified is not a claim.
+     * @param token The supplied token.
+     */
     error InvalidClaim(uint256 token);
 
-    // The optionId specified expired at expiry.
+    /**
+     * @notice The optionId specified expired at expiry.
+     * @param optionId The id of the expired option.
+     * @param expiry The time of expiry of the supplied option Id.
+     */
     error ExpiredOption(uint256 optionId, uint40 expiry);
 
-    // This option cannot yet be exercised.
+    /// @notice This option cannot yet be exercised.
     error ExerciseTooEarly();
 
-    // This option has no claims written against it.
+    /// @notice This option has no claims written against it.
     error NoClaims();
 
-    // This account has no claims.
+    /// @notice This account has no claims.
     error BalanceTooLow();
 
-    // This claimId has already been claimed.
+    /// @notice This claimId has already been claimed.
     error AlreadyClaimed();
 
-    // You can't claim before expiry.
+    /// @notice You can't claim before expiry.
     error ClaimTooSoon();
 
+    /**
+     * @notice Emitted when accrued protocol fees for a given token are swept to the
+     * feeTo address.
+     * @param token The token for which protocol fees are being swept.
+     * @param feeTo The account to which fees are being swept.
+     * @param amount The total amount being swept.
+     */
     event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);
 
+    /**
+     * @notice Emitted when a new unique options chain is created.
+     * @param optionId The id of the initial option created on the chain.
+     * @param exerciseAsset The contract address of the exercise asset.
+     * @param underlyingAsset The contract address of the underlying asset.
+     * @param exerciseAmount The amount of the exercise asset to be exercised.
+     * @param underlyingAmount The amount of the underlying asset in the option.
+     * @param exerciseTimestamp The timestamp for exercising the option.
+     * @param expiryTimestamp The expiry timestamp of the option.
+     */
     event NewChain(
         uint256 indexed optionId,
         address indexed exerciseAsset,
@@ -62,12 +102,42 @@ interface IOptionSettlementEngine {
         uint40 expiryTimestamp
     );
 
+    /**
+     * @notice Emitted when an option is exercised.
+     * @param optionId The id of the option being exercised.
+     * @param exercisee The contract address of the asset being exercised.
+     * @param amount The amount of the exercissee being exercised.
+     */
     event OptionsExercised(uint256 indexed optionId, address indexed exercisee, uint112 amount);
 
+    /**
+     * @notice Emitted when a new option is written.
+     * @param optionId The id of the newly written option.
+     * @param writer The address of the writer of the new option.
+     * @param claimId The claim ID for the option.
+     * @param amount The amount of options written.
+     */
     event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 claimId, uint112 amount);
 
+    /**
+     * @notice Emitted when protocol fees are accrued for a given asset.
+     * @dev Emitted on write() or exercise().
+     * @param asset Asset for which fees are accrued.
+     * @param payor The address paying the fee.
+     * @param amount The amount of fees which are accrued.
+     */
     event FeeAccrued(address indexed asset, address indexed payor, uint256 amount);
 
+    /**
+     * @notice Emitted when a claim is redeemed.
+     * @param claimId The id of the claim being redeemed.
+     * @param optionId The option id associated with the redeeming claim.
+     * @param redeemer The address redeeming the claim.
+     * @param exerciseAsset The exercise asset of the option.
+     * @param underlyingAsset The underlying asset of the option.
+     * @param exerciseAmount The amount of options being
+     * @param underlyingAmount The amount of underlying
+     */
     event ClaimRedeemed(
         uint256 indexed claimId,
         uint256 indexed optionId,
@@ -78,16 +148,22 @@ interface IOptionSettlementEngine {
         uint96 underlyingAmount
     );
 
+    /**
+     * @notice Emitted when an option id is exercised and assigned to a particular claim NFT.
+     * @param claimId The claim NFT id being assigned.
+     * @param optionId The id of the option being exercised.
+     * @param amountAssigned The total amount of options contracts assigned.
+     */
     event ExerciseAssigned(uint256 indexed claimId, uint256 indexed optionId, uint112 amountAssigned);
 
-    // @dev This enumeration is used to determine the type of an ERC1155 subtoken in the engine.
+    /// @dev This enumeration is used to determine the type of an ERC1155 subtoken in the engine.
     enum Type {
         None,
         Option,
         Claim
     }
 
-    // @dev This struct contains the data about an options chain associated with an ERC-1155 token.
+    /// @dev This struct contains the data about an options chain associated with an ERC-1155 token.
     struct Option {
         // The underlying asset to be received
         address underlyingAsset;
@@ -105,7 +181,7 @@ interface IOptionSettlementEngine {
         uint96 exerciseAmount;
     }
 
-    // @dev This struct contains the data about a claim ERC-1155 NFT associated with an option chain.
+    /// @dev This struct contains the data about a claim ERC-1155 NFT associated with an option chain.
     struct Claim {
         // Which option was written
         uint256 option;
@@ -119,52 +195,115 @@ interface IOptionSettlementEngine {
     }
 
     struct Underlying {
+        // address of the underlying asset erc20
         address underlyingAsset;
+        // position on the underlying asset
         int256 underlyingPosition;
+        // address of the exercise asset erc20
         address exerciseAsset;
+        // position on the exercise asset
         int256 exercisePosition;
     }
 
-    // @notice The protocol fee, expressed in basis points
-    // @return The fee in basis points
-    function feeBps() external view returns (uint8);
-
-    // @return The address fees accrue to
-    function feeTo() external view returns (address);
-
-    // @return The balance of unswept fees for a given address
+    /**
+     * @notice The balance of protocol fees for a given token which have not yet
+     * been swept.
+     * @param token The token for the unswept fee balance.
+     * @return The balance of unswept fees.
+     */
     function feeBalance(address token) external view returns (uint256);
 
-    // @return The enum (uint8) Type of the tokenId
+    /**
+     * @notice The protocol fee, expressed in basis points.
+     * @return The fee in basis points.
+     */
+    function feeBps() external view returns (uint8);
+
+    /**
+     * @notice Returns the address to which protocol fees are swept.
+     * @return The address to which fees are swept
+     */
+    function feeTo() external view returns (address);
+
+    /**
+     * @notice Returns the token type (e.g. Option/Claim) for a given token Id
+     * @param tokenId The id of the option or claim.
+     * @return The enum (uint8) Type of the tokenId
+     */
     function tokenType(uint256 tokenId) external view returns (Type);
 
-    // @return The optionInfo Option struct for tokenId
+    /**
+     * @notice Returns Option struct details about a given tokenID if that token is
+     * a vToken.
+     * @param tokenId The id of the option.
+     * @return optionInfo The Option struct for tokenId.
+     */
     function option(uint256 tokenId) external view returns (Option memory optionInfo);
 
-    // @return The claimInfo Claim struct for claimId
+    /**
+     * @notice Returns Claim struct details about a given tokenId if that token is a
+     * claim NFT.
+     * @param tokenId The id of the claim.
+     * @return claimInfo The Claim struct for tokenId.
+     */
     function claim(uint256 tokenId) external view returns (Claim memory claimInfo);
 
-    // @notice Updates the address fees can be swept to
+    /**
+     * @notice Updates the address fees can be swept to.
+     * @param newFeeTo The new address to which fees will be swept.
+     */
     function setFeeTo(address newFeeTo) external;
 
-    // @return The tokenId if it exists, else 0
+    /**
+     * @notice Retrieves the optionId for the keccak256 hash of an Option struct
+     * with settlementSeed set to 0 at time of hashing.
+     * @param hash The keccak256 hash of an Option struct.
+     * @return optionId The tokenId if it exists, else 0.
+     */
     function hashToOptionToken(bytes32 hash) external view returns (uint256 optionId);
 
-    // @notice Sweeps fees to the feeTo address if there are more than 0 wei for each address in tokens
+    /**
+     * @notice Sweeps fees to the feeTo address if there are more than 0 wei for
+     * each address in tokens.
+     * @param tokens The tokens for which fees will be swept to the feeTo address.
+     */
     function sweepFees(address[] memory tokens) external;
 
-    // @notice Create a new options chain from optionInfo if it doesn't already exist
+    /**
+     * @notice Create a new options chain from optionInfo if it doesn't already exist
+     * @param optionInfo The optionInfo from which a new chain will be created, with
+     * settlementSeed set to 0.
+     * @return optionId The optionId for the option.
+     */
     function newChain(Option memory optionInfo) external returns (uint256 optionId);
 
-    // @notice write a new bundle of options contract and recieve options tokens and claim ticket
+    /**
+     * @notice Writes a specified amount of the specified option, returining claim NFT id.
+     * @param optionId The desired option id to write.
+     * @param amount The desired number of options to write.
+     * @return claimId The claim NFT id for the option bundle.
+     */
     function write(uint256 optionId, uint112 amount) external returns (uint256 claimId);
 
-    // @notice exercise amount of optionId transfers and receives required amounts of tokens
+    /**
+     * @notice Exercises specified amount of optionId, transferring in the exercise asset,
+     * and transferring out the underlying asset if requirements are met.
+     * @param optionId The option id to exercise.
+     * @param amount The amoutn of option id to exercise.
+     */
     function exercise(uint256 optionId, uint112 amount) external;
 
-    // @notice redeem a claim NFT, transfers the underlying tokens
+    /**
+     * @notice Redeem a claim NFT, transfers the underlying tokens.
+     * @param claimId The ID of the claim to redeem.
+     */
     function redeem(uint256 claimId) external;
 
-    // @notice Information about the position underlying a token, useful for determining value
+    /**
+     * @notice Information about the position underlying a token, useful for determining
+     * value.
+     * @param tokenId The token id for which to retrieve the Underlying position.
+     * @return underlyingPositions The Underlying struct for the supplied tokenId.
+     */
     function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions);
 }

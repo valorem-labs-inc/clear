@@ -130,6 +130,18 @@ event ClaimRedeemed(
     );
 ```
 
+##### ExerciseAssigned
+
+The `ExerciseAssigned` event is emitted when an exercise of an option is assigned to a claim.
+
+```solidity
+event ExerciseAssigned(
+        uint256 indexed claimId, 
+        uint256 indexed optionId, 
+        uint112 amountAssigned
+    );
+```
+
 #### Functions
 
 ##### feeBalance

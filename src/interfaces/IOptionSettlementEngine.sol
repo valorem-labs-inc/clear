@@ -234,7 +234,7 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Returns Option struct details about a given tokenID if that token is
-     * a vToken.
+     * a option.
      * @param tokenId The id of the option.
      * @return optionInfo The Option struct for tokenId.
      */
@@ -271,8 +271,12 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Create a new options chain from optionInfo if it doesn't already exist
-     * @param optionInfo The optionInfo from which a new chain will be created, with
-     * settlementSeed set to 0.
+     * @dev The settlementSeed field in the provided optionInfo will be disregarded,
+     * and is only used internally for fair exercise assignment. The seed's initial
+     * value will be the keccak256 hash of the supplied optionInfo. The internal 
+     * mapping from hash of option info to optionId is mapped with settlementSeed
+     * set to zero when generating the hash.
+     * @param optionInfo The optionInfo from which a new chain will be created
      * @return optionId The optionId for the option.
      */
     function newChain(Option memory optionInfo) external returns (uint256 optionId);

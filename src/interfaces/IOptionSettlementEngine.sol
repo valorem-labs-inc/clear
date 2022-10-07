@@ -14,8 +14,8 @@ interface IOptionSettlementEngine {
     // The caller doesn't have permission to access that function.
     error AccessControlViolation(address accessor, address permissioned);
 
-    // This options chain already exists and thus cannot be created.
-    error OptionsChainExists(bytes32 hash);
+    // This options type already exists and thus cannot be created.
+    error OptionsTypeExists(bytes32 hash);
 
     // The expiry timestamp is less than 24 hours from now.
     error ExpiryTooSoon();
@@ -52,7 +52,7 @@ interface IOptionSettlementEngine {
 
     event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);
 
-    event NewChain(
+    event NewOptionType(
         uint256 indexed optionId,
         address indexed exerciseAsset,
         address indexed underlyingAsset,
@@ -87,7 +87,7 @@ interface IOptionSettlementEngine {
         Claim
     }
 
-    // @dev This struct contains the data about an options chain associated with an ERC-1155 token.
+    // @dev This struct contains the data about an options type associated with an ERC-1155 token.
     struct Option {
         // The underlying asset to be received
         address underlyingAsset;
@@ -99,13 +99,13 @@ interface IOptionSettlementEngine {
         address exerciseAsset;
         // The amount of the underlying asset contained within an option contract of this type
         uint96 underlyingAmount;
-        // Random seed created at the time of option chain creation
+        // Random seed created at the time of option type creation
         uint160 settlementSeed;
         // The amount of the exercise asset required to exercise this option
         uint96 exerciseAmount;
     }
 
-    // @dev This struct contains the data about a claim ERC-1155 NFT associated with an option chain.
+    // @dev This struct contains the data about a claim ERC-1155 NFT associated with an option type.
     struct Claim {
         // Which option was written
         uint256 option;
@@ -153,8 +153,8 @@ interface IOptionSettlementEngine {
     // @notice Sweeps fees to the feeTo address if there are more than 0 wei for each address in tokens
     function sweepFees(address[] memory tokens) external;
 
-    // @notice Create a new options chain from optionInfo if it doesn't already exist
-    function newChain(Option memory optionInfo) external returns (uint256 optionId);
+    // @notice Create a new options type from optionInfo if it doesn't already exist
+    function newOptionType(Option memory optionInfo) external returns (uint256 optionId);
 
     // @notice write a new bundle of options contract and recieve options tokens and claim ticket
     function write(uint256 optionId, uint112 amount) external returns (uint256 claimId);

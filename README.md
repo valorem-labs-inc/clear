@@ -61,12 +61,12 @@ event FeeSwept(
     );
 ```
 
-##### NewChain
+##### NewOptionType
 
-The `NewChain` event is emitted when a new unique options chain is created.
+The `NewOptionType` event is emitted when a new unique options chain is created.
 
 ```solidity
-event NewChain(
+event NewOptionType(
         uint256 indexed optionId,
         address indexed exerciseAsset,
         address indexed underlyingAsset,
@@ -218,13 +218,13 @@ Sweeps the fees if the balance for a token is greater than 1 wei, for each token
 function sweepFees(address[] memory tokens) external;
 ```
 
-##### newChain
+##### NewOptionType
 
 Creates a new options chain if one doesn't already exist for the hash `keccak256(abi.encode(Option memory))` where `settlementSeed` is set to
 `0`.
 
 ```solidity
- function newChain(Option memory optionInfo)
+ function newOptionType(Option memory optionInfo)
         external
         returns (uint256 optionId);
 ```

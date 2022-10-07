@@ -76,7 +76,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
-        testOptionId = engine.newChain(option);
+        testOptionId = engine.newOptionType(option);
 
         // pre-load balances and approvals
         address[4] memory recipients = [address(engine), ALICE, BOB, CAROL];
@@ -117,7 +117,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(engine.balanceOf(BOB, testOptionId), 0);
     }
 
-    function testWriteMultipleWriteSameChain() public {
+    function testWriteMultipleWriteSameOptionType() public {
         IOptionSettlementEngine.Claim memory claim;
 
         // Alice writes a few options and later decides to write more
@@ -249,7 +249,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
-        uint256 optionId = engine.newChain(option);
+        uint256 optionId = engine.newOptionType(option);
 
         vm.startPrank(ALICE);
         engine.write(optionId, 1);
@@ -279,7 +279,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     // **********************************************************************
     //                            FAIL TESTS
     // **********************************************************************
-    function testFailNewChainOptionsChainExists() public {
+    function testFailnewOptionTypeOptionsChainExists() public {
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
             underlyingAsset: WETH_A,
             exerciseAsset: DAI_A,
@@ -291,11 +291,11 @@ contract OptionSettlementTest is Test, NFTreceiver {
         });
         // TODO: investigate this revert - OptionsChainExists error should be displayed
         //  with an argument, implying this expectRevert would use `abi.encodeWithSelector();
-        vm.expectRevert(IOptionSettlementEngine.OptionsChainExists.selector);
-        engine.newChain(option);
+        vm.expectRevert(IOptionSettlementEngine.OptionsTypeExists.selector);
+        engine.newOptionType(option);
     }
 
-    function testFailNewChainExerciseWindowTooShort() public {
+    function testFailnewOptionTypeExerciseWindowTooShort() public {
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
             underlyingAsset: WETH_A,
             exerciseAsset: DAI_A,
@@ -306,10 +306,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
             expiryTimestamp: testExpiryTimestamp - 1
         });
         vm.expectRevert(IOptionSettlementEngine.ExerciseWindowTooShort.selector);
-        engine.newChain(option);
+        engine.newOptionType(option);
     }
 
-    function testNewChainInvalidAssets() public {
+    function testnewOptionTypeInvalidAssets() public {
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
             underlyingAsset: DAI_A,
             exerciseAsset: DAI_A,
@@ -320,7 +320,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             expiryTimestamp: testExpiryTimestamp
         });
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, DAI_A, DAI_A));
-        engine.newChain(option);
+        engine.newOptionType(option);
     }
 
     function testFailAssignExercise() public {
@@ -349,7 +349,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseTimestamp: testExerciseTimestamp + 1,
             expiryTimestamp: testExpiryTimestamp + 1
         });
-        uint256 badOptionId = engine.newChain(option);
+        uint256 badOptionId = engine.newOptionType(option);
 
         // Alice writes
         vm.startPrank(ALICE);
@@ -447,7 +447,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     //                            FUZZ TESTS
     // **********************************************************************
 
-    function testFuzzNewChain(
+    function testFuzznewOptionType(
         uint96 underlyingAmount,
         uint96 exerciseAmount,
         uint40 exerciseTimestamp,
@@ -471,7 +471,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             expiryTimestamp: expiryTimestamp
         });
 
-        uint256 optionId = engine.newChain(optionInfo);
+        uint256 optionId = engine.newOptionType(optionInfo);
         assertEq(optionId, 2);
 
         IOptionSettlementEngine.Option memory optionRecord = engine.option(optionId);

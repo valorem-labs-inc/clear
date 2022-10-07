@@ -138,7 +138,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Make sure that expiry is at least 24 hours from now
         if (optionInfo.expiryTimestamp < (block.timestamp + 86400)) {
-            revert ExpiryTooSoon();
+            revert ExpiryTooSoon(optionId);
         }
 
         // Ensure the exercise window is at least 24 hours
@@ -243,7 +243,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint256 claimsLen = unexercisedClaimsByOption[optionId].length;
 
         if (claimsLen == 0) {
-            revert NoClaims();
+            revert NoClaims(optionId);
         }
 
         // Initial storage pointer
@@ -320,7 +320,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
         // Require that we have reached the exercise timestamp
         if (optionRecord.exerciseTimestamp >= block.timestamp) {
-            revert ExerciseTooEarly();
+            revert ExerciseTooEarly(optionId);
         }
 
         uint256 rxAmount = optionRecord.exerciseAmount * amount;
@@ -353,20 +353,20 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint256 balance = this.balanceOf(msg.sender, claimId);
 
         if (balance != 1) {
-            revert BalanceTooLow();
+            revert BalanceTooLow(claimId);
         }
 
         Claim storage claimRecord = _claim[claimId];
 
         if (claimRecord.claimed) {
-            revert AlreadyClaimed();
+            revert AlreadyClaimed(claimId);
         }
 
         uint256 optionId = claimRecord.option;
         Option storage optionRecord = _option[optionId];
 
         if (optionRecord.expiryTimestamp > block.timestamp) {
-            revert ClaimTooSoon();
+            revert ClaimTooSoon(claimId);
         }
 
         uint256 exerciseAmount = optionRecord.exerciseAmount * claimRecord.amountExercised;

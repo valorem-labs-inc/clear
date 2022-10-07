@@ -439,7 +439,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
         vm.warp(testExerciseTimestamp - 1);
-        vm.expectRevert(IOptionSettlementEngine.ClaimTooSoon.selector);
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.ClaimTooSoon.selector, claimId));
         engine.redeem(claimId);
     }
 

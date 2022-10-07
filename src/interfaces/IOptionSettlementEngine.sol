@@ -27,7 +27,8 @@ interface IOptionSettlementEngine {
     error OptionsChainExists(bytes32 hash);
 
     /// @notice The expiry timestamp is less than 24 hours from now.
-    error ExpiryTooSoon();
+    /// @param optionId Supplied option ID.
+    error ExpiryTooSoon(uint256 optionId);
 
     /// @notice The option exercise window is less than 24 hours long.
     error ExerciseWindowTooShort();
@@ -59,19 +60,24 @@ interface IOptionSettlementEngine {
     error ExpiredOption(uint256 optionId, uint40 expiry);
 
     /// @notice This option cannot yet be exercised.
-    error ExerciseTooEarly();
+    /// @param optionId Supplied option ID.
+    error ExerciseTooEarly(uint256 optionId);
 
     /// @notice This option has no claims written against it.
-    error NoClaims();
+    /// @param optionId Supplied option ID.
+    error NoClaims(uint256 optionId);
 
     /// @notice This account has no claims.
-    error BalanceTooLow();
+    /// @param claimId Supplied claim ID.
+    error BalanceTooLow(uint256 claimId);
 
     /// @notice This claimId has already been claimed.
-    error AlreadyClaimed();
+    /// @param claimId Supplied claim ID.
+    error AlreadyClaimed(uint256 claimId);
 
     /// @notice You can't claim before expiry.
-    error ClaimTooSoon();
+    /// @param claimId Supplied claim ID.
+    error ClaimTooSoon(uint256 claimId);
 
     /**
      * @notice Emitted when accrued protocol fees for a given token are swept to the

@@ -11,7 +11,7 @@ import "./TokenURIGenerator.sol";
 /**
  * Valorem Options V1 is a DeFi money lego enabling writing covered call and covered put, physically settled, options.
  * All written options are fully collateralized against an ERC-20 underlying asset and exercised with an
- * ERC-20 exercise asset using a chainlink VRF random number per unique option type for fair settlement. Options contracts
+ * ERC-20 exercise asset using a pseudorandom number per unique option type for fair settlement. Options contracts
  * are issued as fungible ERC-1155 tokens, with each token representing a contract. Option writers are additionally issued
  * an ERC-1155 NFT representing a lot of contracts written for claiming collateral and exercise assignment. This design
  * eliminates the need for market price oracles, and allows for permission-less writing, and gas efficient transfer, of
@@ -51,14 +51,17 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     // Accessor for claim ticket details
     mapping(uint256 => Claim) internal _claim;
 
+    /// @inheritdoc IOptionSettlementEngine
     function option(uint256 tokenId) external view returns (Option memory optionInfo) {
         optionInfo = _option[tokenId];
     }
 
+    /// @inheritdoc IOptionSettlementEngine
     function claim(uint256 tokenId) external view returns (Claim memory claimInfo) {
         claimInfo = _claim[tokenId];
     }
 
+    /// @inheritdoc IOptionSettlementEngine
     function setFeeTo(address newFeeTo) public {
         if (msg.sender != feeTo) {
             revert AccessControlViolation(msg.sender, feeTo);
@@ -66,6 +69,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         feeTo = newFeeTo;
     }
 
+    /// @inheritdoc IOptionSettlementEngine
     function sweepFees(address[] memory tokens) public {
         address sendFeeTo = feeTo;
         address token;
@@ -119,6 +123,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return TokenURIGenerator.constructTokenURI(params);
     }
 
+    /// @inheritdoc IOptionSettlementEngine
     function newOptionType(Option memory optionInfo) external returns (uint256 optionId) {
         // Ensure settlement seed is 0
         optionInfo.settlementSeed = 0;
@@ -184,6 +189,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             );
     }
 
+    /// @inheritdoc IOptionSettlementEngine
     function write(uint256 optionId, uint112 amount) external returns (uint256 claimId) {
         if (tokenType[optionId] != Type.Option) {
             revert InvalidOption(optionId);
@@ -301,6 +307,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         _option[optionId].settlementSeed = settlementSeed;
     }
 
+    /// @inheritdoc IOptionSettlementEngine
     function exercise(uint256 optionId, uint112 amount) external {
         if (tokenType[optionId] != Type.Option) {
             revert InvalidOption(optionId);
@@ -337,6 +344,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         emit OptionsExercised(optionId, msg.sender, amount);
     }
 
+    /// @inheritdoc IOptionSettlementEngine
     function redeem(uint256 claimId) external {
         if (tokenType[claimId] != Type.Claim) {
             revert InvalidClaim(claimId);
@@ -388,6 +396,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             );
     }
 
+    /// @inheritdoc IOptionSettlementEngine
     function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions) {
         if (tokenType[tokenId] == Type.None) {
             revert TokenNotFound(tokenId);

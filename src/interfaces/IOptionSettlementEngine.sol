@@ -234,7 +234,7 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Returns Option struct details about a given tokenID if that token is
-     * a option.
+     * an option.
      * @param tokenId The id of the option.
      * @return optionInfo The Option struct for tokenId.
      */

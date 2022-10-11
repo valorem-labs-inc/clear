@@ -155,6 +155,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Use the optionKey to seed entropy
         optionInfo.settlementSeed = optionKey;
+        optionInfo.nextClaimId = 1;
 
         // TODO(Is this check really needed?)
         // Check that both tokens are ERC20 by instantiating them and checking supply
@@ -178,8 +179,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             optionInfo.exerciseAmount,
             optionInfo.underlyingAmount,
             optionInfo.exerciseTimestamp,
-            optionInfo.expiryTimestamp
-            );
+            optionInfo.expiryTimestamp,
+            optionInfo.nextClaimId
+        );
     }
 
     /// @inheritdoc IOptionSettlementEngine
@@ -436,7 +438,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     // **********************************************************************
-    //                            INTERNAL
+    //                    TOKEN ID ENCODING HELPERS 
     // **********************************************************************
     /**
      * @dev Claim and option type ids are encoded as follows:
@@ -468,6 +470,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     function _isOptionInitialized(uint160 optionId) public view returns (bool) {
-        return _option[optionId].underlyingAsset == address(0x0);
+        return _option[optionId].underlyingAsset != address(0x0);
     }
 }

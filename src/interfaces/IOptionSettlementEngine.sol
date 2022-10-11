@@ -102,7 +102,8 @@ interface IOptionSettlementEngine {
         uint96 exerciseAmount,
         uint96 underlyingAmount,
         uint40 exerciseTimestamp,
-        uint40 expiryTimestamp
+        uint40 expiryTimestamp,
+        uint96 nextClaimId
     );
 
     /**
@@ -268,9 +269,8 @@ interface IOptionSettlementEngine {
      * @notice Create a new options type from optionInfo if it doesn't already exist
      * @dev The settlementSeed field in the provided optionInfo will be disregarded,
      * and is only used internally for fair exercise assignment. The seed's initial
-     * value will be the keccak256 hash of the supplied optionInfo. The internal
-     * mapping from hash of option info to optionId is mapped with settlementSeed
-     * set to zero when generating the hash.
+     * value will be the keccak256 hash of the supplied optionInfo. The nextClaimId
+     * field will also be disregarded.
      * @param optionInfo The optionInfo from which a new type will be created
      * @return optionId The optionId for the option.
      */

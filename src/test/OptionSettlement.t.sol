@@ -276,6 +276,15 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(underlyingPositions.exercisePosition, 49000000000000000000);
     }
 
+    function testGetEncodedIdComponents() public {
+        // hash == 1, type == 1, id == 1
+        uint256 testId = 0x1400000000000000000000001;
+        (uint160 optionOrClaimHash, IOptionSettlementEngine.Type t, uint96 claimId) = engine.getDecodedIdComponents(testId);
+        assertEq(optionOrClaimHash, 1);
+        assertEq(uint8(t), uint8(1));
+        assertEq(claimId, 1);
+    }
+
     // **********************************************************************
     //                            FAIL TESTS
     // **********************************************************************

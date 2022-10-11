@@ -51,6 +51,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     // Accessor for claim ticket details
     mapping(uint256 => Claim) internal _claim;
 
+    uint256 public hashMask = 0xFFFFFFFFFFFFFFFFFFFF000000000000;
+
     /// @inheritdoc IOptionSettlementEngine
     function option(uint256 tokenId) external view returns (Option memory optionInfo) {
         optionInfo = _option[tokenId];
@@ -422,5 +424,56 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 exercisePosition: int256(underlyingAmount)
             });
         }
+    }
+
+    // **********************************************************************
+    //                            INTERNAL
+    // **********************************************************************
+    event LogUint(string topic, uint data);
+    uint8 _hashShift = 256 - 160;
+    uint8 _typeShift = 256 - 160 - 2;
+
+    /**
+     * @dev Claim and option type ids are encoded as follows:
+     * (MSb)
+     * [160b hash of claim/option data structure] 
+     * [2b encoding option/claim/uninitilized type] 
+     * [94b encoding  option id or claim id] 
+     * (LSb)
+     * This function decodes a supplied id.
+     * @return h t _id The decoded components of the id as described above, padded as required.
+     */
+    function getDecodedIdComponents(uint256 id) public returns (uint160 h, Type t, uint96 _id) {
+        // id mask is the LSB, no shift required
+        // uint160.max is all 1s, shift this to MSB
+        uint256 _hashMask = type(uint160).max << _hashShift;
+        uint256 typeMask = (3 << _typeShift);
+        // uint96, top 2 bits set low to mask 94b id
+        // 0011 => 0x3 
+        uint256 idMask = 0x3FFFFFFFFFFFFFFFFFFFFFFF;
+
+        // move hash to LSB to fit into uint160
+        h = uint160((id & _hashMask) >> _hashShift);
+        uint8 _type = uint8((id & typeMask) >> _typeShift);
+        _id = uint96(id & idMask);
+        emit LogUint("hash shift", _hashShift);
+        emit LogUint("upper 160 hash", h);
+        emit LogUint("type shift", _typeShift);
+        emit LogUint("4 bit type", _type);
+        emit LogUint("id", _id);
+        t = Type(_type);
+    }
+
+    function getEncodedId(Option memory option) public view returns (uint256 id) {
+        bytes32 optionHash = bytes32(keccak256(abi.encode(option)));
+        id = (uint256(optionHash) << _hashShift);
+        id |= (uint256(Type.Option) << _typeShift);
+        // id remains zero in the last 94 bits for options
+    }
+
+    function getEncodedId(Claim memory claim) public view returns (uint256 id) {
+        bytes32 claimHash = bytes32(keccak256(abi.encode(claim)));
+        id = (uint256(claimHash) << _hashShift);
+        id |= (uint256(Type.Option) << _typeShift);
     }
 }

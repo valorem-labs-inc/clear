@@ -124,16 +124,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @inheritdoc IOptionSettlementEngine
-    function newChain(Option memory optionInfo) external returns (uint256 optionId) {
+    function newOptionType(Option memory optionInfo) external returns (uint256 optionId) {
         // Ensure settlement seed is 0
         optionInfo.settlementSeed = 0;
 
-        // Check that a duplicate chain doesn't exist
-        bytes32 chainKey = keccak256(abi.encode(optionInfo));
+        // Check that a duplicate option type doesn't exist
+        bytes32 optionKey = keccak256(abi.encode(optionInfo));
 
         // If it does, revert
-        if (hashToOptionToken[chainKey] != 0) {
-            revert OptionsChainExists(chainKey);
+        if (hashToOptionToken[optionKey] != 0) {
+            revert OptionsTypeExists(optionKey);
         }
 
         // Make sure that expiry is at least 24 hours from now
@@ -151,8 +151,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert InvalidAssets(optionInfo.exerciseAsset, optionInfo.underlyingAsset);
         }
 
-        // Use the chainKey to seed entropy
-        optionInfo.settlementSeed = uint160(uint256(chainKey));
+        // Use the optionKey to seed entropy
+        optionInfo.settlementSeed = uint160(uint256(optionKey));
 
         // Create option token and increment
         tokenType[nextTokenId] = Type.Option;
@@ -176,9 +176,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Increment the next token id to be used
         ++nextTokenId;
-        hashToOptionToken[chainKey] = optionId;
+        hashToOptionToken[optionKey] = optionId;
 
-        emit NewChain(
+        emit NewOptionType(
             optionId,
             optionInfo.exerciseAsset,
             optionInfo.underlyingAsset,

@@ -24,7 +24,7 @@ interface IOptionSettlementEngine {
      * @notice This options chain already exists and thus cannot be created.
      * @param hash The hash of the options chain.
      */
-    error OptionsChainExists(bytes32 hash);
+    error OptionsTypeExists(bytes32 hash);
 
     /// @notice The expiry timestamp is less than 24 hours from now.
     error ExpiryTooSoon();
@@ -83,8 +83,8 @@ interface IOptionSettlementEngine {
     event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);
 
     /**
-     * @notice Emitted when a new unique options chain is created.
-     * @param optionId The id of the initial option created on the chain.
+     * @notice Emitted when a new unique options type is created.
+     * @param optionId The id of the initial option created.
      * @param exerciseAsset The contract address of the exercise asset.
      * @param underlyingAsset The contract address of the underlying asset.
      * @param exerciseAmount The amount of the exercise asset to be exercised.
@@ -92,7 +92,7 @@ interface IOptionSettlementEngine {
      * @param exerciseTimestamp The timestamp for exercising the option.
      * @param expiryTimestamp The expiry timestamp of the option.
      */
-    event NewChain(
+    event NewOptionType(
         uint256 indexed optionId,
         address indexed exerciseAsset,
         address indexed underlyingAsset,
@@ -163,7 +163,7 @@ interface IOptionSettlementEngine {
         Claim
     }
 
-    /// @dev This struct contains the data about an options chain associated with an ERC-1155 token.
+    /// @dev This struct contains the data about an options type associated with an ERC-1155 token.
     struct Option {
         // The underlying asset to be received
         address underlyingAsset;
@@ -175,13 +175,13 @@ interface IOptionSettlementEngine {
         address exerciseAsset;
         // The amount of the underlying asset contained within an option contract of this type
         uint96 underlyingAmount;
-        // Random seed created at the time of option chain creation
+        // Random seed created at the time of option type creation
         uint160 settlementSeed;
         // The amount of the exercise asset required to exercise this option
         uint96 exerciseAmount;
     }
 
-    /// @dev This struct contains the data about a claim ERC-1155 NFT associated with an option chain.
+    /// @dev This struct contains the data about a claim ERC-1155 NFT associated with an option type.
     struct Claim {
         // Which option was written
         uint256 option;
@@ -234,7 +234,7 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Returns Option struct details about a given tokenID if that token is
-     * a option.
+     * an option.
      * @param tokenId The id of the option.
      * @return optionInfo The Option struct for tokenId.
      */
@@ -270,16 +270,16 @@ interface IOptionSettlementEngine {
     function sweepFees(address[] memory tokens) external;
 
     /**
-     * @notice Create a new options chain from optionInfo if it doesn't already exist
+     * @notice Create a new options type from optionInfo if it doesn't already exist
      * @dev The settlementSeed field in the provided optionInfo will be disregarded,
      * and is only used internally for fair exercise assignment. The seed's initial
      * value will be the keccak256 hash of the supplied optionInfo. The internal
      * mapping from hash of option info to optionId is mapped with settlementSeed
      * set to zero when generating the hash.
-     * @param optionInfo The optionInfo from which a new chain will be created
+     * @param optionInfo The optionInfo from which a new type will be created
      * @return optionId The optionId for the option.
      */
-    function newChain(Option memory optionInfo) external returns (uint256 optionId);
+    function newOptionType(Option memory optionInfo) external returns (uint256 optionId);
 
     /**
      * @notice Writes a specified amount of the specified option, returining claim NFT id.

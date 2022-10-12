@@ -46,7 +46,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function option(uint256 tokenId) external view returns (Option memory optionInfo) {
-        // TODO: Revert if claim IDX is specified? 
+        // TODO: Revert if claim IDX is specified?
         (uint160 optionId,) = getDecodedIdComponents(tokenId);
         optionInfo = _option[optionId];
     }
@@ -60,11 +60,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function tokenType(uint256 tokenId) external pure returns (Type) {
         (, uint96 claimIdx) = getDecodedIdComponents(tokenId);
         // TODO: should we do a read here and ensure the token exists?
-        if (claimIdx == 0) 
+        if (claimIdx == 0) {
             return Type.Option;
+        }
         return Type.Claim;
     }
-
 
     /// @inheritdoc IOptionSettlementEngine
     function setFeeTo(address newFeeTo) public {
@@ -183,7 +183,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             optionInfo.exerciseTimestamp,
             optionInfo.expiryTimestamp,
             optionInfo.nextClaimId
-        );
+            );
     }
 
     /// @inheritdoc IOptionSettlementEngine
@@ -442,7 +442,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     // **********************************************************************
-    //                    TOKEN ID ENCODING HELPERS 
+    //                    TOKEN ID ENCODING HELPERS
     // **********************************************************************
     /**
      * @dev Claim and option type ids are encoded as follows:

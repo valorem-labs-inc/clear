@@ -460,6 +460,12 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.write(testOptionId, 0);
     }
 
+    function testUriFailsWithTokenIdEncodingNonexistantOptionType() public {
+        uint256 tokenId = 420;
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, tokenId));
+        engine.uri(420);
+    }
+
     // **********************************************************************
     //                            FUZZ TESTS
     // **********************************************************************

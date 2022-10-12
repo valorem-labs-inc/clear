@@ -36,7 +36,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     // The list of claims for an option
     mapping(uint160 => uint256[]) internal unexercisedClaimsByOption;
 
-    // TODO: should this be uint160 => option?
     // Accessor for Option contract details
     mapping(uint160 => Option) internal _option;
 
@@ -104,9 +103,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         Option memory optionInfo;
         (uint160 optionId, uint96 claimId) = getDecodedIdComponents(tokenId);
         optionInfo = _option[optionId];
-        Type _type = claimId == 0 ? Type.Option : Type.Claim;
 
-        // TODO: revert token not found
+        if (optionInfo.underlyingAsset == address(0x0)) {
+            revert TokenNotFound(tokenId);
+        }
+
+        Type _type = claimId == 0 ? Type.Option : Type.Claim;
 
         TokenURIGenerator.TokenURIParams memory params = TokenURIGenerator.TokenURIParams({
             underlyingAsset: optionInfo.underlyingAsset,
@@ -187,7 +189,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @inheritdoc IOptionSettlementEngine
     function write(uint256 optionId, uint112 amount) external returns (uint256 claimId) {
         if (amount == 0) {
-            // TODO test
             revert AmountWrittenCannotBeZero();
         }
 

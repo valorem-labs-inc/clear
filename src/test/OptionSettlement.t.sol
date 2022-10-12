@@ -126,7 +126,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         claim = engine.claim(claimId1);
         (uint160 _optionId, uint96 claimIdx) = engine.getDecodedIdComponents(claimId1);
-        uint256 optionId = (_optionId) << 96;
+        uint256 optionId = uint256(_optionId) << 96;
         assertEq(optionId, testOptionId);
         assertEq(claimIdx, 1);
         assertEq(claim.amountWritten, 69);
@@ -134,8 +134,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertTrue(!claim.claimed);
 
         claim = engine.claim(claimId2);
-        (optionId, claimIdx) = engine.getDecodedIdComponents(claimId1);
-        optionId = (_optionId) << 96;
+        (optionId, claimIdx) = engine.getDecodedIdComponents(claimId2);
+        optionId = uint256(_optionId) << 96;
         assertEq(optionId, testOptionId);
         assertEq(claimIdx, 2);
         assertEq(claim.amountWritten, 100);

@@ -454,6 +454,12 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.redeem(claimId);
     }
 
+    function testWriteZeroOptionsFails() public {
+        vm.startPrank(ALICE);
+        vm.expectRevert(IOptionSettlementEngine.AmountWrittenCannotBeZero.selector);
+        engine.write(testOptionId, 0);
+    }
+
     // **********************************************************************
     //                            FUZZ TESTS
     // **********************************************************************

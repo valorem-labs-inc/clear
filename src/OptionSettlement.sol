@@ -62,8 +62,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         (, uint96 claimIdx) = getDecodedIdComponents(tokenId);
         // TODO: should we do a read here and ensure the token exists?
         if (claimIdx == 0) 
-            return Type.Claim;
-        return Type.Option;
+            return Type.Option;
+        return Type.Claim;
     }
 
 

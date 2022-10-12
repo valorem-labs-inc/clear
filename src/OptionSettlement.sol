@@ -211,11 +211,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
 
         claimIndex = optionRecord.nextClaimId;
+        claimId = getTokenId(_optionId, claimIndex);
 
         // Mint the options contracts and claim token
         uint256[] memory tokens = new uint256[](2);
-        tokens[0] = _optionId;
-        tokens[1] = claimIndex;
+        tokens[0] = uint256(_optionId) << 96;
+        tokens[1] = claimId;
 
         uint256[] memory amounts = new uint256[](2);
         amounts[0] = amount;
@@ -224,7 +225,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         bytes memory data = new bytes(0);
 
         // Store info about the claim
-        claimId = getTokenId(_optionId, claimIndex);
         _claim[claimId] = Claim({amountWritten: amount, amountExercised: 0, claimed: false});
         unexercisedClaimsByOption[_optionId].push(claimId);
 
@@ -314,11 +314,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function exercise(uint256 optionId, uint112 amount) external {
         (uint160 _optionId, uint96 claimIdx) = getDecodedIdComponents(optionId);
 
+        // option ID should be specified without claim in lower 96b
         if (claimIdx != 0) {
             revert InvalidOption(optionId);
         }
 
         Option storage optionRecord = _option[_optionId];
+        // retrieve the number of claims from the option record
+        claimIdx = optionRecord.nextClaimId - 1;
 
         if (optionRecord.expiryTimestamp <= block.timestamp) {
             revert ExpiredOption(optionId, optionRecord.expiryTimestamp);

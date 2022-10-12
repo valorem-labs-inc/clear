@@ -268,9 +268,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function testGetEncodedIdComponents() public {
-        uint256 testId = 0x1400000000000000000000001;
+        uint256 testId = 1;
+        testId |= 23 << 96;
         (uint160 optionId, uint96 claimId) = engine.getDecodedIdComponents(testId);
-        assertEq(optionId, 0x14);
+        assertEq(optionId, 23);
         assertEq(claimId, 1);
     }
 

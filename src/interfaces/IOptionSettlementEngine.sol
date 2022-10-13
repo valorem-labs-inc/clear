@@ -27,9 +27,9 @@ interface IOptionSettlementEngine {
     error OptionsChainExists(bytes32 hash);
 
     /**
-      * @notice The expiry timestamp is less than 24 hours from now.
-      * @param optionId Supplied option ID.
-      */
+     * @notice The expiry timestamp is less than 24 hours from now.
+     * @param optionId Supplied option ID.
+     */
     error ExpiryTooSoon(uint256 optionId, uint40 expiry);
 
     /// @notice The option exercise window is less than 24 hours long.

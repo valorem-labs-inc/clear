@@ -22,9 +22,9 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice This options chain already exists and thus cannot be created.
-     * @param hash The hash of the options chain.
+     * @param optionId The id and hash of the options chain.
      */
-    error OptionsTypeExists(bytes32 hash);
+    error OptionsTypeExists(uint256 optionId);
 
     /// @notice The expiry timestamp is less than 24 hours from now.
     error ExpiryTooSoon();
@@ -73,6 +73,9 @@ interface IOptionSettlementEngine {
     /// @notice You can't claim before expiry.
     error ClaimTooSoon();
 
+    /// @notice The amount provided to write() must be > 0.
+    error AmountWrittenCannotBeZero();
+
     /**
      * @notice Emitted when accrued protocol fees for a given token are swept to the
      * feeTo address.
@@ -99,7 +102,8 @@ interface IOptionSettlementEngine {
         uint96 exerciseAmount,
         uint96 underlyingAmount,
         uint40 exerciseTimestamp,
-        uint40 expiryTimestamp
+        uint40 expiryTimestamp,
+        uint96 nextClaimId
     );
 
     /**
@@ -179,12 +183,12 @@ interface IOptionSettlementEngine {
         uint160 settlementSeed;
         // The amount of the exercise asset required to exercise this option
         uint96 exerciseAmount;
+        // Which option was written
+        uint96 nextClaimId;
     }
 
     /// @dev This struct contains the data about a claim ERC-1155 NFT associated with an option type.
     struct Claim {
-        // Which option was written
-        uint256 option;
         // These are 1:1 contracts with the underlying Option struct
         // The number of contracts written in this claim
         uint112 amountWritten;
@@ -255,14 +259,6 @@ interface IOptionSettlementEngine {
     function setFeeTo(address newFeeTo) external;
 
     /**
-     * @notice Retrieves the optionId for the keccak256 hash of an Option struct
-     * with settlementSeed set to 0 at time of hashing.
-     * @param hash The keccak256 hash of an Option struct.
-     * @return optionId The tokenId if it exists, else 0.
-     */
-    function hashToOptionToken(bytes32 hash) external view returns (uint256 optionId);
-
-    /**
      * @notice Sweeps fees to the feeTo address if there are more than 0 wei for
      * each address in tokens.
      * @param tokens The tokens for which fees will be swept to the feeTo address.
@@ -273,9 +269,8 @@ interface IOptionSettlementEngine {
      * @notice Create a new options type from optionInfo if it doesn't already exist
      * @dev The settlementSeed field in the provided optionInfo will be disregarded,
      * and is only used internally for fair exercise assignment. The seed's initial
-     * value will be the keccak256 hash of the supplied optionInfo. The internal
-     * mapping from hash of option info to optionId is mapped with settlementSeed
-     * set to zero when generating the hash.
+     * value will be the keccak256 hash of the supplied optionInfo. The nextClaimId
+     * field will also be disregarded.
      * @param optionInfo The optionInfo from which a new type will be created
      * @return optionId The optionId for the option.
      */

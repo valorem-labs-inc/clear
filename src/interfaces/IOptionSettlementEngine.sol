@@ -29,6 +29,7 @@ interface IOptionSettlementEngine {
     /**
      * @notice The expiry timestamp is less than 24 hours from now.
      * @param optionId Supplied option ID.
+     * @param expiry Timestamp of expiry
      */
     error ExpiryTooSoon(uint256 optionId, uint40 expiry);
 

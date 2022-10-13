@@ -26,8 +26,12 @@ interface IOptionSettlementEngine {
      */
     error OptionsTypeExists(uint256 optionId);
 
-    /// @notice The expiry timestamp is less than 24 hours from now.
-    error ExpiryTooSoon();
+    /**
+     * @notice The expiry timestamp is less than 24 hours from now.
+     * @param optionId Supplied option ID.
+     * @param expiry Timestamp of expiry
+     */
+    error ExpiryTooSoon(uint256 optionId, uint40 expiry);
 
     /// @notice The option exercise window is less than 24 hours long.
     error ExerciseWindowTooShort();
@@ -58,20 +62,37 @@ interface IOptionSettlementEngine {
      */
     error ExpiredOption(uint256 optionId, uint40 expiry);
 
-    /// @notice This option cannot yet be exercised.
-    error ExerciseTooEarly();
+    /**
+     * @notice This option cannot yet be exercised.
+     * @param optionId Supplied option ID.
+     * @param exercise The time when the optionId can be exercised.
+     */
+    error ExerciseTooEarly(uint256 optionId, uint40 exercise);
 
-    /// @notice This option has no claims written against it.
-    error NoClaims();
+    /**
+     * @notice This option has no claims written against it.
+     * @param optionId Supplied option ID.
+     */
+    error NoClaims(uint256 optionId);
 
-    /// @notice This account has no claims.
-    error BalanceTooLow();
+    /**
+     * @notice This account has no claims.
+     * @param claimId Supplied claim ID.
+     */
+    error RedeemerDoesNotOwnClaimId(uint256 claimId);
 
-    /// @notice This claimId has already been claimed.
-    error AlreadyClaimed();
+    /**
+     * @notice This claimId has already been claimed.
+     * @param claimId Supplied claim ID.
+     */
+    error AlreadyClaimed(uint256 claimId);
 
-    /// @notice You can't claim before expiry.
-    error ClaimTooSoon();
+    /**
+     * @notice You can't claim before expiry.
+     * @param claimId Supplied claim ID.
+     * @param expiry timestamp at which the options chain expires
+     */
+    error ClaimTooSoon(uint256 claimId, uint40 expiry);
 
     /// @notice The amount provided to write() must be > 0.
     error AmountWrittenCannotBeZero();

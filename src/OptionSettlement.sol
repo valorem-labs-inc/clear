@@ -142,7 +142,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Make sure that expiry is at least 24 hours from now
         if (optionInfo.expiryTimestamp < (block.timestamp + 86400)) {
-            revert ExpiryTooSoon();
+            revert ExpiryTooSoon(optionId, optionInfo.expiryTimestamp);
         }
 
         // Ensure the exercise window is at least 24 hours
@@ -247,7 +247,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function assignExercise(uint160 optionId, uint96 claimsLen, uint112 amount, uint160 settlementSeed) internal {
         // Number of claims enqueued for this option
         if (claimsLen == 0) {
-            revert NoClaims();
+            revert NoClaims(optionId);
         }
 
         // Initial storage pointer
@@ -329,7 +329,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
         // Require that we have reached the exercise timestamp
         if (optionRecord.exerciseTimestamp >= block.timestamp) {
-            revert ExerciseTooEarly();
+            revert ExerciseTooEarly(optionId, optionRecord.exerciseTimestamp);
         }
 
         uint256 rxAmount = optionRecord.exerciseAmount * amount;
@@ -364,19 +364,19 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint256 balance = this.balanceOf(msg.sender, claimId);
 
         if (balance != 1) {
-            revert BalanceTooLow();
+            revert RedeemerDoesNotOwnClaimId(claimId);
         }
 
         Claim storage claimRecord = _claim[claimId];
 
         if (claimRecord.claimed) {
-            revert AlreadyClaimed();
+            revert AlreadyClaimed(claimId);
         }
 
         Option storage optionRecord = _option[optionId];
 
         if (optionRecord.expiryTimestamp > block.timestamp) {
-            revert ClaimTooSoon();
+            revert ClaimTooSoon(claimId, optionRecord.expiryTimestamp);
         }
 
         uint256 exerciseAmount = optionRecord.exerciseAmount * claimRecord.amountExercised;

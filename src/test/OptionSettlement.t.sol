@@ -57,7 +57,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function setUp() public {
         // Fork mainnet
-        vm.createSelectFork(vm.envString("RPC_URL"));
+        vm.createSelectFork(vm.envString("RPC_URL"), 15_000_000); // specify block number to cache for future test runs
 
         // Deploy OptionSettlementEngine
         engine = new OptionSettlementEngine();
@@ -299,7 +299,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testEvent_newOptionType() public {
         vm.expectEmit(false, true, true, true); // ignore 1st topic for now (TODO calculate optionId)
         emit NewOptionType(
-            0,
+            999,
             WETH_A,
             DAI_A,
             testExerciseAmount,
@@ -327,10 +327,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(WETH_A, ALICE, expectedFeeAccruedAmount);
 
-        // TODO fix incorrect topics and data
-
-        vm.expectEmit(false, false, false, false); // ignore 3rd topic for now (TODO calculate claimId)
-        emit OptionsWritten(testOptionId, ALICE, 0, 1);
+        vm.expectEmit(true, true, true, false); // ignore data for now (TODO calculate claimId)
+        emit OptionsWritten(testOptionId, ALICE, 999, 1);
 
         vm.prank(ALICE);
         engine.write(testOptionId, 1);
@@ -342,17 +340,18 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
         vm.stopPrank();
 
-        vm.warp(testExpiryTimestamp - 1);
+        vm.warp(testExpiryTimestamp - 1 seconds);
 
-        // TODO fix incorrect topics and data
+        (uint160 expectedOptionId, ) = engine.getDecodedIdComponents(testOptionId);
+        uint256 expectedFeeAccruedAmount = (testExerciseAmount / 10_000) * engine.feeBps();
 
-        vm.expectEmit(false, false, false, false);
-        emit ExerciseAssigned(1234, testOptionId, 1234);
+        vm.expectEmit(false, true, true, true); // ignore 1st topic for now (TODO calculate claimId)
+        emit ExerciseAssigned(999, expectedOptionId, 1);
 
-        vm.expectEmit(false, false, false, false);
-        emit FeeAccrued(WETH_A, BOB, 1234);
+        vm.expectEmit(true, true, true, true);
+        emit FeeAccrued(DAI_A, BOB, expectedFeeAccruedAmount);
 
-        vm.expectEmit(false, false, false, false);
+        vm.expectEmit(true, true, true, true);
         emit OptionsExercised(testOptionId, BOB, 1);
 
         vm.prank(BOB);
@@ -366,7 +365,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         (uint256 optionId, ) = engine.getDecodedIdComponents(claimId);
         uint96 expectedUnderlyingAmount = testUnderlyingAmount * amountWritten;
 
-        vm.warp(testExpiryTimestamp + 1);
+        vm.warp(testExpiryTimestamp + 1 seconds);
 
         vm.expectEmit(true, true, true, true);
         emit ClaimRedeemed(
@@ -383,7 +382,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.redeem(claimId);
     }
 
-    function testEvent_sweepFees() public {
+    function testEvent_sweepFees_whenFeesAccruedForWrite() public {
         uint96 daiUnderlyingAmount = 9 * 10 ** 18;
         uint96 usdcUnderlyingAmount = 7 * 10 ** 9; // not 18 decimals
         
@@ -433,6 +432,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         engine.sweepFees(tokens);
     }
+
+    // TODO testEvent_sweepFees_whenFeesAccruedForExercise
 
     // **********************************************************************
     //                            FAIL TESTS

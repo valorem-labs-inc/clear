@@ -434,9 +434,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 (optionRecord.underlyingAmount * (claimRecord.amountWritten - claimRecord.amountExercised));
             underlyingPositions = Underlying({
                 underlyingAsset: optionRecord.underlyingAsset,
-                underlyingPosition: int256(exerciseAmount),
+                underlyingPosition: int256(underlyingAmount),
                 exerciseAsset: optionRecord.exerciseAsset,
-                exercisePosition: int256(underlyingAmount)
+                exercisePosition: int256(exerciseAmount)
             });
         }
     }

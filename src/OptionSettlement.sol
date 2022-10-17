@@ -136,7 +136,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         optionId = uint256(optionKey) << 96;
 
         // If it does, revert
-        if (_isOptionInitialized(optionKey)) {
+        if (isOptionInitialized(optionKey)) {
             revert OptionsTypeExists(optionId);
         }
 
@@ -411,7 +411,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions) {
         (uint160 optionId, uint96 claimIdx) = getDecodedIdComponents(tokenId);
 
-        if (!_isOptionInitialized(optionId)) {
+        if (!isOptionInitialized(optionId)) {
             revert TokenNotFound(tokenId);
         }
 
@@ -473,7 +473,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         claimId |= uint256(claimIndex);
     }
 
-    function _isOptionInitialized(uint160 optionId) public view returns (bool) {
+    function isOptionInitialized(uint160 optionId) public view returns (bool) {
         return _option[optionId].underlyingAsset != address(0x0);
     }
 }

@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: BUSL 1.1
 pragma solidity 0.8.11;
 
-import "ds-test/test.sol";
-import "forge-std/Vm.sol";
 import "forge-std/Test.sol";
 import "./interfaces/IERC20.sol";
 import "../OptionSettlement.sol";
-import "../interfaces/IOptionSettlementEngine.sol";
 
 /// @notice Receiver hook utility for NFT 'safe' transfers
 abstract contract NFTreceiver {
@@ -63,29 +60,39 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function setUp() public {
+        // Fork mainnet
+        vm.createSelectFork(vm.envString("RPC_URL"));
+
+        // Deploy OptionSettlementEngine
         engine = new OptionSettlementEngine();
 
+        // Setup test option contract
         testExerciseTimestamp = uint40(block.timestamp);
         testExpiryTimestamp = uint40(block.timestamp + testDuration);
         testOptionId = _newOption(
             WETH_A, testExerciseTimestamp, testExpiryTimestamp, DAI_A, testUnderlyingAmount, 1234567, testExerciseAmount
         );
 
-        // pre-load balances and approvals
-        address[4] memory recipients = [address(engine), ALICE, BOB, CAROL];
-        for (uint256 i = 0; i < 4; i++) {
+        // Pre-load balances and approvals
+        address[3] memory recipients = [ALICE, BOB, CAROL];
+        for (uint256 i = 0; i < recipients.length; i++) {
             address recipient = recipients[i];
+
             // Now we have 1B in stables and 10M WETH
             writeTokenBalance(recipient, DAI_A, 1000000000 * 1e18);
             writeTokenBalance(recipient, USDC_A, 1000000000 * 1e6);
             writeTokenBalance(recipient, WETH_A, 10000000 * 1e18);
+
+            // Approve settlement engine to spend ERC20 token balances
             vm.startPrank(recipient);
             WETH.approve(address(engine), type(uint256).max);
             DAI.approve(address(engine), type(uint256).max);
             USDC.approve(address(engine), type(uint256).max);
-            engine.setApprovalForAll(address(this), true);
             vm.stopPrank();
         }
+
+        // Approve test contract approval for all on settlement engine ERC1155 token balances
+        engine.setApprovalForAll(address(this), true);
     }
 
     // **********************************************************************

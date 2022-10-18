@@ -301,7 +301,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertFalse(claimId == claimId2);
         assertEq(1, engine.balanceOf(ALICE, claimId2));
         assertEq(2, engine.balanceOf(ALICE, testOptionId));
-        
+
         // write some more options, adding to existing claim
         uint256 claimId3 = engine.write(claimId, testOptionId, 1);
         assertEq(claimId, claimId3);
@@ -519,12 +519,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.stopPrank();
 
         vm.startPrank(BOB);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector,
-                claimId
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
         engine.write(claimId, testOptionId, 1);
     }
 

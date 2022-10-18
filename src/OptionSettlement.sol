@@ -188,31 +188,52 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function write(uint256 optionId, uint112 amount) external returns (uint256 claimId) {
-        if (amount == 0) {
-            revert AmountWrittenCannotBeZero();
-        }
+        /// claimId == 0 signifies that a new claim NFT should be minted
+        return write(0, optionId, amount);
+    }
 
+    /// @inheritdoc IOptionSettlementEngine
+    function write(uint256 claimId, uint256 optionId, uint112 amount) public returns (uint256) {
         (uint160 _optionId, uint96 claimIndex) = getDecodedIdComponents(optionId);
+
+        // claim index must be zero in lower 96b for provided option Id
         if (claimIndex != 0) {
-            // claim index must be zero in lower 96b
             revert InvalidOption(optionId);
         }
 
-        Option storage optionRecord = _option[_optionId];
-
-        if (optionRecord.expiryTimestamp <= block.timestamp) {
-            revert ExpiredOption(optionId, optionRecord.expiryTimestamp);
+        // claim provided must match the option provided
+        if (claimId != 0 && (claimId >> 96) != (optionId >> 96)) {
+            revert EncodedOptionIdInClaimIdDoesNotMatchProvidedOptionId(claimId, optionId);
         }
 
-        uint256 rxAmount = amount * optionRecord.underlyingAmount;
-        uint256 fee = ((rxAmount / 10000) * feeBps);
-        address underlyingAsset = optionRecord.underlyingAsset;
+        Option storage optionRecord = _writeOptions(_optionId, amount);
+        uint256 mintClaimNft = 0;
 
-        // Transfer the requisite underlying asset
-        SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
+        if (claimId == 0) {
+            // create new claim
+            // Increment the next token ID
+            claimIndex = optionRecord.nextClaimId++;
+            claimId = getTokenId(_optionId, claimIndex);
+            // Store info about the claim
+            _claim[claimId] = Claim({amountWritten: amount, amountExercised: 0, claimed: false});
+            unexercisedClaimsByOption[_optionId].push(claimId);
+            mintClaimNft = 1;
+        } else {
+            // check ownership of claim
+            uint256 balance = balanceOf[msg.sender][claimId];
+            if (balance != 1) {
+                revert CallerDoesNotOwnClaimId(claimId);
+            }
 
-        claimIndex = optionRecord.nextClaimId;
-        claimId = getTokenId(_optionId, claimIndex);
+            // retrieve claim
+            Claim storage existingClaim = _claim[claimId];
+
+            if (existingClaim.claimed) {
+                revert AlreadyClaimed(claimId); // claim has already been claimed
+            }
+
+            existingClaim.amountWritten += amount;
+        }
 
         // Mint the options contracts and claim token
         uint256[] memory tokens = new uint256[](2);
@@ -221,27 +242,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         uint256[] memory amounts = new uint256[](2);
         amounts[0] = amount;
-        amounts[1] = 1;
+        amounts[1] = mintClaimNft;
 
         bytes memory data = new bytes(0);
 
-        // Store info about the claim
-        _claim[claimId] = Claim({amountWritten: amount, amountExercised: 0, claimed: false});
-        unexercisedClaimsByOption[_optionId].push(claimId);
-
-        feeBalance[underlyingAsset] += fee;
-
-        // Increment the next token ID
-        optionRecord.nextClaimId++;
-
-        emit FeeAccrued(underlyingAsset, msg.sender, fee);
-        // TODO: option ID in addition to claim ID is potentially redundant now
-        // either emit claim idx specifically, or just the entire option id
-        // with encoded claim idx
-        emit OptionsWritten(optionId, msg.sender, claimId, amount);
-
         // Send tokens to writer
         _batchMint(msg.sender, tokens, amounts, data);
+
+        emit OptionsWritten(optionId, msg.sender, claimId, amount);
+
+        return claimId;
     }
 
     function assignExercise(uint160 optionId, uint96 claimsLen, uint112 amount, uint160 settlementSeed) internal {
@@ -364,7 +374,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint256 balance = this.balanceOf(msg.sender, claimId);
 
         if (balance != 1) {
-            revert RedeemerDoesNotOwnClaimId(claimId);
+            revert CallerDoesNotOwnClaimId(claimId);
         }
 
         Claim storage claimRecord = _claim[claimId];
@@ -439,6 +449,41 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 exercisePosition: int256(underlyingAmount)
             });
         }
+    }
+
+    // **********************************************************************
+    //                        INTERNAL HELPERS
+    // **********************************************************************
+    /**
+     * @dev Writes the specified number of options, transferring in the requisite
+     * underlying assets, and trasnsferring fungible ERC1155 tokens to caller.
+     * Reverts if insufficient underlying assets are not available from caller.
+     * @param _optionId The options to write.
+     * @param amount The amount of options to write.
+     */
+    function _writeOptions(uint160 _optionId, uint112 amount) internal returns (Option storage) {
+        if (amount == 0) {
+            revert AmountWrittenCannotBeZero();
+        }
+
+        Option storage optionRecord = _option[_optionId];
+
+        if (optionRecord.expiryTimestamp <= block.timestamp) {
+            revert ExpiredOption(uint256(_optionId) << 96, optionRecord.expiryTimestamp);
+        }
+
+        uint256 rxAmount = amount * optionRecord.underlyingAmount;
+        uint256 fee = ((rxAmount / 10000) * feeBps);
+        address underlyingAsset = optionRecord.underlyingAsset;
+
+        // Transfer the requisite underlying asset
+        SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
+
+        feeBalance[underlyingAsset] += fee;
+
+        emit FeeAccrued(underlyingAsset, msg.sender, fee);
+
+        return optionRecord;
     }
 
     // **********************************************************************

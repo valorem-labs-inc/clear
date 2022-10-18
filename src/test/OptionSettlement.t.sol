@@ -420,18 +420,18 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
         engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
-        vm.expectRevert(IOptionSettlementEngine.RedeemerDoesNotOwnClaimId.selector);
+        vm.expectRevert(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector);
         engine.redeem(claimId);
         vm.stopPrank();
         // Carol feels left out and tries to redeem what she can't
         vm.startPrank(CAROL);
-        vm.expectRevert(IOptionSettlementEngine.RedeemerDoesNotOwnClaimId.selector);
+        vm.expectRevert(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector);
         engine.redeem(claimId);
         vm.stopPrank();
         // Bob redeems, which should burn, and then be unable to redeem a second time
         vm.startPrank(BOB);
         engine.redeem(claimId);
-        vm.expectRevert(IOptionSettlementEngine.RedeemerDoesNotOwnClaimId.selector);
+        vm.expectRevert(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector);
         engine.redeem(claimId);
     }
 

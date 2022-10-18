@@ -482,6 +482,21 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.write(option1Claim1, option2, 1);
     }
 
+    function testRevertIfWriterDoesNotOwnClaim() public {
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 1);
+        vm.stopPrank();
+
+        vm.startPrank(BOB);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector,
+                claimId
+            )
+        );
+        engine.write(claimId, testOptionId, 1);
+    }
+
     // **********************************************************************
     //                            FUZZ TESTS
     // **********************************************************************

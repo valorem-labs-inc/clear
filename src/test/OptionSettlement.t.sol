@@ -283,6 +283,37 @@ contract OptionSettlementTest is Test, NFTreceiver {
         emit log_named_int("exercisePosition", underlyingPositions.exercisePosition);
     }
 
+    function testAddOptionsToExistingClaim() public {
+        // write some options, grab a claim
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 1);
+
+        IOptionSettlementEngine.Claim memory claimRecord = engine.claim(claimId);
+
+        assertEq(1, claimRecord.amountWritten);
+        assertEq(0, claimRecord.amountExercised);
+        assertEq(false, claimRecord.claimed);
+        assertEq(1, engine.balanceOf(ALICE, claimId));
+        assertEq(1, engine.balanceOf(ALICE, testOptionId));
+
+        // write some more options, get a new claim NFT
+        uint256 claimId2 = engine.write(testOptionId, 1);
+        assertFalse(claimId == claimId2);
+        assertEq(1, engine.balanceOf(ALICE, claimId2));
+        assertEq(2, engine.balanceOf(ALICE, testOptionId));
+        
+        // write some more options, adding to existing claim
+        uint256 claimId3 = engine.write(claimId, testOptionId, 1);
+        assertEq(claimId, claimId3);
+        assertEq(1, engine.balanceOf(ALICE, claimId3));
+        assertEq(3, engine.balanceOf(ALICE, testOptionId));
+
+        claimRecord = engine.claim(claimId3);
+        assertEq(2, claimRecord.amountWritten);
+        assertEq(0, claimRecord.amountExercised);
+        assertEq(false, claimRecord.claimed);
+    }
+
     // **********************************************************************
     //                            FAIL TESTS
     // **********************************************************************

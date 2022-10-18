@@ -468,6 +468,20 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.uri(420);
     }
 
+    function testRevertIfClaimIdDoesNotEncodeOptionId() public {
+        uint256 option1Claim1 = engine.getTokenId(0xDEADBEEF1, 0xCAFECAFE1);
+        uint256 option2 = engine.getTokenId(0xDEADBEEF2, 0x0);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOptionSettlementEngine.EncodedOptionIdInClaimIdDoesNotMatchProvidedOptionId.selector,
+                option1Claim1,
+                option2
+            )
+        );
+        engine.write(option1Claim1, option2, 1);
+    }
+
     // **********************************************************************
     //                            FUZZ TESTS
     // **********************************************************************

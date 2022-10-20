@@ -312,7 +312,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(2, engine.balanceOf(ALICE, testOptionId));
 
         // write some more options, adding to existing claim
-        uint256 claimId3 = engine.write(claimId, testOptionId, 1);
+        uint256 claimId3 = engine.write(testOptionId, 1, claimId);
         assertEq(claimId, claimId3);
         assertEq(1, engine.balanceOf(ALICE, claimId3));
         assertEq(3, engine.balanceOf(ALICE, testOptionId));
@@ -519,7 +519,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
                 option2
             )
         );
-        engine.write(option1Claim1, option2, 1);
+        engine.write(option2, 1, option1Claim1);
     }
 
     function testRevertIfWriterDoesNotOwnClaim() public {
@@ -529,7 +529,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         vm.startPrank(BOB);
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
-        engine.write(claimId, testOptionId, 1);
+        engine.write(testOptionId, 1, claimId);
     }
 
     // **********************************************************************

@@ -188,35 +188,37 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function write(uint256 optionId, uint112 amount) external returns (uint256 claimId) {
-        /// claimId == 0 signifies that a new claim NFT should be minted
+        /// supplying claimId as 0 to the overloaded write signifies that a new
+        /// claim NFT should be minted for the options lot, rather than being added
+        /// as an existing claim.
         return write(optionId, amount, 0);
     }
 
     /// @inheritdoc IOptionSettlementEngine
     function write(uint256 optionId, uint112 amount, uint256 claimId) public returns (uint256) {
-        (uint160 _optionId, uint96 claimIndex) = getDecodedIdComponents(optionId);
+        (uint160 _optionIdU160b, uint96 _optionIdL96b) = getDecodedIdComponents(optionId);
 
-        // claim index must be zero in lower 96b for provided option Id
-        if (claimIndex != 0) {
+        // optionId must be zero in lower 96b for provided option Id
+        if (_optionIdL96b != 0) {
             revert InvalidOption(optionId);
         }
 
         // claim provided must match the option provided
-        if (claimId != 0 && (claimId >> 96) != (optionId >> 96)) {
+        if (claimId != 0 && ((claimId >> 96) != (optionId >> 96))) {
             revert EncodedOptionIdInClaimIdDoesNotMatchProvidedOptionId(claimId, optionId);
         }
 
-        Option storage optionRecord = _writeOptions(_optionId, amount);
+        Option storage optionRecord = _writeOptions(_optionIdU160b, amount);
         uint256 mintClaimNft = 0;
 
         if (claimId == 0) {
             // create new claim
             // Increment the next token ID
-            claimIndex = optionRecord.nextClaimId++;
-            claimId = getTokenId(_optionId, claimIndex);
+            uint96 claimIndex = optionRecord.nextClaimId++;
+            claimId = getTokenId(_optionIdU160b, claimIndex);
             // Store info about the claim
             _claim[claimId] = Claim({amountWritten: amount, amountExercised: 0, claimed: false});
-            unexercisedClaimsByOption[_optionId].push(claimId);
+            unexercisedClaimsByOption[_optionIdU160b].push(claimId);
             mintClaimNft = 1;
         } else {
             // check ownership of claim
@@ -229,7 +231,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             Claim storage existingClaim = _claim[claimId];
 
             if (existingClaim.claimed) {
-                revert AlreadyClaimed(claimId); // claim has already been claimed
+                revert AlreadyClaimed(claimId);
             }
 
             existingClaim.amountWritten += amount;
@@ -237,7 +239,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Mint the options contracts and claim token
         uint256[] memory tokens = new uint256[](2);
-        tokens[0] = uint256(_optionId) << 96;
+        tokens[0] = optionId;
         tokens[1] = claimId;
 
         uint256[] memory amounts = new uint256[](2);

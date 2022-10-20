@@ -21,25 +21,24 @@ import "./TokenURIGenerator.sol";
 // TODO(DRY code during testing)
 // TODO(Gas Optimize)
 
-// @notice This settlement protocol does not support rebase tokens, or fee on transfer tokens
-
+/// @notice This settlement protocol does not support rebase tokens, or fee on transfer tokens
 contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
-    // The protocol fee
+    /// @notice The protocol fee
     uint8 public immutable feeBps = 5;
 
-    // The address fees accrue to
+    /// @notice The address fees accrue to
     address public feeTo = 0x36273803306a3C22bc848f8Db761e974697ece0d;
 
-    // Fee balance for a given token
+    /// @notice Fee balance for a given token
     mapping(address => uint256) public feeBalance;
 
-    // The list of claims for an option
+    /// @notice The list of claims for an option
     mapping(uint160 => uint256[]) internal unexercisedClaimsByOption;
 
-    // Accessor for Option contract details
+    /// @notice Accessor for Option contract details
     mapping(uint160 => Option) internal _option;
 
-    // Accessor for claim ticket details
+    /// @notice Accessor for claim ticket details
     mapping(uint256 => Claim) internal _claim;
 
     uint256 public hashMask = 0xFFFFFFFFFFFFFFFFFFFF000000000000;

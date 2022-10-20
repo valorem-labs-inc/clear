@@ -262,9 +262,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
         IOptionSettlementEngine.Underlying memory underlyingPositions = engine.underlying(claimId);
 
         assertEq(underlyingPositions.underlyingAsset, WETH_A);
-        assertEq(underlyingPositions.underlyingPosition, 0);
+        _assertPosition(underlyingPositions.underlyingPosition, 7 * testUnderlyingAmount);
         assertEq(underlyingPositions.exerciseAsset, DAI_A);
-        assertEq(underlyingPositions.exercisePosition, 49000000000000000000);
+        assertEq(underlyingPositions.exercisePosition, 0);
     }
 
     function testGetEncodedIdComponents() public {
@@ -276,11 +276,20 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function testUnderlyingAfterExercise() public {
-        uint256 claimId = _writeAndExerciseOption(testOptionId, ALICE, BOB, 2, 1);
-
+        uint256 claimId = _writeAndExerciseOption(testOptionId, ALICE, BOB, 2, 0);
         IOptionSettlementEngine.Underlying memory underlyingPositions = engine.underlying(claimId);
-        emit log_named_int("underlyingPosition", underlyingPositions.underlyingPosition);
-        emit log_named_int("exercisePosition", underlyingPositions.exercisePosition);
+        _assertPosition(underlyingPositions.underlyingPosition, 2 * testUnderlyingAmount);
+        assertEq(underlyingPositions.exercisePosition, 0);
+
+        _writeAndExerciseOption(testOptionId, ALICE, BOB, 0, 1);
+        underlyingPositions = engine.underlying(claimId);
+        _assertPosition(underlyingPositions.underlyingPosition, testUnderlyingAmount);
+        _assertPosition(underlyingPositions.exercisePosition, testExerciseAmount);
+
+        _writeAndExerciseOption(testOptionId, ALICE, BOB, 0, 1);
+        underlyingPositions = engine.underlying(claimId);
+        _assertPosition(underlyingPositions.underlyingPosition, 0);
+        _assertPosition(underlyingPositions.exercisePosition, 2 * testExerciseAmount);
     }
 
     function testAddOptionsToExistingClaim() public {
@@ -694,6 +703,11 @@ contract OptionSettlementTest is Test, NFTreceiver {
         }
     }
 
+    function _assertPosition(int256 actual, uint96 expected) internal {
+        uint96 _actual = uint96(int96(actual));
+        assertEq(_actual, expected);
+    }
+
     function _writeAndExerciseNewOption(
         address underlyingAsset,
         uint40 exerciseTimestamp,
@@ -753,13 +767,18 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint112 toWrite,
         uint112 toExercise
     ) internal returns (uint256 claimId) {
-        vm.startPrank(writer);
-        claimId = engine.write(optionId, toWrite);
-        engine.safeTransferFrom(writer, exerciser, optionId, toWrite, "");
-        vm.stopPrank();
-        vm.warp(testExerciseTimestamp + 1);
-        vm.startPrank(exerciser);
-        engine.exercise(optionId, toExercise);
-        vm.stopPrank();
+        if (toWrite > 0) {
+            vm.startPrank(writer);
+            claimId = engine.write(optionId, toWrite);
+            engine.safeTransferFrom(writer, exerciser, optionId, toWrite, "");
+            vm.stopPrank();
+        }
+
+        if (toExercise > 0) {
+            vm.warp(testExerciseTimestamp + 1);
+            vm.startPrank(exerciser);
+            engine.exercise(optionId, toExercise);
+            vm.stopPrank();
+        }
     }
 }

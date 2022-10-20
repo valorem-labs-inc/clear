@@ -41,6 +41,17 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @notice Accessor for claim ticket details
     mapping(uint256 => Claim) internal _claim;
 
+    /// @notice Accessor for buckets of claims grouped by day
+    /// @dev This is to enable O(constant) time options exercise. When options are written,
+    /// the Claim struct in this mapping is updated to reflect the cumulative amount written
+    /// on the day in question (block.timestamp/# seconds in a day). This allows 
+    /// exercise() to assign options on each bucket from 'today' up until option expiry,
+    /// rather than a costly iteration of every unexercised claim on an option.
+    mapping(uint40 => Claim) internal _claimBucketByOptionAndDay;
+
+    /// @notice Accessor for mapping a claim id to its bucketed day
+    mapping(uint256 => uint40) internal _claimIdToBucket;
+
     uint256 public hashMask = 0xFFFFFFFFFFFFFFFFFFFF000000000000;
 
     /// @inheritdoc IOptionSettlementEngine
@@ -236,6 +247,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             existingClaim.amountWritten += amount;
         }
 
+        // Update claim bucket for today
+        uint40 tsDays = uint40(block.timestamp / 86400);
+        Claim storage claimBucket = _claimBucketByOptionAndDay[tsDays];
+        claimBucket.amountWritten += amount;
+        _claimIdToBucket[claimId] = tsDays;
+
         // Mint the options contracts and claim token
         uint256[] memory tokens = new uint256[](2);
         tokens[0] = optionId;
@@ -261,12 +278,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert NoClaims(optionId);
         }
 
-        // Initial storage pointer
-        Claim storage claimRecord;
-
-        // Counter for randomness
-        uint256 i;
-
         // To keep track of the slot to overwrite
         uint256 overwrite;
 
@@ -278,15 +289,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // While there are still options to exercise
         while (amount > 0) {
-            // Get the claim number to assign
-            uint256 claimNum;
-            if (claimsLen == 1) {
-                lastIndex = 0;
-                claimNum = unexercisedClaimsByOption[optionId][lastIndex];
-            } else {
-                lastIndex = settlementSeed % claimsLen;
-                claimNum = unexercisedClaimsByOption[optionId][lastIndex];
-            }
+            // get the claim bucket to exercise
+            uint40 tsDays = uint40(block.timestamp / 86400);
 
             claimRecord = _claim[claimNum];
 
@@ -364,6 +368,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         emit OptionsExercised(optionId, msg.sender, amount);
     }
 
+    /// @dev Fair assignment is performed here. After option expiry, any claim holder
+    /// seeking to redeem their claim for the underlying asset will be able to retrieve 
+    /// the same ratio of their underlying asset as have been exercised in the claim's 
+    /// bucket.
     /// @inheritdoc IOptionSettlementEngine
     function redeem(uint256 claimId) external {
         (uint160 optionId, uint96 claimIdx) = getDecodedIdComponents(claimId);
@@ -389,6 +397,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         if (optionRecord.expiryTimestamp > block.timestamp) {
             revert ClaimTooSoon(claimId, optionRecord.expiryTimestamp);
         }
+
+        uint40 bucketedDayForClaim = _claimIdToBucket[claimId];
+        Claim memory claimBucket = _claimBucketByOptionAndDay[optionId][bucketedDayForClaim];
 
         uint256 exerciseAmount = optionRecord.exerciseAmount * claimRecord.amountExercised;
         uint256 underlyingAmount =

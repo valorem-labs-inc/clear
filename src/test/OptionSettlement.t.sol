@@ -292,6 +292,37 @@ contract OptionSettlementTest is Test, NFTreceiver {
         _assertPosition(underlyingPositions.exercisePosition, 2 * testExerciseAmount);
     }
 
+    function testAddOptionsToExistingClaim() public {
+        // write some options, grab a claim
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 1);
+
+        IOptionSettlementEngine.Claim memory claimRecord = engine.claim(claimId);
+
+        assertEq(1, claimRecord.amountWritten);
+        assertEq(0, claimRecord.amountExercised);
+        assertEq(false, claimRecord.claimed);
+        assertEq(1, engine.balanceOf(ALICE, claimId));
+        assertEq(1, engine.balanceOf(ALICE, testOptionId));
+
+        // write some more options, get a new claim NFT
+        uint256 claimId2 = engine.write(testOptionId, 1);
+        assertFalse(claimId == claimId2);
+        assertEq(1, engine.balanceOf(ALICE, claimId2));
+        assertEq(2, engine.balanceOf(ALICE, testOptionId));
+
+        // write some more options, adding to existing claim
+        uint256 claimId3 = engine.write(testOptionId, 1, claimId);
+        assertEq(claimId, claimId3);
+        assertEq(1, engine.balanceOf(ALICE, claimId3));
+        assertEq(3, engine.balanceOf(ALICE, testOptionId));
+
+        claimRecord = engine.claim(claimId3);
+        assertEq(2, claimRecord.amountWritten);
+        assertEq(0, claimRecord.amountExercised);
+        assertEq(false, claimRecord.claimed);
+    }
+
     // **********************************************************************
     //                            FAIL TESTS
     // **********************************************************************
@@ -429,18 +460,18 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
         engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
-        vm.expectRevert(IOptionSettlementEngine.RedeemerDoesNotOwnClaimId.selector);
+        vm.expectRevert(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector);
         engine.redeem(claimId);
         vm.stopPrank();
         // Carol feels left out and tries to redeem what she can't
         vm.startPrank(CAROL);
-        vm.expectRevert(IOptionSettlementEngine.RedeemerDoesNotOwnClaimId.selector);
+        vm.expectRevert(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector);
         engine.redeem(claimId);
         vm.stopPrank();
         // Bob redeems, which should burn, and then be unable to redeem a second time
         vm.startPrank(BOB);
         engine.redeem(claimId);
-        vm.expectRevert(IOptionSettlementEngine.RedeemerDoesNotOwnClaimId.selector);
+        vm.expectRevert(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector);
         engine.redeem(claimId);
     }
 
@@ -475,6 +506,30 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 tokenId = 420;
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, tokenId));
         engine.uri(420);
+    }
+
+    function testRevertIfClaimIdDoesNotEncodeOptionId() public {
+        uint256 option1Claim1 = engine.getTokenId(0xDEADBEEF1, 0xCAFECAFE1);
+        uint256 option2 = engine.getTokenId(0xDEADBEEF2, 0x0);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOptionSettlementEngine.EncodedOptionIdInClaimIdDoesNotMatchProvidedOptionId.selector,
+                option1Claim1,
+                option2
+            )
+        );
+        engine.write(option2, 1, option1Claim1);
+    }
+
+    function testRevertIfWriterDoesNotOwnClaim() public {
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 1);
+        vm.stopPrank();
+
+        vm.startPrank(BOB);
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
+        engine.write(testOptionId, 1, claimId);
     }
 
     // **********************************************************************

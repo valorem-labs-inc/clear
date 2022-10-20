@@ -316,12 +316,12 @@ interface IOptionSettlementEngine {
     /**
      * @notice This override allows additional options to be written against a particular
      * claim id.
-     * @param claimId The claimId for the options lot to which the caller will add options
      * @param optionId The desired option id to write.
      * @param amount The desired number of options to write.
+     * @param claimId The claimId for the options lot to which the caller will add options
      * @return claimId The claim NFT id for the option bundle.
      */
-    function write(uint256 claimId, uint256 optionId, uint112 amount) external returns (uint256);
+    function write(uint256 optionId, uint112 amount, uint256 claimId) external returns (uint256);
 
     /**
      * @notice Exercises specified amount of optionId, transferring in the exercise asset,

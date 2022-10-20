@@ -189,11 +189,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @inheritdoc IOptionSettlementEngine
     function write(uint256 optionId, uint112 amount) external returns (uint256 claimId) {
         /// claimId == 0 signifies that a new claim NFT should be minted
-        return write(0, optionId, amount);
+        return write(optionId, amount, 0);
     }
 
     /// @inheritdoc IOptionSettlementEngine
-    function write(uint256 claimId, uint256 optionId, uint112 amount) public returns (uint256) {
+    function write(uint256 optionId, uint112 amount, uint256 claimId) public returns (uint256) {
         (uint160 _optionId, uint96 claimIndex) = getDecodedIdComponents(optionId);
 
         // claim index must be zero in lower 96b for provided option Id

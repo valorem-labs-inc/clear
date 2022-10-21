@@ -50,8 +50,8 @@ jobs:
 
       - name: Run tests
         run: forge test --optimize
-        env: # Sent environment variable for fork node
-          RPC_URL: ${{ secrets.RPC_URL }}        
+        env:
+          RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
       - name: Run lint check
         run: npm run lint:check

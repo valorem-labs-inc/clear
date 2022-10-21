@@ -299,30 +299,25 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testEvent_newOptionType() public {
         vm.expectEmit(false, true, true, true); // ignore 1st topic for now (TODO calculate optionId)
         emit NewOptionType(
-            999,
-            WETH_A,
-            DAI_A,
-            testExerciseAmount,
-            testUnderlyingAmount,
-            testExerciseTimestamp,
-            testExpiryTimestamp,
-            1
-        );
+            999, WETH_A, DAI_A, testExerciseAmount, testUnderlyingAmount, testExerciseTimestamp, testExpiryTimestamp, 1
+            );
 
-        engine.newOptionType(IOptionSettlementEngine.Option({
-            underlyingAsset: DAI_A,
-            exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp,
-            exerciseAsset: WETH_A,
-            underlyingAmount: testUnderlyingAmount,
-            settlementSeed: 1234567,
-            exerciseAmount: testExerciseAmount,
-            nextClaimId: 1
-        }));
+        engine.newOptionType(
+            IOptionSettlementEngine.Option({
+                underlyingAsset: DAI_A,
+                exerciseTimestamp: testExerciseTimestamp,
+                expiryTimestamp: testExpiryTimestamp,
+                exerciseAsset: WETH_A,
+                underlyingAmount: testUnderlyingAmount,
+                settlementSeed: 1234567,
+                exerciseAmount: testExerciseAmount,
+                nextClaimId: 1
+            })
+        );
     }
 
     function testEvent_write() public {
-        uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount  / 10_000) * engine.feeBps());
+        uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
 
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(WETH_A, ALICE, expectedFeeAccruedAmount);
@@ -342,7 +337,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         vm.warp(testExpiryTimestamp - 1 seconds);
 
-        (uint160 expectedOptionId, ) = engine.getDecodedIdComponents(testOptionId);
+        (uint160 expectedOptionId,) = engine.getDecodedIdComponents(testOptionId);
         uint256 expectedFeeAccruedAmount = (testExerciseAmount / 10_000) * engine.feeBps();
 
         vm.expectEmit(false, true, true, true); // ignore 1st topic for now (TODO calculate claimId)
@@ -362,7 +357,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.startPrank(ALICE);
         uint96 amountWritten = 7;
         uint256 claimId = engine.write(testOptionId, amountWritten);
-        (uint256 optionId, ) = engine.getDecodedIdComponents(claimId);
+        (uint256 optionId,) = engine.getDecodedIdComponents(claimId);
         uint96 expectedUnderlyingAmount = testUnderlyingAmount * amountWritten;
 
         vm.warp(testExpiryTimestamp + 1 seconds);
@@ -376,7 +371,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             WETH_A,
             uint96(0), // no one has exercised
             uint96(expectedUnderlyingAmount)
-        );
+            );
 
         engine.claim(claimId);
         engine.redeem(claimId);
@@ -385,7 +380,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testEvent_sweepFees_whenFeesAccruedForWrite() public {
         uint96 daiUnderlyingAmount = 9 * 10 ** 18;
         uint96 usdcUnderlyingAmount = 7 * 10 ** 9; // not 18 decimals
-        
+
         // Write option that will generate WETH fees
         vm.startPrank(ALICE);
         engine.write(testOptionId, 1);
@@ -421,9 +416,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
         tokens[2] = USDC_A;
 
         uint256[] memory expectedFees = new uint256[](3);
-        expectedFees[0] = ((testUnderlyingAmount  / 10_000) * engine.feeBps());
-        expectedFees[1] = ((daiUnderlyingAmount  / 10_000) * engine.feeBps());
-        expectedFees[2] = ((usdcUnderlyingAmount  / 10_000) * engine.feeBps());
+        expectedFees[0] = ((testUnderlyingAmount / 10_000) * engine.feeBps());
+        expectedFees[1] = ((daiUnderlyingAmount / 10_000) * engine.feeBps());
+        expectedFees[2] = ((usdcUnderlyingAmount / 10_000) * engine.feeBps());
 
         for (uint256 i = 0; i < tokens.length; i++) {
             vm.expectEmit(true, true, true, true);
@@ -871,8 +866,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     // TODO consider better pattern to DRY up event definitions
 
-    event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);  
-      
+    event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);
+
     event NewOptionType(
         uint256 indexed optionId,
         address indexed exerciseAsset,

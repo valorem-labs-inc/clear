@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: BUSL 1.1
 pragma solidity 0.8.11;
 
-import "ds-test/test.sol";
-import "forge-std/Vm.sol";
 import "forge-std/Test.sol";
 import "./interfaces/IERC20.sol";
 import "../OptionSettlement.sol";
-import "../interfaces/IOptionSettlementEngine.sol";
 
 /// @notice Receiver hook utility for NFT 'safe' transfers
 abstract contract NFTreceiver {
@@ -58,34 +55,46 @@ contract OptionSettlementTest is Test, NFTreceiver {
     uint96 private testExerciseAmount = 3000 ether;
     uint256 private testDuration = 1 days;
 
-    function writeTokenBalance(address who, address token, uint256 amt) internal {
-        stdstore.target(token).sig(IERC20(token).balanceOf.selector).with_key(who).checked_write(amt);
-    }
-
     function setUp() public {
+        // Fork mainnet
+        vm.createSelectFork(vm.envString("RPC_URL"), 15_000_000); // specify block number to cache for future test runs
+
+        // Deploy OptionSettlementEngine
         engine = new OptionSettlementEngine();
 
+        // Setup test option contract
         testExerciseTimestamp = uint40(block.timestamp);
         testExpiryTimestamp = uint40(block.timestamp + testDuration);
-        testOptionId = _newOption(
-            WETH_A, testExerciseTimestamp, testExpiryTimestamp, DAI_A, testUnderlyingAmount, 1234567, testExerciseAmount
-        );
+        testOptionId = _newOption({
+            underlyingAsset: WETH_A,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp,
+            exerciseAsset: DAI_A,
+            underlyingAmount: testUnderlyingAmount,
+            settlementSeed: 1234567,
+            exerciseAmount: testExerciseAmount
+        });
 
-        // pre-load balances and approvals
-        address[4] memory recipients = [address(engine), ALICE, BOB, CAROL];
-        for (uint256 i = 0; i < 4; i++) {
+        // Pre-load balances and approvals
+        address[3] memory recipients = [ALICE, BOB, CAROL];
+        for (uint256 i = 0; i < recipients.length; i++) {
             address recipient = recipients[i];
+
             // Now we have 1B in stables and 10M WETH
-            writeTokenBalance(recipient, DAI_A, 1000000000 * 1e18);
-            writeTokenBalance(recipient, USDC_A, 1000000000 * 1e6);
-            writeTokenBalance(recipient, WETH_A, 10000000 * 1e18);
+            _writeTokenBalance(recipient, DAI_A, 1000000000 * 1e18);
+            _writeTokenBalance(recipient, USDC_A, 1000000000 * 1e6);
+            _writeTokenBalance(recipient, WETH_A, 10000000 * 1e18);
+
+            // Approve settlement engine to spend ERC20 token balances
             vm.startPrank(recipient);
             WETH.approve(address(engine), type(uint256).max);
             DAI.approve(address(engine), type(uint256).max);
             USDC.approve(address(engine), type(uint256).max);
-            engine.setApprovalForAll(address(this), true);
             vm.stopPrank();
         }
+
+        // Approve test contract approval for all on settlement engine ERC1155 token balances
+        engine.setApprovalForAll(address(this), true);
     }
 
     // **********************************************************************
@@ -324,8 +333,147 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     // **********************************************************************
+    //                            EVENT TESTS
+    // **********************************************************************
+
+    function testEvent_newOptionType() public {
+        vm.expectEmit(false, true, true, true); // ignore 1st topic for now (TODO calculate optionId)
+        emit NewOptionType(
+            999, WETH_A, DAI_A, testExerciseAmount, testUnderlyingAmount, testExerciseTimestamp, testExpiryTimestamp, 1
+            );
+
+        engine.newOptionType(
+            IOptionSettlementEngine.Option({
+                underlyingAsset: DAI_A,
+                exerciseTimestamp: testExerciseTimestamp,
+                expiryTimestamp: testExpiryTimestamp,
+                exerciseAsset: WETH_A,
+                underlyingAmount: testUnderlyingAmount,
+                settlementSeed: 1234567,
+                exerciseAmount: testExerciseAmount,
+                nextClaimId: 1
+            })
+        );
+    }
+
+    function testEvent_write() public {
+        uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
+
+        vm.expectEmit(true, true, true, true);
+        emit FeeAccrued(WETH_A, ALICE, expectedFeeAccruedAmount);
+
+        vm.expectEmit(true, true, true, false); // ignore data for now (TODO calculate claimId)
+        emit OptionsWritten(testOptionId, ALICE, 999, 1);
+
+        vm.prank(ALICE);
+        engine.write(testOptionId, 1);
+    }
+
+    function testEvent_exercise() public {
+        vm.startPrank(ALICE);
+        engine.write(testOptionId, 1);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
+        vm.stopPrank();
+
+        vm.warp(testExpiryTimestamp - 1 seconds);
+
+        (uint160 expectedOptionId,) = engine.getDecodedIdComponents(testOptionId);
+        uint256 expectedFeeAccruedAmount = (testExerciseAmount / 10_000) * engine.feeBps();
+
+        vm.expectEmit(false, true, true, true); // ignore 1st topic for now (TODO calculate claimId)
+        emit ExerciseAssigned(999, expectedOptionId, 1);
+
+        vm.expectEmit(true, true, true, true);
+        emit FeeAccrued(DAI_A, BOB, expectedFeeAccruedAmount);
+
+        vm.expectEmit(true, true, true, true);
+        emit OptionsExercised(testOptionId, BOB, 1);
+
+        vm.prank(BOB);
+        engine.exercise(testOptionId, 1);
+    }
+
+    function testEvent_redeem() public {
+        vm.startPrank(ALICE);
+        uint96 amountWritten = 7;
+        uint256 claimId = engine.write(testOptionId, amountWritten);
+        (uint256 optionId,) = engine.getDecodedIdComponents(claimId);
+        uint96 expectedUnderlyingAmount = testUnderlyingAmount * amountWritten;
+
+        vm.warp(testExpiryTimestamp + 1 seconds);
+
+        vm.expectEmit(true, true, true, true);
+        emit ClaimRedeemed(
+            claimId,
+            optionId,
+            ALICE,
+            DAI_A,
+            WETH_A,
+            uint96(0), // no one has exercised
+            uint96(expectedUnderlyingAmount)
+            );
+
+        engine.claim(claimId);
+        engine.redeem(claimId);
+    }
+
+    function testEvent_sweepFees_whenFeesAccruedForWrite() public {
+        uint96 daiUnderlyingAmount = 9 * 10 ** 18;
+        uint96 usdcUnderlyingAmount = 7 * 10 ** 9; // not 18 decimals
+
+        // Write option that will generate WETH fees
+        vm.startPrank(ALICE);
+        engine.write(testOptionId, 1);
+
+        // Write option that will generate DAI fees
+        uint256 daiOptionId = _newOption({
+            underlyingAsset: DAI_A,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp,
+            exerciseAsset: WETH_A,
+            underlyingAmount: daiUnderlyingAmount,
+            settlementSeed: 12345678,
+            exerciseAmount: testExerciseAmount
+        });
+        engine.write(daiOptionId, 1);
+
+        // Write option that will generate USDC fees
+        uint256 usdcOptionId = _newOption({
+            underlyingAsset: USDC_A,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp,
+            exerciseAsset: DAI_A,
+            underlyingAmount: usdcUnderlyingAmount,
+            settlementSeed: 123456789,
+            exerciseAmount: testExerciseAmount
+        });
+        engine.write(usdcOptionId, 1);
+        vm.stopPrank();
+
+        address[] memory tokens = new address[](3);
+        tokens[0] = WETH_A;
+        tokens[1] = DAI_A;
+        tokens[2] = USDC_A;
+
+        uint256[] memory expectedFees = new uint256[](3);
+        expectedFees[0] = ((testUnderlyingAmount / 10_000) * engine.feeBps());
+        expectedFees[1] = ((daiUnderlyingAmount / 10_000) * engine.feeBps());
+        expectedFees[2] = ((usdcUnderlyingAmount / 10_000) * engine.feeBps());
+
+        for (uint256 i = 0; i < tokens.length; i++) {
+            vm.expectEmit(true, true, true, true);
+            emit FeeSwept(tokens[i], engine.feeTo(), expectedFees[i] - 1); // sweeps 1 wei less as gas optimization
+        }
+
+        engine.sweepFees(tokens);
+    }
+
+    // TODO testEvent_sweepFees_whenFeesAccruedForExercise
+
+    // **********************************************************************
     //                            FAIL TESTS
     // **********************************************************************
+
     function testFailnewOptionTypeOptionsChainExists() public {
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
             underlyingAsset: WETH_A,
@@ -691,6 +839,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
         _assertTokenIsClaim(claimId);
     }
 
+    // **********************************************************************
+    //                            TEST HELPERS
+    // **********************************************************************
+
     function _assertTokenIsClaim(uint256 tokenId) internal {
         if (engine.tokenType(tokenId) != IOptionSettlementEngine.Type.Claim) {
             assertTrue(false);
@@ -781,4 +933,41 @@ contract OptionSettlementTest is Test, NFTreceiver {
             vm.stopPrank();
         }
     }
+
+    function _writeTokenBalance(address who, address token, uint256 amt) internal {
+        stdstore.target(token).sig(IERC20(token).balanceOf.selector).with_key(who).checked_write(amt);
+    }
+
+    // TODO consider better pattern to DRY up event definitions
+
+    event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);
+
+    event NewOptionType(
+        uint256 indexed optionId,
+        address indexed exerciseAsset,
+        address indexed underlyingAsset,
+        uint96 exerciseAmount,
+        uint96 underlyingAmount,
+        uint40 exerciseTimestamp,
+        uint40 expiryTimestamp,
+        uint96 nextClaimId
+    );
+
+    event OptionsExercised(uint256 indexed optionId, address indexed exercisee, uint112 amount);
+
+    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 claimId, uint112 amount);
+
+    event FeeAccrued(address indexed asset, address indexed payor, uint256 amount);
+
+    event ClaimRedeemed(
+        uint256 indexed claimId,
+        uint256 indexed optionId,
+        address indexed redeemer,
+        address exerciseAsset,
+        address underlyingAsset,
+        uint96 exerciseAmount,
+        uint96 underlyingAmount
+    );
+
+    event ExerciseAssigned(uint256 indexed claimId, uint256 indexed optionId, uint112 amountAssigned);
 }

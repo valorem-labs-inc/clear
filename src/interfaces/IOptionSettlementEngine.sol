@@ -154,7 +154,8 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Emitted when protocol fees are accrued for a given asset.
-     * @dev Emitted on write() or exercise().
+     * @dev Emitted on write() when fees are accrued on the underlying asset,
+     * or exercise() when fees are accrued on the exercise asset.
      * @param asset Asset for which fees are accrued.
      * @param payor The address paying the fee.
      * @param amount The amount of fees which are accrued.
@@ -306,7 +307,7 @@ interface IOptionSettlementEngine {
     function newOptionType(Option memory optionInfo) external returns (uint256 optionId);
 
     /**
-     * @notice Writes a specified amount of the specified option, returining claim NFT id.
+     * @notice Writes a specified amount of the specified option, returning claim NFT id.
      * @param optionId The desired option id to write.
      * @param amount The desired number of options to write.
      * @return claimId The claim NFT id for the option bundle.
@@ -327,7 +328,7 @@ interface IOptionSettlementEngine {
      * @notice Exercises specified amount of optionId, transferring in the exercise asset,
      * and transferring out the underlying asset if requirements are met.
      * @param optionId The option id to exercise.
-     * @param amount The amoutn of option id to exercise.
+     * @param amount The amount of option id to exercise.
      */
     function exercise(uint256 optionId, uint112 amount) external;
 

@@ -9,6 +9,11 @@ system. The Core consists, primarily, of a settlement engine which allows users
 to write options, exercise options, redeem claims for assets, and settles assignments
 of exercises to claims written.
 
+## Building the Project
+1. Clone the git repository
+2. Copy `.env.template` to `.env` and replace "XYZ" with your `RPC_URL` (e.g., https://mainnet.infura.io/v3/apikey or https://eth-mainnet.g.alchemy.com/v2/apikey)
+3. Run `forge test` (this will install dependencies, build the project's smart contracts, and run the unit tests on a local fork of mainnet)
+
 ## Core Interface
 
 The core exposes an interface for users of the protocol, which is documented in the

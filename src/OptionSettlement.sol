@@ -475,8 +475,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
             claimBucket.amountExercised += amountPresentlyExercised;
             daysAfterOptionTypeCreation++;
-            // TODO: eventing
-            // emit ExerciseAssigned(claimNum, optionId, amountPresentlyExercised);
         }
     }
 

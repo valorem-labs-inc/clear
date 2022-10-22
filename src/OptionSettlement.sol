@@ -33,9 +33,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @notice Fee balance for a given token
     mapping(address => uint256) public feeBalance;
 
-    /// @notice The list of claims for an option
-    mapping(uint160 => uint256[]) internal unexercisedClaimsByOption;
-
     /// @notice Accessor for Option contract details
     mapping(uint160 => Option) internal _option;
 
@@ -230,7 +227,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             claimId = getTokenId(_optionIdU160b, claimIndex);
             // Store info about the claim
             _claim[claimId] = Claim({amountWritten: amount, claimBucketId: daysAfterOptionCreation, claimed: false});
-            unexercisedClaimsByOption[_optionIdU160b].push(claimId);
             mintClaimNft = 1;
         } else {
             // check ownership of claim

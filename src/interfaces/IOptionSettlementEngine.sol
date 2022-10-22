@@ -224,10 +224,20 @@ interface IOptionSettlementEngine {
         // These are 1:1 contracts with the underlying Option struct
         // The number of contracts written in this claim
         uint112 amountWritten;
-        // The amount of contracts assigned for exercise to this claim
-        uint112 amountExercised;
+        // The ID of the bucket in which this claim is placed (numerically equal to the
+        // number of days after option type creation that the options lot was written)
+        uint16 claimBucketId;
         // The two amounts above along with the option info, can be used to calculate the underlying assets
         bool claimed;
+    }
+
+    /// @dev Represents the total amount of options written and exercised for a group of
+    /// claims bucketed by day
+    struct ClaimBucket {
+        // The number of options written in this bucket
+        uint112 amountWritten;
+        // The number of options exercised in this bucket
+        uint112 amountExercised;
     }
 
     struct Underlying {

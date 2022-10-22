@@ -6,6 +6,7 @@ import "solmate/tokens/ERC20.sol";
 import "solmate/tokens/ERC1155.sol";
 import "./interfaces/IOptionSettlementEngine.sol";
 import "solmate/utils/SafeTransferLib.sol";
+import "solmate/utils/FixedPointMathLib.sol";
 import "./TokenURIGenerator.sol";
 
 /**
@@ -44,13 +45,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @notice Accessor for buckets of claims grouped by day
     /// @dev This is to enable O(constant) time options exercise. When options are written,
     /// the Claim struct in this mapping is updated to reflect the cumulative amount written
-    /// on the day in question (block.timestamp/# seconds in a day). This allows 
+    /// on the day in question (block.timestamp/# seconds in a day). This allows
     /// exercise() to assign options on each bucket from 'today' up until option expiry,
     /// rather than a costly iteration of every unexercised claim on an option.
-    mapping(uint160 => mapping(uint40 => Claim)) internal _claimBucketByOptionAndDay;
+    mapping(uint160 => mapping(uint16 => ClaimBucket)) internal _claimBucketByOptionAndDay;
 
     /// @notice Accessor for mapping a claim id to its bucketed day
-    mapping(uint256 => uint40) internal _claimIdToBucket;
+    mapping(uint256 => uint16) internal _claimIdToBucket;
 
     uint256 public hashMask = 0xFFFFFFFFFFFFFFFFFFFF000000000000;
 
@@ -193,7 +194,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             optionInfo.expiryTimestamp,
             optionInfo.nextClaimId,
             optionInfo.creationTimestamp
-        );
+            );
     }
 
     /// @inheritdoc IOptionSettlementEngine
@@ -220,6 +221,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         Option storage optionRecord = _writeOptions(_optionIdU160b, amount);
         uint256 mintClaimNft = 0;
+        uint16 daysAfterOptionCreation = _getDaysAfterOptionCreation(optionRecord);
 
         if (claimId == 0) {
             // create new claim
@@ -227,7 +229,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             uint96 claimIndex = optionRecord.nextClaimId++;
             claimId = getTokenId(_optionIdU160b, claimIndex);
             // Store info about the claim
-            _claim[claimId] = Claim({amountWritten: amount, amountExercised: 0, claimed: false});
+            _claim[claimId] = Claim({amountWritten: amount, claimBucketId: daysAfterOptionCreation, claimed: false});
             unexercisedClaimsByOption[_optionIdU160b].push(claimId);
             mintClaimNft = 1;
         } else {
@@ -248,10 +250,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
 
         // Update claim bucket for today
-        uint40 tsDays = uint40(block.timestamp / 86400);
-        Claim storage claimBucket = _claimBucketByOptionAndDay[_optionIdU160b][tsDays];
+        ClaimBucket storage claimBucket = _claimBucketByOptionAndDay[_optionIdU160b][daysAfterOptionCreation];
         claimBucket.amountWritten += amount;
-        _claimIdToBucket[claimId] = tsDays;
+        _claimIdToBucket[claimId] = daysAfterOptionCreation;
 
         // Mint the options contracts and claim token
         uint256[] memory tokens = new uint256[](2);
@@ -270,14 +271,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         emit OptionsWritten(optionId, msg.sender, claimId, amount);
 
         return claimId;
-    } 
+    }
 
     /**
-    claim buckets are a of set options written on a given day, along with how 
-        many of those options that have been exercised. writing options
-        on a given day adds to the amount written in that day's claim bucket.
-        the exercise process 
-    exercise is performed by iterating from the claim bucket 
+     * claim buckets are a of set options written on a given day, along with how
+     * many of those options that have been exercised. writing options
+     * on a given day adds to the amount written in that day's claim bucket.
+     * the exercise process
+     * exercise is performed by iterating from the claim bucket
      */
     /// @inheritdoc IOptionSettlementEngine
     function exercise(uint256 optionId, uint112 amount) external {
@@ -309,7 +310,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // Transfer out the underlying
         SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, txAmount);
 
-        _assignExercise(_optionIdU160b, amount);
+        _assignExercise(_optionIdU160b, amount, optionRecord);
 
         feeBalance[exerciseAsset] += fee;
 
@@ -320,8 +321,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @dev Fair assignment is performed here. After option expiry, any claim holder
-    /// seeking to redeem their claim for the underlying asset will be able to retrieve 
-    /// the same ratio of their underlying asset as have been exercised in the claim's 
+    /// seeking to redeem their claim for the underlying asset will be able to retrieve
+    /// the same ratio of their underlying asset as have been exercised in the claim's
     /// bucket.
     /// @inheritdoc IOptionSettlementEngine
     function redeem(uint256 claimId) external {
@@ -349,14 +350,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert ClaimTooSoon(claimId, optionRecord.expiryTimestamp);
         }
 
-        uint40 bucketedDayForClaim = _claimIdToBucket[claimId];
-        Claim memory claimBucket = _claimBucketByOptionAndDay[_claimIdU160b][bucketedDayForClaim];
+        uint16 bucketedDayForClaim = _claimIdToBucket[claimId];
+        ClaimBucket storage claimBucket = _claimBucketByOptionAndDay[_claimIdU160b][bucketedDayForClaim];
 
-        // TODO: fair assignment based on bucket's exercised/written ratio
-        
-        uint256 exerciseAmount = optionRecord.exerciseAmount * claimRecord.amountExercised;
-        uint256 underlyingAmount =
-            (optionRecord.underlyingAmount * (claimRecord.amountWritten - claimRecord.amountExercised));
+        (uint256 amountExercised, uint256 amountUnexercised) = _getAmountExercised(claimRecord, claimBucket);
+        uint256 exerciseAmount = optionRecord.exerciseAmount * amountExercised;
+        uint256 underlyingAmount = optionRecord.underlyingAmount * amountUnexercised;
 
         if (exerciseAmount > 0) {
             SafeTransferLib.safeTransfer(ERC20(optionRecord.exerciseAsset), msg.sender, exerciseAmount);
@@ -404,14 +403,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // token ID is a claim
             Claim storage claimRecord = _claim[tokenId];
             Option storage optionRecord = _option[_tokenIdU160b];
-            uint256 exerciseAmount = optionRecord.exerciseAmount * claimRecord.amountExercised;
-            uint256 underlyingAmount =
-                (optionRecord.underlyingAmount * (claimRecord.amountWritten - claimRecord.amountExercised));
+            ClaimBucket storage claimBucket = _claimBucketByOptionAndDay[_tokenIdU160b][claimRecord.claimBucketId];
+
+            (uint256 amountExerciseAsset, uint amountUnderlyingAsset) = 
+                _getExerciseAndUnderlyingAssetPositions(optionRecord, claimRecord, claimBucket);
+
             underlyingPositions = Underlying({
                 underlyingAsset: optionRecord.underlyingAsset,
-                underlyingPosition: int256(underlyingAmount),
+                underlyingPosition: int256(amountUnderlyingAsset),
                 exerciseAsset: optionRecord.exerciseAsset,
-                exercisePosition: int256(exerciseAmount)
+                exercisePosition: int256(amountExerciseAsset)
             });
         }
     }
@@ -451,16 +452,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return optionRecord;
     }
 
-    function _assignExercise(uint160 optionId, uint112 amount) internal {
+    function _assignExercise(uint160 optionId, uint112 amount, Option storage optionRecord) internal {
         // A bucket of the overall amounts written and exercised for all claims
         // on a given day
-        Claim storage claimBucket;
+        ClaimBucket storage claimBucket;
 
         while (amount > 0) {
             // get the claim bucket to assign
-            uint40 tsDays = uint40(block.timestamp / 86400);
+            uint16 daysAfterOptionTypeCreation = _getDaysAfterOptionCreation(optionRecord);
 
-            claimBucket = _claimBucketByOptionAndDay[optionId][tsDays];
+            claimBucket = _claimBucketByOptionAndDay[optionId][daysAfterOptionTypeCreation];
 
             uint112 amountAvailiable = claimBucket.amountWritten - claimBucket.amountExercised;
 
@@ -477,6 +478,40 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // TODO: eventing
             // emit ExerciseAssigned(claimNum, optionId, amountPresentlyExercised);
         }
+    }
+
+    function _getDaysAfterOptionCreation(Option storage optionRecord) internal view returns (uint16) {
+        return uint16((block.timestamp - optionRecord.creationTimestamp) / 86400);
+    }
+
+    // TODO: gas test storage and memory
+    function _getAmountExercised(
+        Claim storage claimRecord,
+        ClaimBucket storage claimBucket
+    ) internal view returns (uint256 _exercised, uint256 _unexercised) {
+        // The ratio of exercised to written options in the bucket multiplied by the
+        // number of options actaully written in the claim.
+        _exercised = FixedPointMathLib.mulDivDown(
+            claimBucket.amountExercised, claimRecord.amountWritten, claimBucket.amountWritten
+        );
+
+        // The ration of unexercised to written options in the bucket multiplied by the
+        // number of options actually written in the claim.
+        _unexercised = FixedPointMathLib.mulDivDown(
+            claimBucket.amountWritten - claimBucket.amountExercised,
+            claimRecord.amountWritten,
+            claimBucket.amountWritten
+        );
+    }
+
+    function _getExerciseAndUnderlyingAssetPositions(
+        Option storage optionRecord,
+        Claim storage claimRecord,
+        ClaimBucket storage claimBucket
+    ) internal view returns (uint256 amountExerciseAsset, uint256 amountUnderlyingAsset) {
+        (uint256 amountExercised, uint256 amountUnexercised) = _getAmountExercised(claimRecord, claimBucket);
+        amountExerciseAsset = optionRecord.exerciseAmount * amountExercised;
+        amountUnderlyingAsset = optionRecord.underlyingAmount * amountUnexercised;
     }
 
     // **********************************************************************

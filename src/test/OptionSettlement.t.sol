@@ -116,7 +116,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // Alice writes a few options and later decides to write more
         vm.startPrank(ALICE);
         uint256 claimId1 = engine.write(testOptionId, 69);
-        vm.warp(100);
+        vm.warp(block.timestamp + 100);
         uint256 claimId2 = engine.write(testOptionId, 100);
         vm.stopPrank();
 
@@ -130,7 +130,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(optionId, testOptionId);
         assertEq(claimIdx, 1);
         assertEq(claim.amountWritten, 69);
-        assertEq(claim.amountExercised, 0);
+        _assertClaimAmountExercised(claimId1, 0);
         assertTrue(!claim.claimed);
 
         claim = engine.claim(claimId2);
@@ -139,7 +139,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(optionId, testOptionId);
         assertEq(claimIdx, 2);
         assertEq(claim.amountWritten, 100);
-        assertEq(claim.amountExercised, 0);
+        _assertClaimAmountExercised(claimId2, 0);
         assertTrue(!claim.claimed);
     }
 
@@ -148,8 +148,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.uri(testOptionId);
     }
 
-    // TODO(This should pass)
-    function testFailExerciseMultipleWriteSameChain() public {
+    function testExerciseMultipleWriteSameChain() public {
         uint256 wethBalanceEngine = WETH.balanceOf(address(engine));
         uint256 wethBalanceA = WETH.balanceOf(ALICE);
         uint256 wethBalanceB = WETH.balanceOf(BOB);
@@ -216,7 +215,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         IOptionSettlementEngine.Claim memory claimRecord;
         uint256 wethBalanceEngine = WETH.balanceOf(address(engine));
         uint256 wethBalanceA = WETH.balanceOf(ALICE);
-
         // Alice writes 7 and no one exercises
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 7);
@@ -226,6 +224,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         claimRecord = engine.claim(claimId);
         assertTrue(!claimRecord.claimed);
         engine.redeem(claimId);
+
         claimRecord = engine.claim(claimId);
         assertTrue(claimRecord.claimed);
 
@@ -300,7 +299,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         IOptionSettlementEngine.Claim memory claimRecord = engine.claim(claimId);
 
         assertEq(1, claimRecord.amountWritten);
-        assertEq(0, claimRecord.amountExercised);
+        _assertClaimAmountExercised(claimId, 0);
         assertEq(false, claimRecord.claimed);
         assertEq(1, engine.balanceOf(ALICE, claimId));
         assertEq(1, engine.balanceOf(ALICE, testOptionId));
@@ -319,7 +318,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         claimRecord = engine.claim(claimId3);
         assertEq(2, claimRecord.amountWritten);
-        assertEq(0, claimRecord.amountExercised);
+        _assertClaimAmountExercised(claimId, 0);
         assertEq(false, claimRecord.claimed);
     }
 
@@ -335,7 +334,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseAmount: testExerciseAmount,
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
-            nextClaimId: 0
+            nextClaimId: 0,
+            creationTimestamp: uint40(block.timestamp) //disregarded
         });
         // TODO: investigate this revert - OptionsChainExists error should be displayed
         //  with an argument, implying this expectRevert would use `abi.encodeWithSelector();
@@ -352,7 +352,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseAmount: testExerciseAmount,
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp - 1,
-            nextClaimId: 0
+            nextClaimId: 0,
+            creationTimestamp: uint40(block.timestamp) //disregarded
         });
         vm.expectRevert(IOptionSettlementEngine.ExerciseWindowTooShort.selector);
         engine.newOptionType(option);
@@ -367,7 +368,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseAmount: testExerciseAmount,
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
-            nextClaimId: 0
+            nextClaimId: 0,
+            creationTimestamp: uint40(block.timestamp) //disregarded
         });
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, DAI_A, DAI_A));
         engine.newOptionType(option);
@@ -398,7 +400,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseAmount: testExerciseAmount,
             exerciseTimestamp: testExerciseTimestamp + 1,
             expiryTimestamp: testExpiryTimestamp + 1,
-            nextClaimId: 0
+            nextClaimId: 0,
+            creationTimestamp: uint40(block.timestamp) //disregarded
         });
         uint256 badOptionId = engine.newOptionType(option);
 
@@ -558,7 +561,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseAmount: exerciseAmount,
             exerciseTimestamp: exerciseTimestamp,
             expiryTimestamp: expiryTimestamp,
-            nextClaimId: 0
+            nextClaimId: 0,
+            creationTimestamp: uint40(block.timestamp) //disregarded
         });
 
         uint256 optionId = engine.newOptionType(optionInfo);
@@ -607,7 +611,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(uint256(optionId) << 96, testOptionId);
         assertEq(claimIdx, 1);
         assertEq(claimRecord.amountWritten, amount);
-        assertEq(claimRecord.amountExercised, 0);
+        _assertClaimAmountExercised(claimId, 0);
 
         _assertTokenIsClaim(claimId);
     }
@@ -642,7 +646,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         assertTrue(!claimRecord.claimed);
         assertEq(claimRecord.amountWritten, amountWrite);
-        assertEq(claimRecord.amountExercised, amountExercise);
+        _assertClaimAmountExercised(claimId, amountExercise);
 
         assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + writeAmount - txAmount + writeFee);
         assertEq(WETH.balanceOf(ALICE), (wethBalance - writeAmount + txAmount - writeFee));
@@ -708,6 +712,13 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(_actual, expected);
     }
 
+    function _assertClaimAmountExercised(uint256 claimId, uint112 amount) internal {
+        IOptionSettlementEngine.Underlying memory underlying = engine.underlying(claimId);
+        IOptionSettlementEngine.Option memory option = engine.getOptionFromEncodedId(claimId);
+        uint112 amountExercised = uint112(uint256(underlying.exercisePosition) / option.exerciseAmount);
+        assertEq(amount, amountExercised);
+    }
+
     function _writeAndExerciseNewOption(
         address underlyingAsset,
         uint40 exerciseTimestamp,
@@ -748,7 +759,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount,
             settlementSeed,
             exerciseAmount,
-            0
+            0,
+            uint40(block.timestamp)
         );
         optionId = engine.newOptionType(option);
     }

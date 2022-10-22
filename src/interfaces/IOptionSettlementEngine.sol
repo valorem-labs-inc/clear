@@ -132,7 +132,8 @@ interface IOptionSettlementEngine {
         uint96 underlyingAmount,
         uint40 exerciseTimestamp,
         uint40 expiryTimestamp,
-        uint96 nextClaimId
+        uint96 nextClaimId,
+        uint40 creationTimestamp
     );
 
     /**

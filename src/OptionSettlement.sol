@@ -194,7 +194,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             optionInfo.exerciseTimestamp,
             optionInfo.expiryTimestamp,
             optionInfo.nextClaimId,
-            optionInfo.creationTimestamp
+            optionInfo.creationTimestamp,
         );
     }
 

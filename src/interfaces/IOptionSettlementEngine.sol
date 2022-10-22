@@ -209,8 +209,6 @@ interface IOptionSettlementEngine {
         address exerciseAsset;
         // The amount of the underlying asset contained within an option contract of this type
         uint96 underlyingAmount;
-        // Random seed created at the time of option type creation
-        uint160 settlementSeed;
         // The amount of the exercise asset required to exercise this option
         uint96 exerciseAmount;
         // Which option was written

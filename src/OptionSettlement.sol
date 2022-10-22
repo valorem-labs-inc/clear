@@ -135,9 +135,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function newOptionType(Option memory optionInfo) external returns (uint256 optionId) {
-        // Ensure settlement seed is 0
-        optionInfo.settlementSeed = 0;
-
         // Check that a duplicate option type doesn't exist
         bytes20 optionHash = bytes20(keccak256(abi.encode(optionInfo)));
         uint160 optionKey = uint160(optionHash);

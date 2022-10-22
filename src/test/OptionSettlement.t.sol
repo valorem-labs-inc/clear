@@ -68,7 +68,12 @@ contract OptionSettlementTest is Test, NFTreceiver {
         testExerciseTimestamp = uint40(block.timestamp);
         testExpiryTimestamp = uint40(block.timestamp + testDuration);
         testOptionId = _newOption(
-            WETH_A, testExerciseTimestamp, testExpiryTimestamp, DAI_A, testUnderlyingAmount, 1234567, testExerciseAmount
+            WETH_A,
+            testExerciseTimestamp, 
+            testExpiryTimestamp,
+            DAI_A, 
+            testUnderlyingAmount, 
+            testExerciseAmount
         );
 
         // pre-load balances and approvals
@@ -91,6 +96,17 @@ contract OptionSettlementTest is Test, NFTreceiver {
     // **********************************************************************
     //                            PASS TESTS
     // **********************************************************************
+
+    function testNewOptionType() public {
+        uint256 optionId = _newOption(
+            WETH_A,
+            testExerciseTimestamp, 
+            testExpiryTimestamp,
+            DAI_A, 
+            testUnderlyingAmount, 
+            testExerciseAmount
+        );
+    }
 
     function testExerciseBeforeExpiry() public {
         // Alice writes
@@ -244,7 +260,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
             testExpiryTimestamp,
             DAI_A,
             testUnderlyingAmount / 100000000000,
-            1234567,
             testExerciseAmount,
             ALICE,
             BOB
@@ -329,7 +344,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
             underlyingAsset: WETH_A,
             exerciseAsset: DAI_A,
-            settlementSeed: 1234567,
             underlyingAmount: testUnderlyingAmount,
             exerciseAmount: testExerciseAmount,
             exerciseTimestamp: testExerciseTimestamp,
@@ -347,7 +361,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
             underlyingAsset: WETH_A,
             exerciseAsset: DAI_A,
-            settlementSeed: 1234567,
             underlyingAmount: testUnderlyingAmount,
             exerciseAmount: testExerciseAmount,
             exerciseTimestamp: testExerciseTimestamp,
@@ -363,7 +376,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
             underlyingAsset: DAI_A,
             exerciseAsset: DAI_A,
-            settlementSeed: 1234567,
             underlyingAmount: testUnderlyingAmount,
             exerciseAmount: testExerciseAmount,
             exerciseTimestamp: testExerciseTimestamp,
@@ -395,7 +407,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
             underlyingAsset: WETH_A,
             exerciseAsset: WETH_A,
-            settlementSeed: 1234567,
             underlyingAmount: testUnderlyingAmount,
             exerciseAmount: testExerciseAmount,
             exerciseTimestamp: testExerciseTimestamp + 1,
@@ -556,7 +567,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         IOptionSettlementEngine.Option memory optionInfo = IOptionSettlementEngine.Option({
             underlyingAsset: WETH_A,
             exerciseAsset: DAI_A,
-            settlementSeed: 0,
             underlyingAmount: underlyingAmount,
             exerciseAmount: exerciseAmount,
             exerciseTimestamp: exerciseTimestamp,
@@ -725,7 +735,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint40 expiryTimestamp,
         address exerciseAsset,
         uint96 underlyingAmount,
-        uint160 settlementSeed,
         uint96 exerciseAmount,
         address writer,
         address exerciser
@@ -736,7 +745,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
             expiryTimestamp,
             exerciseAsset,
             underlyingAmount,
-            settlementSeed,
             exerciseAmount
         );
         claimId = _writeAndExerciseOption(optionId, writer, exerciser);
@@ -748,7 +756,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint40 expiryTimestamp,
         address exerciseAsset,
         uint96 underlyingAmount,
-        uint160 settlementSeed,
         uint96 exerciseAmount
     ) internal returns (uint256 optionId) {
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option(
@@ -757,7 +764,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
             expiryTimestamp,
             exerciseAsset,
             underlyingAmount,
-            settlementSeed,
             exerciseAmount,
             0,
             uint40(block.timestamp)

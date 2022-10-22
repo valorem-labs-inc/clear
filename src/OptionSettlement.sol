@@ -165,10 +165,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert InvalidAssets(optionInfo.exerciseAsset, optionInfo.underlyingAsset);
         }
 
-        // Use the optionKey to seed entropy
-        //optionInfo.settlementSeed = optionKey;
         optionInfo.nextClaimId = 1;
-        optionInfo.creationTimestamp = block.timestamp;
+        optionInfo.creationTimestamp = uint40(block.timestamp);
 
         // TODO(Is this check really needed?)
         // Check that both tokens are ERC20 by instantiating them and checking supply

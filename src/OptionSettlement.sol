@@ -310,7 +310,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // Transfer out the underlying
         SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, txAmount);
 
-        _assignExercise(_optionIdU160b, amount, optionRecord);
+        _assignExercise(_optionIdU160b, amount);
 
         feeBalance[exerciseAsset] += fee;
 
@@ -452,15 +452,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return optionRecord;
     }
 
-    function _assignExercise(uint160 optionId, uint112 amount, Option storage optionRecord) internal {
+    function _assignExercise(uint160 optionId, uint112 amount) internal {
         // A bucket of the overall amounts written and exercised for all claims
         // on a given day
         ClaimBucket storage claimBucket;
+        uint16 daysAfterOptionTypeCreation = 0;
 
         while (amount > 0) {
             // get the claim bucket to assign
-            uint16 daysAfterOptionTypeCreation = _getDaysAfterOptionCreation(optionRecord);
-
             claimBucket = _claimBucketByOptionAndDay[optionId][daysAfterOptionTypeCreation];
 
             uint112 amountAvailiable = claimBucket.amountWritten - claimBucket.amountExercised;
@@ -475,6 +474,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             }
 
             claimBucket.amountExercised += amountPresentlyExercised;
+            daysAfterOptionTypeCreation++;
             // TODO: eventing
             // emit ExerciseAssigned(claimNum, optionId, amountPresentlyExercised);
         }

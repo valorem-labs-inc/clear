@@ -214,6 +214,8 @@ interface IOptionSettlementEngine {
         uint96 exerciseAmount;
         // Which option was written
         uint96 nextClaimId;
+        // When the option type is initially created
+        uint40 creationTimestamp;
     }
 
     /// @dev This struct contains the data about a claim ERC-1155 NFT associated with an option type.

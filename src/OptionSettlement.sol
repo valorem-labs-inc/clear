@@ -166,8 +166,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
 
         // Use the optionKey to seed entropy
-        optionInfo.settlementSeed = optionKey;
+        //optionInfo.settlementSeed = optionKey;
         optionInfo.nextClaimId = 1;
+        optionInfo.creationTimestamp = block.timestamp;
 
         // TODO(Is this check really needed?)
         // Check that both tokens are ERC20 by instantiating them and checking supply
@@ -192,8 +193,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             optionInfo.underlyingAmount,
             optionInfo.exerciseTimestamp,
             optionInfo.expiryTimestamp,
-            optionInfo.nextClaimId
-            );
+            optionInfo.nextClaimId,
+            optionInfo.creationTimestamp
+        );
     }
 
     /// @inheritdoc IOptionSettlementEngine
@@ -270,62 +272,15 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         emit OptionsWritten(optionId, msg.sender, claimId, amount);
 
         return claimId;
-    }
+    } 
 
-    function assignExercise(uint160 optionId, uint96 claimsLen, uint112 amount, uint160 settlementSeed) internal {
-        // Number of claims enqueued for this option
-        if (claimsLen == 0) {
-            revert NoClaims(optionId);
-        }
-
-        // To keep track of the slot to overwrite
-        uint256 overwrite;
-
-        // Last index in the claims list
-        uint256 lastIndex;
-
-        // The new length for the claims list
-        uint96 newLen;
-
-        // While there are still options to exercise
-        while (amount > 0) {
-            // get the claim bucket to exercise
-            uint40 tsDays = uint40(block.timestamp / 86400);
-
-            claimRecord = _claim[claimNum];
-
-            uint112 amountAvailiable = claimRecord.amountWritten - claimRecord.amountExercised;
-            uint112 amountPresentlyExercised;
-            if (amountAvailiable < amount) {
-                amount -= amountAvailiable;
-                amountPresentlyExercised = amountAvailiable;
-                // We pop the end off and overwrite the old slot
-
-                newLen = claimsLen - 1;
-                unexercisedClaimsByOption[optionId].pop();
-                if (newLen > 0) {
-                    overwrite = unexercisedClaimsByOption[optionId][newLen];
-                    // Would be nice if I could pop onto the stack here
-                    claimsLen = newLen;
-                    unexercisedClaimsByOption[optionId][lastIndex] = overwrite;
-                }
-            } else {
-                amountPresentlyExercised = amount;
-                amount = 0;
-            }
-
-            claimRecord.amountExercised += amountPresentlyExercised;
-            emit ExerciseAssigned(claimNum, optionId, amountPresentlyExercised);
-
-            // Increment for the next loop
-            settlementSeed = uint160(uint256(keccak256(abi.encode(settlementSeed, i))));
-            i++;
-        }
-
-        // Update the settlement seed in storage for the next exercise.
-        _option[optionId].settlementSeed = settlementSeed;
-    }
-
+    /**
+    claim buckets are a of set options written on a given day, along with how 
+        many of those options that have been exercised. writing options
+        on a given day adds to the amount written in that day's claim bucket.
+        the exercise process 
+    exercise is performed by iterating from the claim bucket 
+     */
     /// @inheritdoc IOptionSettlementEngine
     function exercise(uint256 optionId, uint112 amount) external {
         (uint160 _optionId, uint96 claimIdx) = getDecodedIdComponents(optionId);
@@ -358,7 +313,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // Transfer out the underlying
         SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, txAmount);
 
-        assignExercise(_optionId, claimIdx, amount, optionRecord.settlementSeed);
+        _assignExercise(_optionId, claimIdx, amount, optionRecord.settlementSeed);
 
         feeBalance[exerciseAsset] += fee;
 
@@ -496,6 +451,53 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         emit FeeAccrued(underlyingAsset, msg.sender, fee);
 
         return optionRecord;
+    }
+
+    function _assignExercise(uint160 optionId, uint96 claimsLen, uint112 amount, uint160 settlementSeed) internal {
+        // Number of claims enqueued for this option
+        if (claimsLen == 0) {
+            revert NoClaims(optionId);
+        }
+
+        // To keep track of the slot to overwrite
+        uint256 overwrite;
+
+        // Last index in the claims list
+        uint256 lastIndex;
+
+        // The new length for the claims list
+        uint96 newLen;
+
+        // While there are still options to exercise
+        while (amount > 0) {
+            // get the claim bucket to exercise
+            uint40 tsDays = uint40(block.timestamp / 86400);
+
+            claimRecord = _claim[claimNum];
+
+            uint112 amountAvailiable = claimRecord.amountWritten - claimRecord.amountExercised;
+            uint112 amountPresentlyExercised;
+            if (amountAvailiable < amount) {
+                amount -= amountAvailiable;
+                amountPresentlyExercised = amountAvailiable;
+                // We pop the end off and overwrite the old slot
+
+                newLen = claimsLen - 1;
+                unexercisedClaimsByOption[optionId].pop();
+                if (newLen > 0) {
+                    overwrite = unexercisedClaimsByOption[optionId][newLen];
+                    // Would be nice if I could pop onto the stack here
+                    claimsLen = newLen;
+                    unexercisedClaimsByOption[optionId][lastIndex] = overwrite;
+                }
+            } else {
+                amountPresentlyExercised = amount;
+                amount = 0;
+            }
+
+            claimRecord.amountExercised += amountPresentlyExercised;
+            emit ExerciseAssigned(claimNum, optionId, amountPresentlyExercised);
+        }
     }
 
     // **********************************************************************

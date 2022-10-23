@@ -47,6 +47,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
     IERC20 public constant WETH = IERC20(WETH_A);
     IERC20 public constant USDC = IERC20(USDC_A);
 
+    uint40 public constant ONE_DAY_SECONDS = 24 * 60 * 60;
+
     // Test option
     uint256 private testOptionId;
     uint40 private testExerciseTimestamp;
@@ -342,10 +344,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function testAssignMultipleBuckets() public {
         // TODO extract
-        uint40 oneDaySeconds = 24 * 60 * 60;
         // New option type with expiry in 5d
-        testExerciseTimestamp = uint40(block.timestamp + oneDaySeconds);
-        testExpiryTimestamp = uint40(block.timestamp + 5 * oneDaySeconds);
+        testExerciseTimestamp = uint40(block.timestamp + ONE_DAY_SECONDS);
+        testExpiryTimestamp = uint40(block.timestamp + 5 * ONE_DAY_SECONDS);
 
         (uint256 optionId, IOptionSettlementEngine.Option memory option) = _newOption({
             underlyingAsset: WETH_A,
@@ -361,7 +362,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 claimId1 = engine.write(optionId, 69);
 
         // write more 1d later
-        vm.warp(block.timestamp + (oneDaySeconds + 1));
+        vm.warp(block.timestamp + (ONE_DAY_SECONDS + 1));
         uint256 claimId2 = engine.write(optionId, 100);
 
         assertEq(169, engine.balanceOf(ALICE, optionId));

@@ -343,7 +343,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function testAssignMultipleBuckets() public {
-        // TODO extract
         // New option type with expiry in 5d
         testExerciseTimestamp = uint40(block.timestamp + ONE_DAY_SECONDS);
         testExpiryTimestamp = uint40(block.timestamp + 5 * ONE_DAY_SECONDS);
@@ -431,6 +430,48 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(
             aliceBalanceUnderlyingAsset + (99 * option.underlyingAmount), ERC20(option.underlyingAsset).balanceOf(ALICE)
         );
+    }
+
+    /// @dev intended to test that the proper written/exercised ratio is used
+    /// when adding options to a claim lot.
+    function testRedemptionRatios() public {
+        uint112 amountToWrite = 100;
+        // New option type with expiry in 5d
+        testExerciseTimestamp = uint40(block.timestamp);
+        testExpiryTimestamp = uint40(block.timestamp + 2 * ONE_DAY_SECONDS);
+
+        (uint256 optionId, IOptionSettlementEngine.Option memory option) = _newOption({
+            underlyingAsset: WETH_A,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp,
+            exerciseAsset: DAI_A,
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAmount: testExerciseAmount
+        });
+
+        // Alice writes some options
+        vm.startPrank(ALICE);
+        uint256 claimId1 = engine.write(optionId, amountToWrite);
+        engine.safeTransferFrom(ALICE, BOB, optionId, uint256(amountToWrite), "");
+        vm.stopPrank();
+
+        // Bob exercises all; leaving bucket 1 completely exercised
+        vm.startPrank(BOB);
+        engine.exercise(optionId, amountToWrite);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + ONE_DAY_SECONDS + 1);
+        vm.startPrank(ALICE);
+        engine.write(optionId, amountToWrite, claimId1);
+
+        // assert state in claim buckets
+        IOptionSettlementEngine.ClaimBucket memory bucket1 = engine.claimBucket(optionId, 0);
+        assertEq(amountToWrite, bucket1.amountWritten);
+        assertEq(amountToWrite, bucket1.amountExercised);
+
+        IOptionSettlementEngine.ClaimBucket memory bucket2 = engine.claimBucket(optionId, 1);
+        assertEq(amountToWrite, bucket2.amountWritten);
+        assertEq(0, bucket2.amountExercised);
     }
 
     // **********************************************************************

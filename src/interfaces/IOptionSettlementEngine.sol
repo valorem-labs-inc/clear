@@ -223,15 +223,23 @@ interface IOptionSettlementEngine {
         // These are 1:1 contracts with the underlying Option struct
         // The number of contracts written in this claim
         uint112 amountWritten;
-        // The ID of the bucket in which this claim is placed (numerically equal to the
-        // number of days after option type creation that the options lot was written)
-        uint16 claimBucketId;
         // The two amounts above along with the option info, can be used to calculate the underlying assets
         bool claimed;
     }
 
+    /// @dev Claims are options lots which are able to have options added to them on different
+    /// bucketed days. This struct is used to keep track of how many options in a single lot are
+    /// written on each day, in order to correctly perform fair assignment.
+    struct ClaimIndex {
+        // The amount of options written on a given day
+        uint112 amountWritten;
+        // The index of the bucket on which the options are written
+        uint16 bucketIndex;
+    }
+
     /// @dev Represents the total amount of options written and exercised for a group of
-    /// claims bucketed by day
+    /// claims bucketed by day. Used in fair assignement to calculate the ratio of
+    /// underlying to exercise assets to be transferred to claimants.
     struct ClaimBucket {
         // The number of options written in this bucket
         uint112 amountWritten;
@@ -239,6 +247,7 @@ interface IOptionSettlementEngine {
         uint112 amountExercised;
     }
 
+    /// @dev Struct used in returning data regarding positions underlying a claim or option
     struct Underlying {
         // address of the underlying asset erc20
         address underlyingAsset;

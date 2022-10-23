@@ -440,8 +440,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testEvent_newOptionType() public {
         vm.expectEmit(false, true, true, true); // ignore 1st topic for now (TODO calculate optionId)
         emit NewOptionType(
-            999, WETH_A, DAI_A, testExerciseAmount, testUnderlyingAmount, testExerciseTimestamp, testExpiryTimestamp, 1
-            );
+            999, WETH_A, DAI_A, testExerciseAmount, testUnderlyingAmount, testExerciseTimestamp, testExpiryTimestamp, 1, uint40(block.timestamp)
+        );
 
         engine.newOptionType(
             IOptionSettlementEngine.Option({
@@ -480,9 +480,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         (uint160 expectedOptionId,) = engine.getDecodedIdComponents(testOptionId);
         uint256 expectedFeeAccruedAmount = (testExerciseAmount / 10_000) * engine.feeBps();
-
-        vm.expectEmit(false, true, true, true); // ignore 1st topic for now (TODO calculate claimId)
-        emit ExerciseAssigned(999, expectedOptionId, 1);
 
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(DAI_A, BOB, expectedFeeAccruedAmount);
@@ -1048,7 +1045,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint96 underlyingAmount,
         uint40 exerciseTimestamp,
         uint40 expiryTimestamp,
-        uint96 nextClaimId
+        uint96 nextClaimId,
+        uint40 creationTimestamp
     );
 
     event OptionsExercised(uint256 indexed optionId, address indexed exercisee, uint112 amount);
@@ -1066,6 +1064,4 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint96 exerciseAmount,
         uint96 underlyingAmount
     );
-
-    event ExerciseAssigned(uint256 indexed claimId, uint256 indexed optionId, uint112 amountAssigned);
 }

@@ -362,7 +362,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // write more 1d later
         vm.warp(block.timestamp + (oneDaySeconds + 1));
-        engine.write(optionId, 100);
+        uint256 claimId2 = engine.write(optionId, 100);
 
         assertEq(169, engine.balanceOf(ALICE, optionId));
 
@@ -411,7 +411,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.warp(1 + option.expiryTimestamp);
         vm.startPrank(ALICE);
         uint256 aliceBalanceExerciseAsset = ERC20(option.exerciseAsset).balanceOf(ALICE);
-        // uint256 aliceBalanceUnderlyingAsset = ERC20(option.underlyingAsset).balanceOf(ALICE);
+        uint256 aliceBalanceUnderlyingAsset = ERC20(option.underlyingAsset).balanceOf(ALICE);
         // Alice's first claim should be completely exercised
         engine.redeem(claimId1);
         assertEq(
@@ -419,18 +419,17 @@ contract OptionSettlementTest is Test, NFTreceiver {
             ERC20(option.exerciseAsset).balanceOf(ALICE)
         );
 
-        // TODO
-        /* 
-        aliceBalanceExerciseAsset = ERC20(option.exerciseAsset).balanceOf(BOB);
+        aliceBalanceExerciseAsset = ERC20(option.exerciseAsset).balanceOf(ALICE);
+        aliceBalanceUnderlyingAsset = ERC20(option.underlyingAsset).balanceOf(ALICE);
+
+        // BOB exercised 70 options
+        // ALICE should retrieve 1 * exerciseAmount of the exercise asset
+        // ALICE should retrieve 99 * underlyingAmount of the underlying asset
         engine.redeem(claimId2);
+        assertEq(aliceBalanceExerciseAsset + option.exerciseAmount, ERC20(option.exerciseAsset).balanceOf(ALICE));
         assertEq(
-            aliceBalanceExerciseAsset + option.exerciseAmount,
-            ERC20(option.exerciseAsset).balanceOf(ALICE)
+            aliceBalanceUnderlyingAsset + (99 * option.underlyingAmount), ERC20(option.underlyingAsset).balanceOf(ALICE)
         );
-        assertEq(
-            aliceBalanceUnderlyingAsset + ((bobExerciseAmount - 1) * option.underlyingAmount),
-            ERC20(option.underlyingAsset).balanceOf(ALICE)
-        );*/
     }
 
     // **********************************************************************
@@ -440,8 +439,16 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testEvent_newOptionType() public {
         vm.expectEmit(false, true, true, true); // ignore 1st topic for now (TODO calculate optionId)
         emit NewOptionType(
-            999, WETH_A, DAI_A, testExerciseAmount, testUnderlyingAmount, testExerciseTimestamp, testExpiryTimestamp, 1, uint40(block.timestamp)
-        );
+            999,
+            WETH_A,
+            DAI_A,
+            testExerciseAmount,
+            testUnderlyingAmount,
+            testExerciseTimestamp,
+            testExpiryTimestamp,
+            1,
+            uint40(block.timestamp)
+            );
 
         engine.newOptionType(
             IOptionSettlementEngine.Option({

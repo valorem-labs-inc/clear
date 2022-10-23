@@ -362,7 +362,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // write more 1d later
         vm.warp(block.timestamp + (oneDaySeconds + 1));
-        uint256 claimId2 = engine.write(optionId, 100);
+        engine.write(optionId, 100);
 
         assertEq(169, engine.balanceOf(ALICE, optionId));
 
@@ -411,7 +411,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.warp(1 + option.expiryTimestamp);
         vm.startPrank(ALICE);
         uint256 aliceBalanceExerciseAsset = ERC20(option.exerciseAsset).balanceOf(ALICE);
-        uint256 aliceBalanceUnderlyingAsset = ERC20(option.underlyingAsset).balanceOf(ALICE);
+        // uint256 aliceBalanceUnderlyingAsset = ERC20(option.underlyingAsset).balanceOf(ALICE);
         // Alice's first claim should be completely exercised
         engine.redeem(claimId1);
         assertEq(

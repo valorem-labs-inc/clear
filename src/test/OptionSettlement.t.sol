@@ -402,7 +402,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         IOptionSettlementEngine.ClaimBucket memory bucket1 = engine.claimBucket(optionId, 0);
         assertEq(69, bucket1.amountWritten);
         assertEq(69, bucket1.amountExercised);
-        
+
         IOptionSettlementEngine.ClaimBucket memory bucket2 = engine.claimBucket(optionId, 1);
         assertEq(100, bucket2.amountWritten);
         assertEq(1, bucket2.amountExercised);

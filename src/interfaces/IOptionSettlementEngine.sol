@@ -294,6 +294,18 @@ interface IOptionSettlementEngine {
     function claim(uint256 tokenId) external view returns (Claim memory claimInfo);
 
     /**
+     * @notice Returns the total amount of options written an exercised for all claims /
+     * option lots created the supplied number of days after the option type is created.
+     * @param optionId The id of the option for the claim buckets.
+     * @param daysAfterOptionTypeCreation The number of days after the creation of the
+     * option type.
+     */
+    function claimBucket(uint256 optionId, uint16 daysAfterOptionTypeCreation)
+        external
+        view
+        returns (ClaimBucket memory claimBucketInfo);
+
+    /**
      * @notice Updates the address fees can be swept to.
      * @param newFeeTo The new address to which fees will be swept.
      */
@@ -308,10 +320,7 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Create a new options type from optionInfo if it doesn't already exist
-     * @dev The settlementSeed field in the provided optionInfo will be disregarded,
-     * and is only used internally for fair exercise assignment. The seed's initial
-     * value will be the keccak256 hash of the supplied optionInfo. The nextClaimId
-     * field will also be disregarded.
+     * @dev The supplied creation timestamp and next claim Id fields will be disregarded.
      * @param optionInfo The optionInfo from which a new type will be created
      * @return optionId The optionId for the option.
      */

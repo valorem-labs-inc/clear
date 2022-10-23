@@ -65,7 +65,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // Setup test option contract
         testExerciseTimestamp = uint40(block.timestamp);
         testExpiryTimestamp = uint40(block.timestamp + testDuration);
-        testOptionId = _newOption({
+        (testOptionId,) = _newOption({
             underlyingAsset: WETH_A,
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
@@ -100,15 +100,15 @@ contract OptionSettlementTest is Test, NFTreceiver {
     //                            PASS TESTS
     // **********************************************************************
 
-    function testNewOptionType() public {
-        uint256 optionId = _newOption(
-            WETH_A,
-            testExerciseTimestamp, 
-            testExpiryTimestamp,
-            DAI_A, 
-            testUnderlyingAmount, 
-            testExerciseAmount
+    function testNewOptionTypeDisregardsNextClaimIdAndCreationTimestamp() public {
+        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option(
+            WETH_A, testExerciseTimestamp, testExpiryTimestamp, DAI_A, testUnderlyingAmount, testExerciseAmount, 420, 69
         );
+        uint256 optionId = engine.newOptionType(option);
+        option = engine.option(optionId);
+
+        assertEq(option.creationTimestamp, uint40(block.timestamp));
+        assertEq(option.nextClaimId, 1);
     }
 
     function testExerciseBeforeExpiry() public {
@@ -340,6 +340,99 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(false, claimRecord.claimed);
     }
 
+    function testAssignMultipleBuckets() public {
+        // TODO extract
+        uint40 oneDaySeconds = 24 * 60 * 60;
+        // New option type with expiry in 5d
+        testExerciseTimestamp = uint40(block.timestamp + oneDaySeconds);
+        testExpiryTimestamp = uint40(block.timestamp + 5 * oneDaySeconds);
+
+        (uint256 optionId, IOptionSettlementEngine.Option memory option) = _newOption({
+            underlyingAsset: WETH_A,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp,
+            exerciseAsset: DAI_A,
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAmount: testExerciseAmount
+        });
+
+        // Alice writes some options
+        vm.startPrank(ALICE);
+        uint256 claimId1 = engine.write(optionId, 69);
+
+        // write more 1d later
+        vm.warp(block.timestamp + (oneDaySeconds + 1));
+        uint256 claimId2 = engine.write(optionId, 100);
+
+        assertEq(169, engine.balanceOf(ALICE, optionId));
+
+        // Alice 'sells' half the written options to Bob, half to Carol
+        uint112 bobOptionAmount = 85;
+        uint112 carolOptionAmount = 84;
+        engine.safeTransferFrom(ALICE, BOB, optionId, bobOptionAmount, "");
+        engine.safeTransferFrom(ALICE, CAROL, optionId, carolOptionAmount, "");
+        assertEq(0, engine.balanceOf(ALICE, optionId));
+
+        vm.stopPrank();
+
+        // Bob exercises the options
+        uint112 bobExerciseAmount = 70;
+        uint256 bobBalanceExerciseAsset1 = ERC20(option.exerciseAsset).balanceOf(BOB);
+        uint256 bobBalanceUnderlyingAsset1 = ERC20(option.underlyingAsset).balanceOf(BOB);
+        uint256 bobExerciseFee = (bobExerciseAmount * option.exerciseAmount / 10000) * engine.feeBps();
+        vm.startPrank(BOB);
+        engine.exercise(optionId, bobExerciseAmount);
+        assertEq(bobOptionAmount - bobExerciseAmount, engine.balanceOf(BOB, optionId));
+        // Bob transfers in exactly (#options exercised * exerciseAmount) of the exercise asset
+        // Bob receives exactly (#options exercised * underlyingAmount) - fee of the underlying asset
+        assertEq(
+            bobBalanceExerciseAsset1 - (bobExerciseAmount * option.exerciseAmount) - bobExerciseFee,
+            ERC20(option.exerciseAsset).balanceOf(BOB)
+        );
+        assertEq(
+            bobBalanceUnderlyingAsset1 + (bobExerciseAmount * option.underlyingAmount),
+            ERC20(option.underlyingAsset).balanceOf(BOB)
+        );
+        vm.stopPrank();
+
+        // first claim lot should be completely exercised
+        IOptionSettlementEngine.Underlying memory underlying1 = engine.underlying(claimId1);
+        assertEq(0, underlying1.underlyingPosition);
+
+        IOptionSettlementEngine.ClaimBucket memory bucket1 = engine.claimBucket(optionId, 0);
+        assertEq(69, bucket1.amountWritten);
+        assertEq(69, bucket1.amountExercised);
+        
+        IOptionSettlementEngine.ClaimBucket memory bucket2 = engine.claimBucket(optionId, 1);
+        assertEq(100, bucket2.amountWritten);
+        assertEq(1, bucket2.amountExercised);
+
+        // Jump ahead to option expiry
+        vm.warp(1 + option.expiryTimestamp);
+        vm.startPrank(ALICE);
+        uint256 aliceBalanceExerciseAsset = ERC20(option.exerciseAsset).balanceOf(ALICE);
+        uint256 aliceBalanceUnderlyingAsset = ERC20(option.underlyingAsset).balanceOf(ALICE);
+        // Alice's first claim should be completely exercised
+        engine.redeem(claimId1);
+        assertEq(
+            aliceBalanceExerciseAsset + ((bobExerciseAmount - 1) * option.exerciseAmount),
+            ERC20(option.exerciseAsset).balanceOf(ALICE)
+        );
+
+        // TODO
+        /* 
+        aliceBalanceExerciseAsset = ERC20(option.exerciseAsset).balanceOf(BOB);
+        engine.redeem(claimId2);
+        assertEq(
+            aliceBalanceExerciseAsset + option.exerciseAmount,
+            ERC20(option.exerciseAsset).balanceOf(ALICE)
+        );
+        assertEq(
+            aliceBalanceUnderlyingAsset + ((bobExerciseAmount - 1) * option.underlyingAmount),
+            ERC20(option.underlyingAsset).balanceOf(ALICE)
+        );*/
+    }
+
     // **********************************************************************
     //                            EVENT TESTS
     // **********************************************************************
@@ -434,7 +527,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.write(testOptionId, 1);
 
         // Write option that will generate DAI fees
-        uint256 daiOptionId = _newOption({
+        (uint256 daiOptionId,) = _newOption({
             underlyingAsset: DAI_A,
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
@@ -445,7 +538,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.write(daiOptionId, 1);
 
         // Write option that will generate USDC fees
-        uint256 usdcOptionId = _newOption({
+        (uint256 usdcOptionId,) = _newOption({
             underlyingAsset: USDC_A,
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
@@ -883,13 +976,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
         address writer,
         address exerciser
     ) internal returns (uint256 optionId, uint256 claimId) {
-        optionId = _newOption(
-            underlyingAsset,
-            exerciseTimestamp,
-            expiryTimestamp,
-            exerciseAsset,
-            underlyingAmount,
-            exerciseAmount
+        (optionId,) = _newOption(
+            underlyingAsset, exerciseTimestamp, expiryTimestamp, exerciseAsset, underlyingAmount, exerciseAmount
         );
         claimId = _writeAndExerciseOption(optionId, writer, exerciser);
     }
@@ -901,8 +989,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
         address exerciseAsset,
         uint96 underlyingAmount,
         uint96 exerciseAmount
-    ) internal returns (uint256 optionId) {
-        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option(
+    ) internal returns (uint256 optionId, IOptionSettlementEngine.Option memory option) {
+        option = IOptionSettlementEngine.Option(
             underlyingAsset,
             exerciseTimestamp,
             expiryTimestamp,

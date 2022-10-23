@@ -436,7 +436,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     //                            EVENT TESTS
     // **********************************************************************
 
-    function testEvent_newOptionType() public {
+    function testEventNewOptionType() public {
         vm.expectEmit(false, true, true, true); // ignore 1st topic for now (TODO calculate optionId)
         emit NewOptionType(
             999,
@@ -464,7 +464,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         );
     }
 
-    function testEvent_write() public {
+    function testEventWrite() public {
         uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
 
         vm.expectEmit(true, true, true, true);
@@ -477,7 +477,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.write(testOptionId, 1);
     }
 
-    function testEvent_exercise() public {
+    function testEventExercise() public {
         vm.startPrank(ALICE);
         engine.write(testOptionId, 1);
         engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
@@ -485,7 +485,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         vm.warp(testExpiryTimestamp - 1 seconds);
 
-        (uint160 expectedOptionId,) = engine.getDecodedIdComponents(testOptionId);
+        engine.getDecodedIdComponents(testOptionId);
         uint256 expectedFeeAccruedAmount = (testExerciseAmount / 10_000) * engine.feeBps();
 
         vm.expectEmit(true, true, true, true);
@@ -498,7 +498,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.exercise(testOptionId, 1);
     }
 
-    function testEvent_redeem() public {
+    function testEventRedeem() public {
         vm.startPrank(ALICE);
         uint96 amountWritten = 7;
         uint256 claimId = engine.write(testOptionId, amountWritten);
@@ -522,7 +522,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.redeem(claimId);
     }
 
-    function testEvent_sweepFees_whenFeesAccruedForWrite() public {
+    function testEventSweepFeesWhenFeesAccruedForWrite() public {
         uint96 daiUnderlyingAmount = 9 * 10 ** 18;
         uint96 usdcUnderlyingAmount = 7 * 10 ** 9; // not 18 decimals
 

@@ -435,10 +435,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
     /// @dev intended to test that the proper written/exercised ratio is used
     /// when adding options to a claim lot.
     function testRedemptionRatios() public {
-        uint112 amountToWrite = 100;
+        uint112 amountToWrite = 10;
         // New option type with expiry in 5d
-        testExerciseTimestamp = uint40(block.timestamp);
-        testExpiryTimestamp = uint40(block.timestamp + 2 * ONE_DAY_SECONDS);
+        testExerciseTimestamp = uint40(block.timestamp - 1);
+        testExpiryTimestamp = uint40(block.timestamp + 4 * ONE_DAY_SECONDS);
 
         (uint256 optionId, IOptionSettlementEngine.Option memory option) = _newOption({
             underlyingAsset: WETH_A,
@@ -452,26 +452,115 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // Alice writes some options
         vm.startPrank(ALICE);
         uint256 claimId1 = engine.write(optionId, amountToWrite);
-        engine.safeTransferFrom(ALICE, BOB, optionId, uint256(amountToWrite), "");
+        uint256 claimId2 = engine.write(optionId, amountToWrite);
+        engine.safeTransferFrom(ALICE, BOB, optionId, uint256(2 * amountToWrite), "");
         vm.stopPrank();
 
-        // Bob exercises all; leaving bucket 1 completely exercised
+        // Bob exercises some options. Half of the options in the first day's bucket
+        // have been exercised
         vm.startPrank(BOB);
         engine.exercise(optionId, amountToWrite);
         vm.stopPrank();
 
         vm.warp(block.timestamp + ONE_DAY_SECONDS + 1);
+
+        // Bob exercises more options. All options in the first day's bucket
+        // have been exercised. No options in the second day's bucket have been
+        // exercised.
+        vm.startPrank(BOB);
+        engine.exercise(optionId, amountToWrite);
+        vm.stopPrank();
+
+        // Alice writes more options, adding them to the first lot and sells them to bob
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(optionId, amountToWrite, claimId1);
+        assertEq(claimId1, claimId);
+        engine.safeTransferFrom(ALICE, BOB, optionId, uint256(amountToWrite), "");
+
+        // Alice also writes more options in a separate lot
+        uint256 claimId3 = engine.write(optionId, amountToWrite);
+        vm.stopPrank();
+
+        // No options in the second day have been exercised.
+        // Alice's underlying position reflects that 20 total of her written
+        // options have been exercised.
+
+        vm.warp(block.timestamp + ONE_DAY_SECONDS);
+
+        // Bob exercises more options
+        vm.startPrank(BOB);
+        engine.exercise(optionId, amountToWrite);
+        vm.stopPrank();
+
+        // Alice writes more options into the first lot
         vm.startPrank(ALICE);
         engine.write(optionId, amountToWrite, claimId1);
+        vm.stopPrank();
 
-        // assert state in claim buckets
+        // Claim buckets reflect that 30 of 50 written options have been exercised
         IOptionSettlementEngine.ClaimBucket memory bucket1 = engine.claimBucket(optionId, 0);
-        assertEq(amountToWrite, bucket1.amountWritten);
-        assertEq(amountToWrite, bucket1.amountExercised);
+        assertEq(20, bucket1.amountWritten);
+        assertEq(20, bucket1.amountExercised);
 
         IOptionSettlementEngine.ClaimBucket memory bucket2 = engine.claimBucket(optionId, 1);
-        assertEq(amountToWrite, bucket2.amountWritten);
-        assertEq(0, bucket2.amountExercised);
+        assertEq(20, bucket2.amountWritten);
+        assertEq(10, bucket2.amountExercised);
+
+        IOptionSettlementEngine.ClaimBucket memory bucket3 = engine.claimBucket(optionId, 2);
+        assertEq(10, bucket3.amountWritten);
+        assertEq(0, bucket3.amountExercised);
+
+        // warp to expiry
+        vm.warp(block.timestamp + 2 * ONE_DAY_SECONDS);
+
+        // redeeming claim2 (written on day 0 for 10) should return 10 * exercise amount
+        // and 0 * underlying amount
+        _redeemAndAssertClaimAmounts(
+            ALICE,
+            claimId1,
+            option,
+            15, // exercised
+            15 // unexercised
+        );
+        _redeemAndAssertClaimAmounts(
+            ALICE,
+            claimId2,
+            option,
+            10, // exercised
+            0 // unexercised
+        );
+        _redeemAndAssertClaimAmounts(
+            ALICE,
+            claimId3,
+            option,
+            5, // exercised
+            5 // unexercised
+        );
+    }
+
+    function _redeemAndAssertClaimAmounts(
+        address claimant,
+        uint256 claimId,
+        IOptionSettlementEngine.Option memory option,
+        uint256 amountExercised,
+        uint256 amountUnexercised
+    ) internal {
+        vm.startPrank(claimant);
+        uint256 exerciseAssetBalance = ERC20(option.exerciseAsset).balanceOf(claimant);
+        uint256 underlyingAssetBalance = ERC20(option.underlyingAsset).balanceOf(claimant);
+
+        engine.redeem(claimId);
+
+        assertEq(
+            ERC20(option.exerciseAsset).balanceOf(claimant),
+            exerciseAssetBalance + amountExercised * option.exerciseAmount
+        );
+
+        assertEq(
+            ERC20(option.underlyingAsset).balanceOf(claimant),
+            underlyingAssetBalance + amountUnexercised * option.underlyingAmount
+        );
+        vm.stopPrank();
     }
 
     // **********************************************************************

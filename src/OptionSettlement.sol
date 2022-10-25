@@ -444,8 +444,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // A bucket of the overall amounts written and exercised for all claims
         // on a given day
         ClaimBucket storage claimBucketInfo;
-        uint16 daysAfter = _getDaysBucket();
-        uint16 bucketIndex = uint16(optionRecord.settlementSeed % (daysAfter + 1));
+        uint16 bucketsMod = _getDaysBucket() + 1;
+        uint16 bucketIndex = uint16(optionRecord.settlementSeed % bucketsMod);
 
         while (amount > 0) {
             // get the claim bucket to assign
@@ -461,7 +461,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 amount = 0;
             }
             claimBucketInfo.amountExercised += amountPresentlyExercised;
-            bucketIndex = (bucketIndex + 1) % (daysAfter + 1);
+            bucketIndex = (bucketIndex + 1) % bucketsMod;
         }
 
         // update settlement seed

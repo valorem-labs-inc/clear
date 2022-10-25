@@ -104,13 +104,22 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function testNewOptionTypeDisregardsNextClaimIdAndCreationTimestamp() public {
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option(
-            WETH_A, testExerciseTimestamp, testExpiryTimestamp, DAI_A, testUnderlyingAmount, testExerciseAmount, 420, 69
+            WETH_A,
+            testExerciseTimestamp,
+            testExpiryTimestamp,
+            DAI_A,
+            testUnderlyingAmount,
+            42,
+            testExerciseAmount,
+            420,
+            69
         );
         uint256 optionId = engine.newOptionType(option);
         option = engine.option(optionId);
 
         assertEq(option.creationTimestamp, uint40(block.timestamp));
         assertEq(option.nextClaimId, 1);
+        assertEq(option.settlementSeed, uint160(optionId >> 96));
     }
 
     function testExerciseBeforeExpiry() public {
@@ -588,6 +597,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
                 expiryTimestamp: testExpiryTimestamp,
                 exerciseAsset: WETH_A,
                 underlyingAmount: testUnderlyingAmount,
+                settlementSeed: 0,
                 exerciseAmount: testExerciseAmount,
                 nextClaimId: 1,
                 creationTimestamp: 0
@@ -708,51 +718,43 @@ contract OptionSettlementTest is Test, NFTreceiver {
     //                            FAIL TESTS
     // **********************************************************************
 
-    function testFailnewOptionTypeOptionsChainExists() public {
-        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
-            underlyingAsset: WETH_A,
-            exerciseAsset: DAI_A,
-            underlyingAmount: testUnderlyingAmount,
-            exerciseAmount: testExerciseAmount,
-            exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp,
-            nextClaimId: 0,
-            creationTimestamp: uint40(block.timestamp) //disregarded
-        });
+    function testFailNewOptionTypeOptionsTypeExists() public {
+        (, IOptionSettlementEngine.Option memory option) = _newOption(
+            WETH_A, // underlyingAsset
+            testExerciseTimestamp, // exerciseTimestamp
+            testExpiryTimestamp, // expiryTimestamp
+            DAI_A, // exerciseAsset
+            testUnderlyingAmount, // underlyingAmount
+            testExerciseAmount // exerciseAmount
+        );
         // TODO: investigate this revert - OptionsChainExists error should be displayed
         //  with an argument, implying this expectRevert would use `abi.encodeWithSelector();
         vm.expectRevert(IOptionSettlementEngine.OptionsTypeExists.selector);
         engine.newOptionType(option);
     }
 
-    function testFailnewOptionTypeExerciseWindowTooShort() public {
-        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
-            underlyingAsset: WETH_A,
-            exerciseAsset: DAI_A,
-            underlyingAmount: testUnderlyingAmount,
-            exerciseAmount: testExerciseAmount,
-            exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp - 1,
-            nextClaimId: 0,
-            creationTimestamp: uint40(block.timestamp) //disregarded
-        });
+    function testFailNewOptionTypeExerciseWindowTooShort() public {
         vm.expectRevert(IOptionSettlementEngine.ExerciseWindowTooShort.selector);
-        engine.newOptionType(option);
+        _newOption(
+            WETH_A, // underlyingAsset
+            testExerciseTimestamp, // exerciseTimestamp
+            testExpiryTimestamp - 1, // expiryTimestamp
+            DAI_A, // exerciseAsset
+            testUnderlyingAmount, // underlyingAmount
+            testExerciseAmount // exerciseAmount
+        );
     }
 
-    function testnewOptionTypeInvalidAssets() public {
-        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
-            underlyingAsset: DAI_A,
-            exerciseAsset: DAI_A,
-            underlyingAmount: testUnderlyingAmount,
-            exerciseAmount: testExerciseAmount,
-            exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp,
-            nextClaimId: 0,
-            creationTimestamp: uint40(block.timestamp) //disregarded
-        });
+    function testNewOptionTypeInvalidAssets() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, DAI_A, DAI_A));
-        engine.newOptionType(option);
+        _newOption(
+            DAI_A, // underlyingAsset
+            testExerciseTimestamp, // exerciseTimestamp
+            testExpiryTimestamp, // expiryTimestamp
+            DAI_A, // exerciseAsset
+            testUnderlyingAmount, // underlyingAmount
+            testExerciseAmount // exerciseAmount
+        );
     }
 
     function testFailAssignExercise() public {
@@ -772,16 +774,14 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function testFailExerciseBeforeExcercise() public {
-        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
-            underlyingAsset: WETH_A,
-            exerciseAsset: WETH_A,
-            underlyingAmount: testUnderlyingAmount,
-            exerciseAmount: testExerciseAmount,
-            exerciseTimestamp: testExerciseTimestamp + 1,
-            expiryTimestamp: testExpiryTimestamp + 1,
-            nextClaimId: 0,
-            creationTimestamp: uint40(block.timestamp) //disregarded
-        });
+        (, IOptionSettlementEngine.Option memory option) = _newOption(
+            WETH_A, // underlyingAsset
+            testExerciseTimestamp + 1, // exerciseTimestamp
+            testExpiryTimestamp + 1, // expiryTimestamp
+            WETH_A, // exerciseAsset
+            testUnderlyingAmount, // underlyingAmount
+            testExerciseAmount // exerciseAmount
+        );
         uint256 badOptionId = engine.newOptionType(option);
 
         // Alice writes
@@ -918,7 +918,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     //                            FUZZ TESTS
     // **********************************************************************
 
-    function testFuzznewOptionType(
+    function testFuzzNewOptionType(
         uint96 underlyingAmount,
         uint96 exerciseAmount,
         uint40 exerciseTimestamp,
@@ -932,18 +932,14 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.assume(underlyingAmount <= WETH.totalSupply());
         vm.assume(exerciseAmount <= DAI.totalSupply());
 
-        IOptionSettlementEngine.Option memory optionInfo = IOptionSettlementEngine.Option({
-            underlyingAsset: WETH_A,
-            exerciseAsset: DAI_A,
-            underlyingAmount: underlyingAmount,
-            exerciseAmount: exerciseAmount,
-            exerciseTimestamp: exerciseTimestamp,
-            expiryTimestamp: expiryTimestamp,
-            nextClaimId: 0,
-            creationTimestamp: uint40(block.timestamp) //disregarded
-        });
-
-        uint256 optionId = engine.newOptionType(optionInfo);
+        (uint256 optionId, IOptionSettlementEngine.Option memory optionInfo) = _newOption(
+            WETH_A, // underlyingAsset
+            exerciseTimestamp, // exerciseTimestamp
+            expiryTimestamp, // expiryTimestamp
+            DAI_A, // exerciseAsset
+            underlyingAmount, // underlyingAmount
+            exerciseAmount // exerciseAmount
+        );
 
         IOptionSettlementEngine.Option memory optionRecord = engine.option(optionId);
 
@@ -1131,8 +1127,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
             expiryTimestamp,
             exerciseAsset,
             underlyingAmount,
+            0, // default zero for settelement seed
             exerciseAmount,
-            0,
+            0, // default zero for next claim id
             uint40(block.timestamp)
         );
         optionId = engine.newOptionType(option);

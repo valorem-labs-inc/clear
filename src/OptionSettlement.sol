@@ -171,6 +171,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert InvalidAssets(optionInfo.exerciseAsset, optionInfo.underlyingAsset);
         }
 
+        optionInfo.settlementSeed = optionKey;
         optionInfo.nextClaimId = 1;
         optionInfo.creationTimestamp = uint40(block.timestamp);
 
@@ -278,13 +279,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return claimId;
     }
 
-    /**
-     * claim buckets are a of set options written on a given day, along with how
-     * many of those options that have been exercised. writing options
-     * on a given day adds to the amount written in that day's claim bucket.
-     * the exercise process
-     * exercise is performed by iterating from the claim bucket
-     */
     /// @inheritdoc IOptionSettlementEngine
     function exercise(uint256 optionId, uint112 amount) external {
         (uint160 _optionIdU160b, uint96 _optionIdL96b) = getDecodedIdComponents(optionId);
@@ -315,7 +309,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // Transfer out the underlying
         SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, txAmount);
 
-        _assignExercise(_optionIdU160b, amount);
+        _assignExercise(_optionIdU160b, optionRecord, amount);
 
         feeBalance[exerciseAsset] += fee;
 
@@ -449,30 +443,37 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return optionRecord;
     }
 
-    function _assignExercise(uint160 optionId, uint112 amount) internal {
+    /// @dev Performs fair exercise assignment by pseudorandomly selecting a claim
+    /// bucket between the intial creation of the option type and "today". The buckets
+    /// are then iterated from oldest to newest (looping if we reach "today") if the
+    /// exercise amount overflows into another bucket. The seed for the pseudorandom
+    /// index is updated accordingly on the option type.
+    function _assignExercise(uint160 optionId, Option storage optionRecord, uint112 amount) internal {
         // A bucket of the overall amounts written and exercised for all claims
         // on a given day
         ClaimBucket storage claimBucketInfo;
-        uint16 daysAfterOptionTypeCreation = 0;
+        uint16 daysAfter = _getDaysAfterOptionCreation(optionRecord);
+        uint16 bucketIndex = uint16(optionRecord.settlementSeed % (daysAfter + 1));
 
         while (amount > 0) {
             // get the claim bucket to assign
-            claimBucketInfo = _claimBucketByOptionAndDay[optionId][daysAfterOptionTypeCreation];
+            claimBucketInfo = _claimBucketByOptionAndDay[optionId][bucketIndex];
 
-            uint112 amountAvailiable = claimBucketInfo.amountWritten - claimBucketInfo.amountExercised;
-
+            uint112 amountAvailable = claimBucketInfo.amountWritten - claimBucketInfo.amountExercised;
             uint112 amountPresentlyExercised;
-            if (amountAvailiable < amount) {
-                amount -= amountAvailiable;
-                amountPresentlyExercised = amountAvailiable;
+            if (amountAvailable < amount) {
+                amount -= amountAvailable;
+                amountPresentlyExercised = amountAvailable;
             } else {
                 amountPresentlyExercised = amount;
                 amount = 0;
             }
-
             claimBucketInfo.amountExercised += amountPresentlyExercised;
-            daysAfterOptionTypeCreation++;
+            bucketIndex = (bucketIndex + 1) % (daysAfter + 1);
         }
+
+        // update settlement seed
+        optionRecord.settlementSeed = uint160(uint256(keccak256(abi.encode(optionRecord.settlementSeed, bucketIndex))));
     }
 
     function _getDaysAfterOptionCreation(Option storage optionRecord) internal view returns (uint16) {

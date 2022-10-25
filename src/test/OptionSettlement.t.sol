@@ -396,11 +396,13 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // first claim lot should be completely exercised
         assertEq(0, engine.underlying(claimId1).underlyingPosition);
 
-        IOptionSettlementEngine.ClaimBucket memory bucket1 = engine.claimBucket(optionId, _getDaysFromBucket(optionWriteTs, 0));
+        IOptionSettlementEngine.ClaimBucket memory bucket1 =
+            engine.claimBucket(optionId, _getDaysFromBucket(optionWriteTs, 0));
         assertEq(69, bucket1.amountWritten);
         assertEq(69, bucket1.amountExercised);
 
-        IOptionSettlementEngine.ClaimBucket memory bucket2 = engine.claimBucket(optionId, _getDaysFromBucket(optionWriteTs, 1));
+        IOptionSettlementEngine.ClaimBucket memory bucket2 =
+            engine.claimBucket(optionId, _getDaysFromBucket(optionWriteTs, 1));
         assertEq(100, bucket2.amountWritten);
         assertEq(1, bucket2.amountExercised);
 
@@ -496,15 +498,18 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.stopPrank();
 
         // Claim buckets reflect that 30 of 50 written options have been exercised
-        IOptionSettlementEngine.ClaimBucket memory bucket1 = engine.claimBucket(optionId, _getDaysFromBucket(optionWriteTs, 0));
+        IOptionSettlementEngine.ClaimBucket memory bucket1 =
+            engine.claimBucket(optionId, _getDaysFromBucket(optionWriteTs, 0));
         assertEq(20, bucket1.amountWritten);
         assertEq(20, bucket1.amountExercised);
 
-        IOptionSettlementEngine.ClaimBucket memory bucket2 = engine.claimBucket(optionId, _getDaysFromBucket(optionWriteTs, 1));
+        IOptionSettlementEngine.ClaimBucket memory bucket2 =
+            engine.claimBucket(optionId, _getDaysFromBucket(optionWriteTs, 1));
         assertEq(20, bucket2.amountWritten);
         assertEq(10, bucket2.amountExercised);
 
-        IOptionSettlementEngine.ClaimBucket memory bucket3 = engine.claimBucket(optionId, _getDaysFromBucket(optionWriteTs, 2));
+        IOptionSettlementEngine.ClaimBucket memory bucket3 =
+            engine.claimBucket(optionId, _getDaysFromBucket(optionWriteTs, 2));
         assertEq(10, bucket3.amountWritten);
         assertEq(0, bucket3.amountExercised);
 
@@ -568,15 +573,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testEventNewOptionType() public {
         vm.expectEmit(false, true, true, true);
         emit NewOptionType(
-            999,
-            WETH_A,
-            DAI_A,
-            testExerciseAmount,
-            testUnderlyingAmount,
-            testExerciseTimestamp,
-            testExpiryTimestamp,
-            1
-        );
+            999, WETH_A, DAI_A, testExerciseAmount, testUnderlyingAmount, testExerciseTimestamp, testExpiryTimestamp, 1
+            );
 
         engine.newOptionType(
             IOptionSettlementEngine.Option({

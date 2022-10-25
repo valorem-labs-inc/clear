@@ -42,12 +42,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @notice Accessor for buckets of claims grouped by day
     /// @dev This is to enable O(constant) time options exercise. When options are written,
     /// the Claim struct in this mapping is updated to reflect the cumulative amount written
-    /// on the day in question (block.timestamp/# seconds in a day). This allows
-    /// exercise() to assign options on each bucket from 'today' up until option expiry,
-    /// rather than a costly iteration of every unexercised claim on an option.
+    /// on the day in question. write() will add unexercised options into the bucket
+    /// corresponding to the # of days after the option type's creation.
+    /// exercise() will randomly assign exercise to a bucket <= the current day.
     mapping(uint160 => mapping(uint16 => ClaimBucket)) internal _claimBucketByOptionAndDay;
 
-    /// @notice Accessor for mapping a claim id to its bucketed day
+    /// @notice Accessor for mapping a claim id to its ClaimIndex
     mapping(uint256 => ClaimIndex[]) internal _claimIdToClaimIndexArray;
 
     uint256 public hashMask = 0xFFFFFFFFFFFFFFFFFFFF000000000000;

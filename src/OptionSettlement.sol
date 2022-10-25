@@ -52,6 +52,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     uint256 public hashMask = 0xFFFFFFFFFFFFFFFFFFFF000000000000;
 
+    uint256 internal constant ONE_SECOND_DAYS = 86400;
+
     /// @inheritdoc IOptionSettlementEngine
     function option(uint256 tokenId) external view returns (Option memory optionInfo) {
         // TODO: Revert if claim IDX is specified?
@@ -155,12 +157,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
 
         // Make sure that expiry is at least 24 hours from now
-        if (optionInfo.expiryTimestamp < (block.timestamp + 86400)) {
+        if (optionInfo.expiryTimestamp < (block.timestamp + ONE_SECOND_DAYS)) {
             revert ExpiryTooSoon(optionId, optionInfo.expiryTimestamp);
         }
 
         // Ensure the exercise window is at least 24 hours
-        if (optionInfo.expiryTimestamp < (optionInfo.exerciseTimestamp + 86400)) {
+        if (optionInfo.expiryTimestamp < (optionInfo.exerciseTimestamp + ONE_SECOND_DAYS)) {
             revert ExerciseWindowTooShort();
         }
 
@@ -474,7 +476,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     function _getDaysAfterOptionCreation(Option storage optionRecord) internal view returns (uint16) {
-        return uint16((block.timestamp - optionRecord.creationTimestamp) / 86400);
+        return uint16((block.timestamp - optionRecord.creationTimestamp) / ONE_SECOND_DAYS);
     }
 
     // TODO: gas test storage and memory

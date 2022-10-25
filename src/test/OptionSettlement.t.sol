@@ -1152,7 +1152,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         return uint16(block.timestamp / ONE_DAY_SECONDS);
     }
 
-    function _getDaysFromBucket(uint256 ts, uint16 daysFrom) internal view returns (uint16) {
+    function _getDaysFromBucket(uint256 ts, uint16 daysFrom) internal pure returns (uint16) {
         return uint16((ts + daysFrom * ONE_DAY_SECONDS) / ONE_DAY_SECONDS);
     }
 

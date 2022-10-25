@@ -345,6 +345,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         testExerciseTimestamp = uint40(block.timestamp + ONE_DAY_SECONDS);
         testExpiryTimestamp = uint40(block.timestamp + 5 * ONE_DAY_SECONDS);
 
+        uint256 optionWriteTs = block.timestamp;
         (uint256 optionId, IOptionSettlementEngine.Option memory option) = _newOption({
             underlyingAsset: WETH_A,
             exerciseTimestamp: testExerciseTimestamp,
@@ -366,9 +367,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Alice 'sells' half the written options to Bob, half to Carol
         uint112 bobOptionAmount = 85;
-        uint112 carolOptionAmount = 84;
         engine.safeTransferFrom(ALICE, BOB, optionId, bobOptionAmount, "");
-        engine.safeTransferFrom(ALICE, CAROL, optionId, carolOptionAmount, "");
+        engine.safeTransferFrom(ALICE, CAROL, optionId, 84, "");
         assertEq(0, engine.balanceOf(ALICE, optionId));
 
         vm.stopPrank();
@@ -394,14 +394,13 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.stopPrank();
 
         // first claim lot should be completely exercised
-        IOptionSettlementEngine.Underlying memory underlying1 = engine.underlying(claimId1);
-        assertEq(0, underlying1.underlyingPosition);
+        assertEq(0, engine.underlying(claimId1).underlyingPosition);
 
-        IOptionSettlementEngine.ClaimBucket memory bucket1 = engine.claimBucket(optionId, 0);
+        IOptionSettlementEngine.ClaimBucket memory bucket1 = engine.claimBucket(optionId, _getDaysFromBucket(optionWriteTs, 0));
         assertEq(69, bucket1.amountWritten);
         assertEq(69, bucket1.amountExercised);
 
-        IOptionSettlementEngine.ClaimBucket memory bucket2 = engine.claimBucket(optionId, 1);
+        IOptionSettlementEngine.ClaimBucket memory bucket2 = engine.claimBucket(optionId, _getDaysFromBucket(optionWriteTs, 1));
         assertEq(100, bucket2.amountWritten);
         assertEq(1, bucket2.amountExercised);
 
@@ -438,6 +437,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         testExerciseTimestamp = uint40(block.timestamp - 1);
         testExpiryTimestamp = uint40(block.timestamp + 4 * ONE_DAY_SECONDS);
 
+        uint256 optionWriteTs = block.timestamp;
         (uint256 optionId, IOptionSettlementEngine.Option memory option) = _newOption({
             underlyingAsset: WETH_A,
             exerciseTimestamp: testExerciseTimestamp,
@@ -496,15 +496,15 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.stopPrank();
 
         // Claim buckets reflect that 30 of 50 written options have been exercised
-        IOptionSettlementEngine.ClaimBucket memory bucket1 = engine.claimBucket(optionId, 0);
+        IOptionSettlementEngine.ClaimBucket memory bucket1 = engine.claimBucket(optionId, _getDaysFromBucket(optionWriteTs, 0));
         assertEq(20, bucket1.amountWritten);
         assertEq(20, bucket1.amountExercised);
 
-        IOptionSettlementEngine.ClaimBucket memory bucket2 = engine.claimBucket(optionId, 1);
+        IOptionSettlementEngine.ClaimBucket memory bucket2 = engine.claimBucket(optionId, _getDaysFromBucket(optionWriteTs, 1));
         assertEq(20, bucket2.amountWritten);
         assertEq(10, bucket2.amountExercised);
 
-        IOptionSettlementEngine.ClaimBucket memory bucket3 = engine.claimBucket(optionId, 2);
+        IOptionSettlementEngine.ClaimBucket memory bucket3 = engine.claimBucket(optionId, _getDaysFromBucket(optionWriteTs, 2));
         assertEq(10, bucket3.amountWritten);
         assertEq(0, bucket3.amountExercised);
 
@@ -1152,6 +1152,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function _getDaysBucket() internal view returns (uint16) {
         return uint16(block.timestamp / ONE_DAY_SECONDS);
+    }
+
+    function _getDaysFromBucket(uint256 ts, uint16 daysFrom) internal view returns (uint16) {
+        return uint16((ts + daysFrom * ONE_DAY_SECONDS) / ONE_DAY_SECONDS);
     }
 
     event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);

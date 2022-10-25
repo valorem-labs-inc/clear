@@ -320,14 +320,15 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @dev Fair assignment is performed here. After option expiry, any claim holder
-    /// seeking to redeem their claim for the underlying asset will be able to retrieve
-    /// the same ratio of their underlying asset as have been exercised in the claim's
-    /// bucket.
+    /// seeking to redeem their claim for the underlying and exercise assets will claim
+    /// amounts proportional to the per-day amounts written on their options lot (i.e.
+    /// the ClaimIndex data structions) weighted by the ratio of exercised to unexercised
+    /// options on each of those days.
     /// @inheritdoc IOptionSettlementEngine
     function redeem(uint256 claimId) external {
-        (uint160 _claimIdU160b, uint96 _claimIdL96b) = getDecodedIdComponents(claimId);
+        (uint160 _optionId, uint96 _claimIndex) = getDecodedIdComponents(claimId);
 
-        if (_claimIdL96b == 0) {
+        if (_claimIndex == 0) {
             revert InvalidClaim(claimId);
         }
 
@@ -343,13 +344,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert AlreadyClaimed(claimId);
         }
 
-        Option storage optionRecord = _option[_claimIdU160b];
+        Option storage optionRecord = _option[_optionId];
 
         if (optionRecord.expiryTimestamp > block.timestamp) {
             revert ClaimTooSoon(claimId, optionRecord.expiryTimestamp);
         }
 
-        (uint256 exerciseAmount, uint256 underlyingAmount) = _getPositionsForClaim(_claimIdU160b, claimId, optionRecord);
+        (uint256 exerciseAmount, uint256 underlyingAmount) = _getPositionsForClaim(_optionId, claimId, optionRecord);
 
         if (exerciseAmount > 0) {
             SafeTransferLib.safeTransfer(ERC20(optionRecord.exerciseAsset), msg.sender, exerciseAmount);
@@ -366,7 +367,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // TODO: stdize emissions vis a vis claim index, option id, token id
         emit ClaimRedeemed(
             claimId,
-            _claimIdU160b,
+            _optionId,
             msg.sender,
             optionRecord.exerciseAsset,
             optionRecord.underlyingAsset,

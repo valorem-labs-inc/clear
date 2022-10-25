@@ -174,7 +174,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function testTokenURI() public view {
-        // TODO(We should assert here what we expect to see)
         engine.uri(testOptionId);
     }
 
@@ -265,7 +264,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + writeFee);
     }
 
-    // TODO: this test fails with an `InvalidAssets()` error
     function testExerciseWithDifferentDecimals() public {
         // write an option where one of the assets isn't 18 decimals
         _writeAndExerciseNewOption(
@@ -577,7 +575,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     // **********************************************************************
 
     function testEventNewOptionType() public {
-        vm.expectEmit(false, true, true, true); // ignore 1st topic for now (TODO calculate optionId)
+        vm.expectEmit(false, true, true, true);
         emit NewOptionType(
             999,
             WETH_A,
@@ -611,7 +609,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(WETH_A, ALICE, expectedFeeAccruedAmount);
 
-        vm.expectEmit(true, true, true, false); // ignore data for now (TODO calculate claimId)
+        vm.expectEmit(true, true, true, false);
         emit OptionsWritten(testOptionId, ALICE, 999, 1);
 
         vm.prank(ALICE);
@@ -712,8 +710,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.sweepFees(tokens);
     }
 
-    // TODO testEvent_sweepFees_whenFeesAccruedForExercise
-
     // **********************************************************************
     //                            FAIL TESTS
     // **********************************************************************
@@ -727,8 +723,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             testUnderlyingAmount, // underlyingAmount
             testExerciseAmount // exerciseAmount
         );
-        // TODO: investigate this revert - OptionsChainExists error should be displayed
-        //  with an argument, implying this expectRevert would use `abi.encodeWithSelector();
+        
         vm.expectRevert(IOptionSettlementEngine.OptionsTypeExists.selector);
         engine.newOptionType(option);
     }
@@ -959,7 +954,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         _assertTokenIsOption(optionId);
     }
 
-    // TODO: fails with counterexample
     function testFuzzWrite(uint112 amount) public {
         uint256 wethBalanceEngine = WETH.balanceOf(address(engine));
         uint256 wethBalance = WETH.balanceOf(ALICE);
@@ -1167,8 +1161,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function _writeTokenBalance(address who, address token, uint256 amt) internal {
         stdstore.target(token).sig(IERC20(token).balanceOf.selector).with_key(who).checked_write(amt);
     }
-
-    // TODO consider better pattern to DRY up event definitions
 
     event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);
 

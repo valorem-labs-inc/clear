@@ -19,9 +19,6 @@ import "./TokenURIGenerator.sol";
  * a broad swath of traditional options.
  */
 
-// TODO(DRY code during testing)
-// TODO(Gas Optimize)
-
 /// @notice This settlement protocol does not support rebase tokens, or fee on transfer tokens
 contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @notice The protocol fee
@@ -56,7 +53,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function option(uint256 tokenId) external view returns (Option memory optionInfo) {
-        // TODO: Revert if claim IDX is specified?
         (uint160 optionId,) = getDecodedIdComponents(tokenId);
         optionInfo = _option[optionId];
     }
@@ -78,7 +74,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @inheritdoc IOptionSettlementEngine
     function tokenType(uint256 tokenId) external pure returns (Type) {
         (, uint96 claimIdx) = getDecodedIdComponents(tokenId);
-        // TODO: should we do a read here and ensure the token exists?
         if (claimIdx == 0) {
             return Type.Option;
         }
@@ -175,7 +170,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         optionInfo.nextClaimId = 1;
         optionInfo.creationTimestamp = uint40(block.timestamp);
 
-        // TODO(Is this check really needed?)
         // Check that both tokens are ERC20 by instantiating them and checking supply
         ERC20 underlyingToken = ERC20(optionInfo.underlyingAsset);
         ERC20 exerciseToken = ERC20(optionInfo.exerciseAsset);
@@ -364,7 +358,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         _burn(msg.sender, claimId, 1);
 
-        // TODO: stdize emissions vis a vis claim index, option id, token id
         emit ClaimRedeemed(
             claimId,
             _optionId,
@@ -481,7 +474,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return uint16((block.timestamp - optionRecord.creationTimestamp) / ONE_SECOND_DAYS);
     }
 
-    // TODO: gas test storage and memory
     function _getAmountExercised(ClaimIndex storage claimIndex, ClaimBucket storage claimBucketInfo)
         internal
         view

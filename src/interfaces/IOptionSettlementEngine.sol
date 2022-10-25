@@ -122,6 +122,7 @@ interface IOptionSettlementEngine {
      * @param underlyingAmount The amount of the underlying asset in the option.
      * @param exerciseTimestamp The timestamp for exercising the option.
      * @param expiryTimestamp The expiry timestamp of the option.
+     * @param nextClaimId The next claim ID
      */
     event NewOptionType(
         uint256 indexed optionId,
@@ -131,8 +132,7 @@ interface IOptionSettlementEngine {
         uint96 underlyingAmount,
         uint40 exerciseTimestamp,
         uint40 expiryTimestamp,
-        uint96 nextClaimId,
-        uint40 creationTimestamp
+        uint96 nextClaimId
     );
 
     /**
@@ -215,8 +215,6 @@ interface IOptionSettlementEngine {
         uint96 exerciseAmount;
         // Which option was written
         uint96 nextClaimId;
-        // When the option type is initially created
-        uint40 creationTimestamp;
     }
 
     /// @dev This struct contains the data about a claim ERC-1155 NFT associated with an option type.
@@ -307,10 +305,10 @@ interface IOptionSettlementEngine {
      * @notice Returns the total amount of options written an exercised for all claims /
      * option lots created the supplied number of days after the option type is created.
      * @param optionId The id of the option for the claim buckets.
-     * @param daysAfterOptionTypeCreation The number of days after the creation of the
+     * @param dayBucket The number of days after the creation of the
      * option type.
      */
-    function claimBucket(uint256 optionId, uint16 daysAfterOptionTypeCreation)
+    function claimBucket(uint256 optionId, uint16 dayBucket)
         external
         view
         returns (ClaimBucket memory claimBucketInfo);

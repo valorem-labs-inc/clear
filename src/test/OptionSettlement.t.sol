@@ -104,20 +104,11 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function testNewOptionTypeDisregardsNextClaimIdAndCreationTimestamp() public {
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option(
-            WETH_A,
-            testExerciseTimestamp,
-            testExpiryTimestamp,
-            DAI_A,
-            testUnderlyingAmount,
-            42,
-            testExerciseAmount,
-            420,
-            69
+            WETH_A, testExerciseTimestamp, testExpiryTimestamp, DAI_A, testUnderlyingAmount, 42, testExerciseAmount, 420
         );
         uint256 optionId = engine.newOptionType(option);
         option = engine.option(optionId);
 
-        assertEq(option.creationTimestamp, uint40(block.timestamp));
         assertEq(option.nextClaimId, 1);
         assertEq(option.settlementSeed, uint160(optionId >> 96));
     }
@@ -584,9 +575,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
             testUnderlyingAmount,
             testExerciseTimestamp,
             testExpiryTimestamp,
-            1,
-            uint40(block.timestamp)
-            );
+            1
+        );
 
         engine.newOptionType(
             IOptionSettlementEngine.Option({
@@ -597,8 +587,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
                 underlyingAmount: testUnderlyingAmount,
                 settlementSeed: 0,
                 exerciseAmount: testExerciseAmount,
-                nextClaimId: 1,
-                creationTimestamp: 0
+                nextClaimId: 1
             })
         );
     }
@@ -723,7 +712,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             testUnderlyingAmount, // underlyingAmount
             testExerciseAmount // exerciseAmount
         );
-        
+
         vm.expectRevert(IOptionSettlementEngine.OptionsTypeExists.selector);
         engine.newOptionType(option);
     }
@@ -1123,8 +1112,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount,
             0, // default zero for settelement seed
             exerciseAmount,
-            0, // default zero for next claim id
-            uint40(block.timestamp)
+            0 // default zero for next claim id
         );
         optionId = engine.newOptionType(option);
     }
@@ -1162,6 +1150,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
         stdstore.target(token).sig(IERC20(token).balanceOf.selector).with_key(who).checked_write(amt);
     }
 
+    function _getDaysBucket() internal view returns (uint16) {
+        return uint16(block.timestamp / ONE_DAY_SECONDS);
+    }
+
     event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);
 
     event NewOptionType(
@@ -1172,8 +1164,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint96 underlyingAmount,
         uint40 exerciseTimestamp,
         uint40 expiryTimestamp,
-        uint96 nextClaimId,
-        uint40 creationTimestamp
+        uint96 nextClaimId
     );
 
     event OptionsExercised(uint256 indexed optionId, address indexed exercisee, uint112 amount);

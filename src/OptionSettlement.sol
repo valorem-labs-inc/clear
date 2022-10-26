@@ -91,9 +91,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 fee = feeBalance[token];
                 // Leave 1 wei here as a gas optimization
                 if (fee > 1) {
-                    sweep = feeBalance[token] - 1;
-                    SafeTransferLib.safeTransfer(ERC20(token), sendFeeTo, sweep);
+                    sweep = fee - 1;
                     feeBalance[token] = 1;
+                    SafeTransferLib.safeTransfer(ERC20(token), sendFeeTo, sweep);
                     emit FeeSwept(token, sendFeeTo, sweep);
                 }
             }

@@ -18,9 +18,6 @@ import "./TokenURIGenerator.sol";
  * a broad swath of traditional options.
  */
 
-// TODO(DRY code during testing)
-// TODO(Gas Optimize)
-
 // @notice This settlement protocol does not support rebase tokens, or fee on transfer tokens
 
 contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
@@ -214,6 +211,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
 
         Option storage optionRecord = _option[_optionIdU160b];
+
+        uint40 expiry = optionRecord.expiryTimestamp;
+        if (expiry == 0) {
+            revert InvalidOption(_optionIdU160b);
+        }
+        if (expiry <= block.timestamp) {
+            revert ExpiredOption(uint256(_optionIdU160b) << 96, expiry);
+        }
 
         if (optionRecord.expiryTimestamp <= block.timestamp) {
             revert ExpiredOption(uint256(_optionIdU160b) << 96, optionRecord.expiryTimestamp);

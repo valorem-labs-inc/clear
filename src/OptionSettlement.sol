@@ -42,8 +42,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     // Accessor for claim ticket details
     mapping(uint256 => Claim) internal _claim;
 
-    uint256 public hashMask = 0xFFFFFFFFFFFFFFFFFFFF000000000000;
-
     /// @inheritdoc IOptionSettlementEngine
     function option(uint256 tokenId) external view returns (Option memory optionInfo) {
         // TODO: Revert if claim IDX is specified?

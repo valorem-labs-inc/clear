@@ -122,7 +122,7 @@ interface IOptionSettlementEngine {
      * @param underlyingAmount The amount of the underlying asset in the option.
      * @param exerciseTimestamp The timestamp for exercising the option.
      * @param expiryTimestamp The expiry timestamp of the option.
-     * @param nextClaimId The next claim ID
+     * @param nextClaimId The next claim ID.
      */
     event NewOptionType(
         uint256 indexed optionId,
@@ -244,6 +244,8 @@ interface IOptionSettlementEngine {
         uint112 amountWritten;
         // The number of options exercised in this bucket
         uint112 amountExercised;
+        // Which day this bucket falls on, in offset from epoch
+        uint16 daysAfterEpoch;
     }
 
     /// @dev Struct used in returning data regarding positions underlying a claim or option
@@ -303,9 +305,9 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Returns the total amount of options written and exercised for all claims /
-     * option lots created on the supplied day. The day supplied is relative to epoch.
+     * option lots created on the supplied index.
      * @param optionId The id of the option for the claim buckets.
-     * @param dayBucket The day corresponding to the claimBucket to return.
+     * @param dayBucket The index of the claimBucket to return.
      */
     function claimBucket(uint256 optionId, uint16 dayBucket)
         external

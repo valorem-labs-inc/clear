@@ -42,9 +42,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// on the day in question. write() will add unexercised options into the bucket
     /// corresponding to the # of days after the option type's creation.
     /// exercise() will randomly assign exercise to a bucket <= the current day.
-    mapping(uint160 => mapping(uint16 => ClaimBucket)) internal _claimBucketByOptionAndDay;
+    mapping(uint160 => ClaimBucket[]) internal _claimBucketByOption;
 
-    /// @notice Accessor for mapping a claim id to its ClaimIndex
+    /// @notice Accessor for mapping a claim id to its ClaimIndices
     mapping(uint256 => ClaimIndex[]) internal _claimIdToClaimIndexArray;
 
     uint256 public hashMask = 0xFFFFFFFFFFFFFFFFFFFF000000000000;
@@ -66,7 +66,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         returns (ClaimBucket memory claimBucketInfo)
     {
         (uint160 _optionId,) = getDecodedIdComponents(optionId);
-        claimBucketInfo = _claimBucketByOptionAndDay[_optionId][dayBucket];
+        claimBucketInfo = _claimBucketByOption[_optionId][dayBucket];
     }
 
     /// @inheritdoc IOptionSettlementEngine
@@ -217,7 +217,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         Option storage optionRecord = _writeOptions(_optionIdU160b, amount);
         uint256 mintClaimNft = 0;
-        uint16 daysBucket = _getDaysBucket();
 
         if (claimId == 0) {
             // create new claim
@@ -243,11 +242,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
             existingClaim.amountWritten += amount;
         }
-
-        // Update claim bucket for today
-        ClaimBucket storage claimBucketInfo = _claimBucketByOptionAndDay[_optionIdU160b][daysBucket];
-        claimBucketInfo.amountWritten += amount;
-
+        uint16 daysBucket = _addOrUpdateClaimBucket(_optionIdU160b, amount);
         _addOrUpdateClaimIndex(claimId, daysBucket, amount);
 
         // Mint the options contracts and claim token
@@ -441,13 +436,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function _assignExercise(uint160 optionId, Option storage optionRecord, uint112 amount) internal {
         // A bucket of the overall amounts written and exercised for all claims
         // on a given day
-        ClaimBucket storage claimBucketInfo;
-        uint16 bucketsMod = _getDaysBucket() + 1;
+        ClaimBucket[] storage claimBucketArray = _claimBucketByOption[optionId];
+        uint16 bucketsMod = uint16(claimBucketArray.length);
         uint16 bucketIndex = uint16(optionRecord.settlementSeed % bucketsMod);
-
         while (amount > 0) {
             // get the claim bucket to assign
-            claimBucketInfo = _claimBucketByOptionAndDay[optionId][bucketIndex];
+            ClaimBucket storage claimBucketInfo = claimBucketArray[bucketIndex];
 
             uint112 amountAvailable = claimBucketInfo.amountWritten - claimBucketInfo.amountExercised;
             uint112 amountPresentlyExercised;
@@ -498,31 +492,53 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         ClaimIndex[] storage claimIndexArray = _claimIdToClaimIndexArray[claimId];
         for (uint256 i = 0; i < claimIndexArray.length; i++) {
             ClaimIndex storage claimIndex = claimIndexArray[i];
-            ClaimBucket storage claimBucketInfo = _claimBucketByOptionAndDay[optionId][claimIndex.bucketIndex];
+            ClaimBucket storage claimBucketInfo = _claimBucketByOption[optionId][claimIndex.bucketIndex];
             (uint256 amountExercised, uint256 amountUnexercised) = _getAmountExercised(claimIndex, claimBucketInfo);
             exerciseAmount += optionRecord.exerciseAmount * amountExercised;
             underlyingAmount += optionRecord.underlyingAmount * amountUnexercised;
         }
     }
 
-    function _addOrUpdateClaimIndex(uint256 claimId, uint16 daysAfterClaimCreation, uint112 amount) internal {
+    function _addOrUpdateClaimBucket(uint160 optionId, uint112 amount) internal returns (uint16) {
+        ClaimBucket[] storage claimBucketsInfo = _claimBucketByOption[optionId];
+        ClaimBucket storage currentBucket;
+        uint16 daysAfterEpoch = _getDaysBucket();
+
+        if (claimBucketsInfo.length == 0) {
+            // add a new bucket if we've passed the day boundary
+            claimBucketsInfo.push(ClaimBucket(amount, 0, daysAfterEpoch));
+            return uint16(claimBucketsInfo.length - 1);
+        }
+
+        currentBucket = claimBucketsInfo[claimBucketsInfo.length - 1];
+        if (currentBucket.daysAfterEpoch < daysAfterEpoch) {
+            claimBucketsInfo.push(ClaimBucket(amount, 0, daysAfterEpoch));
+        } else {
+            // Update claim bucket for today
+            currentBucket.amountWritten += amount;
+        }
+
+        return uint16(claimBucketsInfo.length - 1);
+    }
+
+    function _addOrUpdateClaimIndex(uint256 claimId, uint16 daysIndex, uint112 amount) internal {
         ClaimIndex storage lastIndex;
         ClaimIndex[] storage claimIndexArray = _claimIdToClaimIndexArray[claimId];
         uint256 arrayLength = claimIndexArray.length;
 
         // if no indices have been created previously, create one
         if (arrayLength == 0) {
-            claimIndexArray.push(ClaimIndex({amountWritten: amount, bucketIndex: daysAfterClaimCreation}));
+            claimIndexArray.push(ClaimIndex({amountWritten: amount, bucketIndex: daysIndex}));
             return;
         }
 
         lastIndex = claimIndexArray[arrayLength - 1];
 
-        // if the most recent bucket index (i.e. the number of days after option type creation)
+        // if the most recent bucket index (i.e. the number of days after epoch)
         // is less than the current number of days after option type creation, create a new
         // index and append it to the index array.
-        if (lastIndex.bucketIndex < daysAfterClaimCreation) {
-            claimIndexArray.push(ClaimIndex({amountWritten: amount, bucketIndex: daysAfterClaimCreation}));
+        if (lastIndex.bucketIndex < daysIndex) {
+            claimIndexArray.push(ClaimIndex({amountWritten: amount, bucketIndex: daysIndex}));
             return;
         }
 

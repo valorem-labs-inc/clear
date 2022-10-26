@@ -539,29 +539,45 @@ contract OptionSettlementTest is Test, NFTreceiver {
         );
     }
 
-    function _redeemAndAssertClaimAmounts(
-        address claimant,
-        uint256 claimId,
-        IOptionSettlementEngine.Option memory option,
-        uint256 amountExercised,
-        uint256 amountUnexercised
-    ) internal {
-        vm.startPrank(claimant);
-        uint256 exerciseAssetBalance = ERC20(option.exerciseAsset).balanceOf(claimant);
-        uint256 underlyingAssetBalance = ERC20(option.underlyingAsset).balanceOf(claimant);
+    function testRandomAssignment() public {
+        uint16 numDays = 7;
+        // New option type with expiry in 1w
+        testExerciseTimestamp = uint40(block.timestamp - 1);
+        testExpiryTimestamp = uint40(block.timestamp + numDays * 1 days + 1);
+        (uint256 optionId, IOptionSettlementEngine.Option memory optionInfo) = _newOption({
+            underlyingAsset: WETH_A,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp,
+            exerciseAsset: DAI_A,
+            underlyingAmount: testUnderlyingAmount + 1, // to mess w seed
+            exerciseAmount: testExerciseAmount
+        });
 
-        engine.redeem(claimId);
-
-        assertEq(
-            ERC20(option.exerciseAsset).balanceOf(claimant),
-            exerciseAssetBalance + amountExercised * option.exerciseAmount
-        );
-
-        assertEq(
-            ERC20(option.underlyingAsset).balanceOf(claimant),
-            underlyingAssetBalance + amountUnexercised * option.underlyingAmount
-        );
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(optionId, 1);
+        for (uint256 i = 1; i < numDays; i++) {
+            vm.warp(block.timestamp + 1 days);
+            // write a single option, adding it to the same lot
+            engine.write(optionId, 1, claimId);
+        }
+        engine.safeTransferFrom(ALICE, BOB, optionId, numDays, "");
         vm.stopPrank();
+
+        _emitBuckets(optionId, optionInfo);
+
+        vm.startPrank(BOB);
+
+        // assign a single option on day 2
+        engine.exercise(optionId, 1);
+        _assertAssignedInBucket(optionId, 2, 1);
+
+        // assigns a single option on day 1
+        engine.exercise(optionId, 1);
+        _assertAssignedInBucket(optionId, 2, 1);
+
+        // assigns a single option on day 3
+        engine.exercise(optionId, 1);
+        _assertAssignedInBucket(optionId, 2, 1);
     }
 
     // **********************************************************************
@@ -1152,6 +1168,63 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function _getDaysFromBucket(uint256 ts, uint16 daysFrom) internal pure returns (uint16) {
         return uint16((ts + daysFrom * 1 days) / 1 days);
+    }
+
+    function _redeemAndAssertClaimAmounts(
+        address claimant,
+        uint256 claimId,
+        IOptionSettlementEngine.Option memory option,
+        uint256 amountExercised,
+        uint256 amountUnexercised
+    ) internal {
+        vm.startPrank(claimant);
+        uint256 exerciseAssetBalance = ERC20(option.exerciseAsset).balanceOf(claimant);
+        uint256 underlyingAssetBalance = ERC20(option.underlyingAsset).balanceOf(claimant);
+
+        engine.redeem(claimId);
+
+        assertEq(
+            ERC20(option.exerciseAsset).balanceOf(claimant),
+            exerciseAssetBalance + amountExercised * option.exerciseAmount
+        );
+
+        assertEq(
+            ERC20(option.underlyingAsset).balanceOf(claimant),
+            underlyingAssetBalance + amountUnexercised * option.underlyingAmount
+        );
+        vm.stopPrank();
+    }
+
+    function _emitBuckets(uint256 optionId, IOptionSettlementEngine.Option memory optionInfo) internal {
+        uint16 daysRange = uint16(optionInfo.expiryTimestamp / 1 days);
+
+        for (uint16 i = 0; i < daysRange; i++) {
+            IOptionSettlementEngine.ClaimBucket memory bucket;
+            try engine.claimBucket(optionId, i) returns (IOptionSettlementEngine.ClaimBucket memory _bucket) {
+                bucket = _bucket;
+            } catch {
+                return;
+            }
+            emit log_named_uint("optionId:", optionId);
+            emit log_named_uint("index:", i);
+            _emitBucket(bucket);
+        }
+    }
+
+    function _emitBucket(IOptionSettlementEngine.ClaimBucket memory bucket) internal {
+        emit log_named_uint("bucket amount exercised", bucket.amountExercised);
+        emit log_named_uint("bucket amount written", bucket.amountWritten);
+        emit log_named_uint("bucket daysAfterEpoch", bucket.daysAfterEpoch);
+    }
+
+    function _assertAssignedInBucket(uint256 optionId, uint16 bucketIndex, uint112 assignedAmount) internal {
+        IOptionSettlementEngine.ClaimBucket memory bucket;
+        try engine.claimBucket(optionId, bucketIndex) returns (IOptionSettlementEngine.ClaimBucket memory _bucket) {
+            bucket = _bucket;
+        } catch {
+            return;
+        }
+        assertEq(bucket.amountExercised, assignedAmount);
     }
 
     event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);

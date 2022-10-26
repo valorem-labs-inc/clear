@@ -49,8 +49,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     uint256 public hashMask = 0xFFFFFFFFFFFFFFFFFFFF000000000000;
 
-    uint256 internal constant ONE_DAY_SECONDS = 86400;
-
     /// @inheritdoc IOptionSettlementEngine
     function option(uint256 tokenId) external view returns (Option memory optionInfo) {
         (uint160 optionId,) = getDecodedIdComponents(tokenId);
@@ -152,12 +150,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
 
         // Make sure that expiry is at least 24 hours from now
-        if (optionInfo.expiryTimestamp < (block.timestamp + ONE_DAY_SECONDS)) {
+        if (optionInfo.expiryTimestamp < (block.timestamp + 1 days)) {
             revert ExpiryTooSoon(optionId, optionInfo.expiryTimestamp);
         }
 
         // Ensure the exercise window is at least 24 hours
-        if (optionInfo.expiryTimestamp < (optionInfo.exerciseTimestamp + ONE_DAY_SECONDS)) {
+        if (optionInfo.expiryTimestamp < (optionInfo.exerciseTimestamp + 1 days)) {
             revert ExerciseWindowTooShort();
         }
 
@@ -469,7 +467,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     function _getDaysBucket() internal view returns (uint16) {
-        return uint16(block.timestamp / ONE_DAY_SECONDS);
+        return uint16(block.timestamp / 1 days);
     }
 
     function _getAmountExercised(ClaimIndex storage claimIndex, ClaimBucket storage claimBucketInfo)

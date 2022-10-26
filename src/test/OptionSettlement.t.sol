@@ -47,8 +47,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
     IERC20 public constant WETH = IERC20(WETH_A);
     IERC20 public constant USDC = IERC20(USDC_A);
 
-    uint40 public constant ONE_DAY_SECONDS = 24 * 60 * 60;
-
     // Test option
     uint256 private testOptionId;
     uint40 private testExerciseTimestamp;
@@ -342,8 +340,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function testAssignMultipleBuckets() public {
         // New option type with expiry in 5d
-        testExerciseTimestamp = uint40(block.timestamp + ONE_DAY_SECONDS);
-        testExpiryTimestamp = uint40(block.timestamp + 5 * ONE_DAY_SECONDS);
+        testExerciseTimestamp = uint40(block.timestamp + 1 days);
+        testExpiryTimestamp = uint40(block.timestamp + 5 * 1 days);
 
         uint256 optionWriteTs = block.timestamp;
         (uint256 optionId, IOptionSettlementEngine.Option memory option) = _newOption({
@@ -360,7 +358,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 claimId1 = engine.write(optionId, 69);
 
         // write more 1d later
-        vm.warp(block.timestamp + (ONE_DAY_SECONDS + 1));
+        vm.warp(block.timestamp + (1 days + 1));
         uint256 claimId2 = engine.write(optionId, 100);
 
         assertEq(169, engine.balanceOf(ALICE, optionId));
@@ -437,7 +435,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint112 amountToWrite = 10;
         // New option type with expiry in 5d
         testExerciseTimestamp = uint40(block.timestamp - 1);
-        testExpiryTimestamp = uint40(block.timestamp + 4 * ONE_DAY_SECONDS);
+        testExpiryTimestamp = uint40(block.timestamp + 4 * 1 days);
 
         uint256 optionWriteTs = block.timestamp;
         (uint256 optionId, IOptionSettlementEngine.Option memory option) = _newOption({
@@ -462,7 +460,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.exercise(optionId, amountToWrite);
         vm.stopPrank();
 
-        vm.warp(block.timestamp + ONE_DAY_SECONDS + 1);
+        vm.warp(block.timestamp + 1 days + 1);
 
         // Bob exercises more options. All options in the first day's bucket
         // have been exercised. No options in the second day's bucket have been
@@ -485,7 +483,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // Alice's underlying position reflects that 20 total of her written
         // options have been exercised.
 
-        vm.warp(block.timestamp + ONE_DAY_SECONDS);
+        vm.warp(block.timestamp + 1 days);
 
         // Bob exercises more options
         vm.startPrank(BOB);
@@ -514,7 +512,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(0, bucket3.amountExercised);
 
         // warp to expiry
-        vm.warp(block.timestamp + 2 * ONE_DAY_SECONDS);
+        vm.warp(block.timestamp + 2 * 1 days);
 
         // redeeming claim2 (written on day 0 for 10) should return 10 * exercise amount
         // and 0 * underlying amount
@@ -1149,11 +1147,11 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function _getDaysBucket() internal view returns (uint16) {
-        return uint16(block.timestamp / ONE_DAY_SECONDS);
+        return uint16(block.timestamp / 1 days);
     }
 
     function _getDaysFromBucket(uint256 ts, uint16 daysFrom) internal pure returns (uint16) {
-        return uint16((ts + daysFrom * ONE_DAY_SECONDS) / ONE_DAY_SECONDS);
+        return uint16((ts + daysFrom * 1 days) / 1 days);
     }
 
     event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);

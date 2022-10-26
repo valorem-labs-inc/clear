@@ -25,7 +25,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     uint8 public immutable feeBps = 5;
 
     // The address fees accrue to
-    address public feeTo = 0x36273803306a3C22bc848f8Db761e974697ece0d;
+    address public feeTo = 0x2dbd50A4Ef9B172698596217b7DB0163D3607b41;
 
     // Fee balance for a given token
     mapping(address => uint256) public feeBalance;

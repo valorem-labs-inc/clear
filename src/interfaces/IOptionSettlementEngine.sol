@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL 1.1
-pragma solidity ^0.8.0;
+pragma solidity 0.8.11;
 
 import "./IERC1155Metadata.sol";
 
@@ -19,6 +19,12 @@ interface IOptionSettlementEngine {
      * @param permissioned The address which has the requisite permissions.
      */
     error AccessControlViolation(address accessor, address permissioned);
+
+    /**
+     * @notice Invalid fee to address.
+     * @param feeTo the feeTo address.
+     */
+    error InvalidFeeToAddress(address feeTo);
 
     /**
      * @notice This options chain already exists and thus cannot be created.

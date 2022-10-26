@@ -69,6 +69,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         if (msg.sender != feeTo) {
             revert AccessControlViolation(msg.sender, feeTo);
         }
+        if (newFeeTo == address(0)) {
+            revert InvalidFeeToAddress(newFeeTo);
+        }
         feeTo = newFeeTo;
     }
 

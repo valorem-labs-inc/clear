@@ -302,11 +302,10 @@ interface IOptionSettlementEngine {
     function claim(uint256 tokenId) external view returns (Claim memory claimInfo);
 
     /**
-     * @notice Returns the total amount of options written an exercised for all claims /
-     * option lots created the supplied number of days after the option type is created.
+     * @notice Returns the total amount of options written and exercised for all claims /
+     * option lots created on the supplied day. The day supplied is relative to epoch.
      * @param optionId The id of the option for the claim buckets.
-     * @param dayBucket The number of days after the creation of the
-     * option type.
+     * @param dayBucket The day corresponding to the claimBucket to return.
      */
     function claimBucket(uint256 optionId, uint16 dayBucket)
         external

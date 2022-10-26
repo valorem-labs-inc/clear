@@ -326,7 +326,8 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Exercises specified amount of optionId, transferring in the exercise asset,
-     * and transferring out the underlying asset if requirements are met.
+     * and transferring out the underlying asset if requirements are met. Will revert with
+     * an underflow/overflow if the user does not have the required assets.
      * @param optionId The option id to exercise.
      * @param amount The amount of option id to exercise.
      */

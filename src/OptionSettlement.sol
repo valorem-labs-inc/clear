@@ -248,10 +248,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         bytes memory data = new bytes(0);
 
+        emit OptionsWritten(optionId, msg.sender, claimId, amount);
+
         // Send tokens to writer
         _batchMint(msg.sender, tokens, amounts, data);
-
-        emit OptionsWritten(optionId, msg.sender, claimId, amount);
 
         return claimId;
     }

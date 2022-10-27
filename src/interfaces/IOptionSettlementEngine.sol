@@ -3,7 +3,6 @@ pragma solidity 0.8.11;
 
 import "./IERC1155Metadata.sol";
 
-// TODO(The engine is IERC1155Metadata, but the solmate impl is not compatible with interface, re-implement)
 /// @title A settlement engine for options
 /// @author 0xAlcibiades
 interface IOptionSettlementEngine {
@@ -129,6 +128,7 @@ interface IOptionSettlementEngine {
      * @param underlyingAmount The amount of the underlying asset in the option.
      * @param exerciseTimestamp The timestamp for exercising the option.
      * @param expiryTimestamp The expiry timestamp of the option.
+     * @param nextClaimId The next claim ID.
      */
     event NewOptionType(
         uint256 indexed optionId,
@@ -228,12 +228,33 @@ interface IOptionSettlementEngine {
         // These are 1:1 contracts with the underlying Option struct
         // The number of contracts written in this claim
         uint112 amountWritten;
-        // The amount of contracts assigned for exercise to this claim
-        uint112 amountExercised;
         // The two amounts above along with the option info, can be used to calculate the underlying assets
         bool claimed;
     }
 
+    /// @dev Claims are options lots which are able to have options added to them on different
+    /// bucketed days. This struct is used to keep track of how many options in a single lot are
+    /// written on each day, in order to correctly perform fair assignment.
+    struct ClaimIndex {
+        // The amount of options written on a given day
+        uint112 amountWritten;
+        // The index of the bucket on which the options are written
+        uint16 bucketIndex;
+    }
+
+    /// @dev Represents the total amount of options written and exercised for a group of
+    /// claims bucketed by day. Used in fair assignement to calculate the ratio of
+    /// underlying to exercise assets to be transferred to claimants.
+    struct ClaimBucket {
+        // The number of options written in this bucket
+        uint112 amountWritten;
+        // The number of options exercised in this bucket
+        uint112 amountExercised;
+        // Which day this bucket falls on, in offset from epoch
+        uint16 daysAfterEpoch;
+    }
+
+    /// @dev Struct used in returning data regarding positions underlying a claim or option
     struct Underlying {
         // address of the underlying asset erc20
         address underlyingAsset;
@@ -289,6 +310,17 @@ interface IOptionSettlementEngine {
     function claim(uint256 tokenId) external view returns (Claim memory claimInfo);
 
     /**
+     * @notice Returns the total amount of options written and exercised for all claims /
+     * option lots created on the supplied index.
+     * @param optionId The id of the option for the claim buckets.
+     * @param dayBucket The index of the claimBucket to return.
+     */
+    function claimBucket(uint256 optionId, uint16 dayBucket)
+        external
+        view
+        returns (ClaimBucket memory claimBucketInfo);
+
+    /**
      * @notice Updates the address fees can be swept to.
      * @param newFeeTo The new address to which fees will be swept.
      */
@@ -303,10 +335,7 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Create a new options type from optionInfo if it doesn't already exist
-     * @dev The settlementSeed field in the provided optionInfo will be disregarded,
-     * and is only used internally for fair exercise assignment. The seed's initial
-     * value will be the keccak256 hash of the supplied optionInfo. The nextClaimId
-     * field will also be disregarded.
+     * @dev The supplied creation timestamp and next claim Id fields will be disregarded.
      * @param optionInfo The optionInfo from which a new type will be created
      * @return optionId The optionId for the option.
      */

@@ -242,8 +242,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
             existingClaim.amountWritten += amount;
         }
-        uint16 daysBucket = _addOrUpdateClaimBucket(_optionIdU160b, amount);
-        _addOrUpdateClaimIndex(claimId, daysBucket, amount);
+        uint16 bucketIndex = _addOrUpdateClaimBucket(_optionIdU160b, amount);
+        _addOrUpdateClaimIndex(claimId, bucketIndex, amount);
 
         // Mint the options contracts and claim token
         uint256[] memory tokens = new uint256[](2);
@@ -503,9 +503,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         ClaimBucket[] storage claimBucketsInfo = _claimBucketByOption[optionId];
         ClaimBucket storage currentBucket;
         uint16 daysAfterEpoch = _getDaysBucket();
-
         if (claimBucketsInfo.length == 0) {
-            // add a new bucket if we've passed the day boundary
+            // add a new bucket none exist
             claimBucketsInfo.push(ClaimBucket(amount, 0, daysAfterEpoch));
             return uint16(claimBucketsInfo.length - 1);
         }
@@ -521,24 +520,22 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return uint16(claimBucketsInfo.length - 1);
     }
 
-    function _addOrUpdateClaimIndex(uint256 claimId, uint16 daysIndex, uint112 amount) internal {
+    function _addOrUpdateClaimIndex(uint256 claimId, uint16 bucketIndex, uint112 amount) internal {
         ClaimIndex storage lastIndex;
         ClaimIndex[] storage claimIndexArray = _claimIdToClaimIndexArray[claimId];
         uint256 arrayLength = claimIndexArray.length;
 
         // if no indices have been created previously, create one
         if (arrayLength == 0) {
-            claimIndexArray.push(ClaimIndex({amountWritten: amount, bucketIndex: daysIndex}));
+            claimIndexArray.push(ClaimIndex({amountWritten: amount, bucketIndex: bucketIndex}));
             return;
         }
 
         lastIndex = claimIndexArray[arrayLength - 1];
 
-        // if the most recent bucket index (i.e. the number of days after epoch)
-        // is less than the current number of days after option type creation, create a new
-        // index and append it to the index array.
-        if (lastIndex.bucketIndex < daysIndex) {
-            claimIndexArray.push(ClaimIndex({amountWritten: amount, bucketIndex: daysIndex}));
+        // create a new claim index if we're writing to a new index
+        if (lastIndex.bucketIndex < bucketIndex) {
+            claimIndexArray.push(ClaimIndex({amountWritten: amount, bucketIndex: bucketIndex}));
             return;
         }
 

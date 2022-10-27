@@ -493,17 +493,33 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.newOptionType(optionInfo);
     }
 
-    function testEventWrite() public {
+    function testEventWriteWhenNewClaim() public {
         uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
 
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(WETH_A, ALICE, expectedFeeAccruedAmount);
 
-        vm.expectEmit(true, true, true, false);
-        emit OptionsWritten(testOptionId, ALICE, 999, 1);
+        vm.expectEmit(true, true, true, true);
+        emit OptionsWritten(testOptionId, ALICE, 0, 1);
 
         vm.prank(ALICE);
         engine.write(testOptionId, 1);
+    }
+
+    function testEventWriteWhenExistingClaim() public {
+        uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
+
+        vm.prank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 1);
+
+        vm.expectEmit(true, true, true, true);
+        emit FeeAccrued(WETH_A, ALICE, expectedFeeAccruedAmount);
+
+        vm.expectEmit(true, true, true, true);
+        emit OptionsWritten(testOptionId, ALICE, claimId, 1);
+
+        vm.prank(ALICE);
+        engine.write(testOptionId, 1, claimId);
     }
 
     function testEventExercise() public {
@@ -547,7 +563,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             uint96(expectedUnderlyingAmount)
             );
 
-        engine.claim(claimId);
+        // engine.claim(claimId);
         engine.redeem(claimId);
     }
 
@@ -1131,7 +1147,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     event OptionsExercised(uint256 indexed optionId, address indexed exercisee, uint112 amount);
 
-    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 claimId, uint112 amount);
+    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
 
     event FeeAccrued(address indexed asset, address indexed payor, uint256 amount);
 

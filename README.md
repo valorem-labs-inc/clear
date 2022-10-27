@@ -34,7 +34,8 @@ The structure of an options contract is as follows:
 
 The Valorem core protocol is unopinionated on the type of option (call vs. put), where, when, or for how much an option is bought/sold, and whether or not XYZ. Because all contracts are physically settled, XYZ fully collateralized.
 
-### Protocol Actors
+## Trust Model
+### Actors
 There are 3 main actors in the core protocol:
 - Protocol Admin
 - Options Writer
@@ -46,14 +47,17 @@ The **Protocol Admin** is the address to which protocol fees are swept, and can 
 
 **Options Holders** can acquire option contracts once written. This is accomplished via a simple ERC-1155 transaction to transfer the desired amount of options. When exercising an option, they must hold enough of the exercise asset, and similarly when writing an option, have granted previous approval/permission for the SettlementEngine on this ERC-20 contract.
 
-### Protocol Assets
+### Assets
 Each asset pair for which an option is written is custodied by the SettlementEngine. When an option is written, XYZ. When an option is exercised, XYZ. The core SettlementEngine is agnostic in terms of the buying or selling of options contracts. These are ERC-1155 NFTs which can be transacted freely, from the writer to any party wishing to hold and potentially exercise the option before expiry date. The SettlementEngine emits a standard ERC-1155 TransferSingle event when an options contract changes hands.
 
-### Protocol Actions
-#### Options Writer Flow
+### Actions
+- What can each actor do, when, with how much of each asset
+
+## Story Map
+### Options Writer Flow
 Visual story map XYZ (writing, redeeming)
 
-#### Options Holder Flow
+### Options Holder Flow
 Visual story map XYZ (exercising)
 
 ## Scenario Descriptions

@@ -25,7 +25,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     uint8 public immutable feeBps = 5;
 
     /// @notice The address fees accrue to
-    address public feeTo = 0x36273803306a3C22bc848f8Db761e974697ece0d;
+    address public feeTo = 0x2dbd50A4Ef9B172698596217b7DB0163D3607b41;
 
     /// @notice Fee balance for a given token
     mapping(address => uint256) public feeBalance;
@@ -46,8 +46,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @notice Accessor for mapping a claim id to its ClaimIndices
     mapping(uint256 => ClaimIndex[]) internal _claimIdToClaimIndexArray;
-
-    uint256 public hashMask = 0xFFFFFFFFFFFFFFFFFFFF000000000000;
 
     /// @inheritdoc IOptionSettlementEngine
     function option(uint256 tokenId) external view returns (Option memory optionInfo) {
@@ -83,6 +81,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         if (msg.sender != feeTo) {
             revert AccessControlViolation(msg.sender, feeTo);
         }
+        if (newFeeTo == address(0)) {
+            revert InvalidFeeToAddress(newFeeTo);
+        }
         feeTo = newFeeTo;
     }
 
@@ -102,9 +103,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 fee = feeBalance[token];
                 // Leave 1 wei here as a gas optimization
                 if (fee > 1) {
-                    sweep = feeBalance[token] - 1;
-                    SafeTransferLib.safeTransfer(ERC20(token), sendFeeTo, sweep);
+                    sweep = fee - 1;
                     feeBalance[token] = 1;
+                    SafeTransferLib.safeTransfer(ERC20(token), sendFeeTo, sweep);
                     emit FeeSwept(token, sendFeeTo, sweep);
                 }
             }
@@ -215,7 +216,33 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert EncodedOptionIdInClaimIdDoesNotMatchProvidedOptionId(claimId, optionId);
         }
 
-        Option storage optionRecord = _writeOptions(_optionIdU160b, amount);
+        if (amount == 0) {
+            revert AmountWrittenCannotBeZero();
+        }
+
+        Option storage optionRecord = _option[_optionIdU160b];
+
+        uint40 expiry = optionRecord.expiryTimestamp;
+        if (expiry == 0) {
+            revert InvalidOption(_optionIdU160b);
+        }
+        if (expiry <= block.timestamp) {
+            revert ExpiredOption(uint256(_optionIdU160b) << 96, expiry);
+        }
+
+        if (optionRecord.expiryTimestamp <= block.timestamp) {
+            revert ExpiredOption(uint256(_optionIdU160b) << 96, optionRecord.expiryTimestamp);
+        }
+
+        uint256 rxAmount = amount * optionRecord.underlyingAmount;
+        uint256 fee = ((rxAmount / 10000) * feeBps);
+        address underlyingAsset = optionRecord.underlyingAsset;
+
+        feeBalance[underlyingAsset] += fee;
+
+        emit FeeAccrued(underlyingAsset, msg.sender, fee);
+        emit OptionsWritten(optionId, msg.sender, claimId, amount);
+
         uint256 mintClaimNft = 0;
 
         if (claimId == 0) {
@@ -259,7 +286,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // Send tokens to writer
         _batchMint(msg.sender, tokens, amounts, data);
 
-        emit OptionsWritten(optionId, msg.sender, claimId, amount);
+        // Transfer the requisite underlying asset
+        SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
 
         return claimId;
     }
@@ -288,17 +316,17 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint256 fee = ((rxAmount / 10000) * feeBps);
         address exerciseAsset = optionRecord.exerciseAsset;
 
-        // Transfer in the requisite exercise asset
-        SafeTransferLib.safeTransferFrom(ERC20(exerciseAsset), msg.sender, address(this), (rxAmount + fee));
-
-        // Transfer out the underlying
-        SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, txAmount);
-
         _assignExercise(_optionIdU160b, optionRecord, amount);
 
         feeBalance[exerciseAsset] += fee;
 
         _burn(msg.sender, optionId, amount);
+
+        // Transfer in the requisite exercise asset
+        SafeTransferLib.safeTransferFrom(ERC20(exerciseAsset), msg.sender, address(this), (rxAmount + fee));
+
+        // Transfer out the underlying
+        SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, txAmount);
 
         emit FeeAccrued(exerciseAsset, msg.sender, fee);
         emit OptionsExercised(optionId, msg.sender, amount);
@@ -337,6 +365,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         (uint256 exerciseAmount, uint256 underlyingAmount) = _getPositionsForClaim(_optionId, claimId, optionRecord);
 
+        claimRecord.claimed = true;
+
+        _burn(msg.sender, claimId, 1);
+
         if (exerciseAmount > 0) {
             SafeTransferLib.safeTransfer(ERC20(optionRecord.exerciseAsset), msg.sender, exerciseAmount);
         }
@@ -344,10 +376,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         if (underlyingAmount > 0) {
             SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, underlyingAmount);
         }
-
-        claimRecord.claimed = true;
-
-        _burn(msg.sender, claimId, 1);
 
         emit ClaimRedeemed(
             claimId,

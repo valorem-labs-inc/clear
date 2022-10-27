@@ -255,8 +255,8 @@ library TokenURIGenerator {
         uint256 tenPowDecimals = 10 ** decimals;
 
         uint256 temp = number;
-        uint8 digits;
-        uint8 numSigfigs;
+        uint8 digits = 0;
+        uint8 numSigfigs = 0;
         while (temp != 0) {
             if (numSigfigs > 0) {
                 // count all digits preceding least significant figure
@@ -268,7 +268,16 @@ library TokenURIGenerator {
             temp /= 10;
         }
 
-        DecimalStringParams memory params;
+        DecimalStringParams memory params = DecimalStringParams({
+            sigfigs: uint256(0),
+            bufferLength: uint8(0),
+            sigfigIndex: uint8(0),
+            decimalIndex: uint8(0),
+            zerosStartIndex: uint8(0),
+            zerosEndIndex: uint8(0),
+            isLessThanOne: false,
+            isPercent: false
+        });
         params.isPercent = isPercent;
         if ((digits - numSigfigs) >= decimals) {
             // no decimals, ensure we preserve all trailing zeros
@@ -336,7 +345,7 @@ library TokenURIGenerator {
             y += 1;
         }
 
-        string memory s;
+        string memory s = "";
 
         if (m < 10) {
             s = _toString(0);

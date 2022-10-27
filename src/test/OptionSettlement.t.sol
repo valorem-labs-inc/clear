@@ -404,10 +404,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 aliceBalanceUnderlyingAsset = ERC20(option.underlyingAsset).balanceOf(ALICE);
         // Alice's first claim should be completely unexercised
         engine.redeem(claimId1);
-        assertEq(
-            aliceBalanceExerciseAsset,
-            ERC20(option.exerciseAsset).balanceOf(ALICE)
-        );
+        assertEq(aliceBalanceExerciseAsset, ERC20(option.exerciseAsset).balanceOf(ALICE));
 
         aliceBalanceUnderlyingAsset = ERC20(option.underlyingAsset).balanceOf(ALICE);
 
@@ -415,13 +412,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // ALICE should retrieve 70 * exerciseAmount of the exercise asset
         // ALICE should retrieve (100-70) * underlyingAmount of the underlying asset
         engine.redeem(claimId2);
+        assertEq(ERC20(option.exerciseAsset).balanceOf(ALICE), aliceBalanceExerciseAsset + 70 * option.exerciseAmount);
         assertEq(
-            ERC20(option.exerciseAsset).balanceOf(ALICE),
-            aliceBalanceExerciseAsset + 70 * option.exerciseAmount
-        );
-        assertEq(
-            ERC20(option.underlyingAsset).balanceOf(ALICE),
-            aliceBalanceUnderlyingAsset + 30 * option.underlyingAmount
+            ERC20(option.underlyingAsset).balanceOf(ALICE), aliceBalanceUnderlyingAsset + 30 * option.underlyingAmount
         );
     }
 

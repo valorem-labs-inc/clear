@@ -1,5 +1,7 @@
 # Valorem Options V1 Core
 
+[Valorem](https://valorem.xyz/docs/valorem-options-litepaper/) is a DeFi money lego, allowing traders to permissionlessly and gas efficiently write fully collateralized, physically settled put and call options contracts.
+
 This repository contains a binary smart contract system comprised of many libraries,
 which together make the Valorem Options V1 Core. The Core contracts provide an option
 settlement engine upon which more complex systems can be built.
@@ -12,7 +14,56 @@ of exercises to claims written.
 ## Building the Project
 1. Clone the git repository
 2. Copy `.env.template` to `.env` and replace "XYZ" with your `RPC_URL` (e.g., https://mainnet.infura.io/v3/apikey or https://eth-mainnet.g.alchemy.com/v2/apikey)
-3. Run `forge test` (this will install dependencies, build the project's smart contracts, and run the unit tests on a local fork of mainnet)
+3. Run `forge test` (this will install dependencies, build the project's smart contracts, and run the tests on a local fork of mainnet)
+
+## Introduction to the Protocol
+The core of Valorem is the Settlement Engine, which follows the an ERC-1155 multi-token. Options can be written for any pair of valid ERC-20 assets (excluding rebasing, fee-on-transfer, and ERC-777 tokens). When written, an options contract is represented by an Option NFT, which can be transferred between addresses just like any ERC-1155 NFT.
+
+The options writer claim to the underlying asset (if not exercised) and exercise asset (if exercised) is represented by a Claim NFT. This Claim NFT can be redeemed for their share of the underlying plus exercise assets, based on current.
+
+XYZ, high-level on claim bucketing functionality
+
+The structure of an options contract is as follows:
+
+- **Underlying asset** ERC-20 address of the asset to be received
+- **Underlying amount** contained within an option contract of this type
+- **Exercise asset** ERC-20 address of the asset needed for exercise
+- **Exercise amount** required to exercise this option
+- **Exercise timestamp** after which this option may be exercised
+- **Expiry timestamp** before which this option must be exercised
+
+The Valorem core protocol is unopinionated on the type of option (call vs. put), where, when, or for how much an option is bought/sold, and whether or not XYZ. Because all contracts are physically settled, XYZ fully collateralized.
+
+### Protocol Actors
+There are 3 main actors in the core protocol:
+- Protocol Admin
+- Options Writer
+- Options Holder
+
+The **Protocol Admin** is the address to which protocol fees are swept, and can set the protocol fee. No other administrative actions are possible.
+
+**Options Writers** can create new options types and write contracts for any valid ERC-20 asset pair (excluding rebasing, fee-on-transfer, and ERC-777 tokens). Previous approval/permission must be granted for the SettlementEngine to take custody of the requisite amount of the underlying asset.
+
+**Options Holders** can acquire option contracts once written. This is accomplished via a simple ERC-1155 transaction to transfer the desired amount of options. When exercising an option, they must hold enough of the exercise asset, and similarly when writing an option, have granted previous approval/permission for the SettlementEngine on this ERC-20 contract.
+
+### Protocol Assets
+Each asset pair for which an option is written is custodied by the SettlementEngine. When an option is written, XYZ. When an option is exercised, XYZ. The core SettlementEngine is agnostic in terms of the buying or selling of options contracts. These are ERC-1155 NFTs which can be transacted freely, from the writer to any party wishing to hold and potentially exercise the option before expiry date. The SettlementEngine emits a standard ERC-1155 TransferSingle event when an options contract changes hands.
+
+### Protocol Actions
+#### Options Writer Flow
+Visual story map XYZ (writing, redeeming)
+
+#### Options Holder Flow
+Visual story map XYZ (exercising)
+
+## Scenario Descriptions
+XYZ
+
+## Protocol Invariants
+XYZ
+
+## Glossary
+XYZ
 
 ## Core Interface
 
@@ -333,3 +384,8 @@ struct Underlying {
         int256 exercisePosition;
     }
 ```
+
+## Security Information
+- Audit info XYZ
+- Bug bounty info XYZ
+- Security contact info XYZ

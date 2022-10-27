@@ -487,8 +487,15 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         vm.expectEmit(true, true, true, true);
         emit NewOptionType(
-            expectedOptionId, WETH_A, DAI_A, testExerciseAmount, testUnderlyingAmount, testExerciseTimestamp, testExpiryTimestamp, 1
-        );
+            expectedOptionId,
+            WETH_A,
+            DAI_A,
+            testExerciseAmount,
+            testUnderlyingAmount,
+            testExerciseTimestamp,
+            testExpiryTimestamp,
+            1
+            );
 
         engine.newOptionType(optionInfo);
     }
@@ -572,7 +579,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         tokens[0] = WETH_A;
         tokens[1] = DAI_A;
         tokens[2] = USDC_A;
-        
+
         uint96 daiUnderlyingAmount = 9 * 10 ** 18;
         uint96 usdcUnderlyingAmount = 7 * 10 ** 9; // not 18 decimals
 
@@ -677,10 +684,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.startPrank(BOB);
         engine.exercise(daiExerciseOptionId, 1);
 
-        // Exercise option that will generate DAI fees        
+        // Exercise option that will generate DAI fees
         engine.exercise(wethExerciseOptionId, 1);
 
-        // Exercise option that will generate USDC fees        
+        // Exercise option that will generate USDC fees
         engine.exercise(usdcExerciseOptionId, 1);
         vm.stopPrank();
 

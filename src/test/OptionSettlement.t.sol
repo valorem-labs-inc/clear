@@ -470,23 +470,27 @@ contract OptionSettlementTest is Test, NFTreceiver {
     // **********************************************************************
 
     function testEventNewOptionType() public {
-        vm.expectEmit(false, true, true, true);
-        emit NewOptionType(
-            999, WETH_A, DAI_A, testExerciseAmount, testUnderlyingAmount, testExerciseTimestamp, testExpiryTimestamp, 1
-            );
+        IOptionSettlementEngine.Option memory optionInfo = IOptionSettlementEngine.Option({
+            underlyingAsset: DAI_A,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp,
+            exerciseAsset: WETH_A,
+            underlyingAmount: testUnderlyingAmount,
+            settlementSeed: 0,
+            exerciseAmount: testExerciseAmount,
+            nextClaimId: 1
+        });
 
-        engine.newOptionType(
-            IOptionSettlementEngine.Option({
-                underlyingAsset: DAI_A,
-                exerciseTimestamp: testExerciseTimestamp,
-                expiryTimestamp: testExpiryTimestamp,
-                exerciseAsset: WETH_A,
-                underlyingAmount: testUnderlyingAmount,
-                settlementSeed: 0,
-                exerciseAmount: testExerciseAmount,
-                nextClaimId: 1
-            })
+        bytes20 optionHash = bytes20(keccak256(abi.encode(optionInfo)));
+        uint160 optionKey = uint160(optionHash);
+        uint256 expectedOptionId = uint256(optionKey) << 96;
+
+        vm.expectEmit(true, true, true, true);
+        emit NewOptionType(
+            expectedOptionId, WETH_A, DAI_A, testExerciseAmount, testUnderlyingAmount, testExerciseTimestamp, testExpiryTimestamp, 1
         );
+
+        engine.newOptionType(optionInfo);
     }
 
     function testEventWrite() public {

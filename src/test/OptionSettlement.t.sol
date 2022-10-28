@@ -570,7 +570,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
             uint96(expectedUnderlyingAmount)
             );
 
-        // engine.claim(claimId);
         engine.redeem(claimId);
     }
 

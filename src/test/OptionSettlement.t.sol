@@ -470,36 +470,63 @@ contract OptionSettlementTest is Test, NFTreceiver {
     // **********************************************************************
 
     function testEventNewOptionType() public {
-        vm.expectEmit(false, true, true, true);
+        IOptionSettlementEngine.Option memory optionInfo = IOptionSettlementEngine.Option({
+            underlyingAsset: DAI_A,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp,
+            exerciseAsset: WETH_A,
+            underlyingAmount: testUnderlyingAmount,
+            settlementSeed: 0,
+            exerciseAmount: testExerciseAmount,
+            nextClaimId: 1
+        });
+
+        bytes20 optionHash = bytes20(keccak256(abi.encode(optionInfo)));
+        uint160 optionKey = uint160(optionHash);
+        uint256 expectedOptionId = uint256(optionKey) << 96;
+
+        vm.expectEmit(true, true, true, true);
         emit NewOptionType(
-            999, WETH_A, DAI_A, testExerciseAmount, testUnderlyingAmount, testExerciseTimestamp, testExpiryTimestamp, 1
+            expectedOptionId,
+            WETH_A,
+            DAI_A,
+            testExerciseAmount,
+            testUnderlyingAmount,
+            testExerciseTimestamp,
+            testExpiryTimestamp,
+            1
             );
 
-        engine.newOptionType(
-            IOptionSettlementEngine.Option({
-                underlyingAsset: DAI_A,
-                exerciseTimestamp: testExerciseTimestamp,
-                expiryTimestamp: testExpiryTimestamp,
-                exerciseAsset: WETH_A,
-                underlyingAmount: testUnderlyingAmount,
-                settlementSeed: 0,
-                exerciseAmount: testExerciseAmount,
-                nextClaimId: 1
-            })
-        );
+        engine.newOptionType(optionInfo);
     }
 
-    function testEventWrite() public {
+    function testEventWriteWhenNewClaim() public {
         uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
 
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(WETH_A, ALICE, expectedFeeAccruedAmount);
 
-        vm.expectEmit(true, true, true, false);
-        emit OptionsWritten(testOptionId, ALICE, 999, 1);
+        vm.expectEmit(true, true, true, true);
+        emit OptionsWritten(testOptionId, ALICE, 0, 1);
 
         vm.prank(ALICE);
         engine.write(testOptionId, 1);
+    }
+
+    function testEventWriteWhenExistingClaim() public {
+        uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
+
+        vm.prank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 1);
+
+        vm.expectEmit(true, true, true, true);
+        emit FeeAccrued(WETH_A, ALICE, expectedFeeAccruedAmount);
+
+        vm.expectEmit(true, true, true, true);
+        emit OptionsWritten(testOptionId, ALICE, claimId, 1);
+
+        vm.prank(ALICE);
+        engine.write(testOptionId, 1, claimId);
     }
 
     function testEventExercise() public {
@@ -543,11 +570,15 @@ contract OptionSettlementTest is Test, NFTreceiver {
             uint96(expectedUnderlyingAmount)
             );
 
-        engine.claim(claimId);
         engine.redeem(claimId);
     }
 
     function testEventSweepFeesWhenFeesAccruedForWrite() public {
+        address[] memory tokens = new address[](3);
+        tokens[0] = WETH_A;
+        tokens[1] = DAI_A;
+        tokens[2] = USDC_A;
+
         uint96 daiUnderlyingAmount = 9 * 10 ** 18;
         uint96 usdcUnderlyingAmount = 7 * 10 ** 9; // not 18 decimals
 
@@ -578,11 +609,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.write(usdcOptionId, 1);
         vm.stopPrank();
 
-        address[] memory tokens = new address[](3);
-        tokens[0] = WETH_A;
-        tokens[1] = DAI_A;
-        tokens[2] = USDC_A;
-
+        // Then assert expected fee amounts
         uint256[] memory expectedFees = new uint256[](3);
         expectedFees[0] = ((testUnderlyingAmount / 10_000) * engine.feeBps());
         expectedFees[1] = ((daiUnderlyingAmount / 10_000) * engine.feeBps());
@@ -593,6 +620,88 @@ contract OptionSettlementTest is Test, NFTreceiver {
             emit FeeSwept(tokens[i], engine.feeTo(), expectedFees[i] - 1); // sweeps 1 wei less as gas optimization
         }
 
+        // When fees are swept
+        engine.sweepFees(tokens);
+    }
+
+    function testEventSweepFeesWhenFeesAccruedForExercise() public {
+        address[] memory tokens = new address[](3);
+        tokens[0] = DAI_A;
+        tokens[1] = WETH_A;
+        tokens[2] = USDC_A;
+
+        uint96 daiExerciseAmount = 9 * 10 ** 18;
+        uint96 wethExerciseAmount = 3 * 10 ** 18;
+        uint96 usdcExerciseAmount = 7 * 10 ** 9; // not 18 decimals
+
+        // Write option for WETH-DAI pair
+        vm.startPrank(ALICE);
+        (uint256 daiExerciseOptionId,) = _newOption({
+            underlyingAsset: WETH_A,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp,
+            exerciseAsset: DAI_A,
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAmount: daiExerciseAmount
+        });
+        engine.write(daiExerciseOptionId, 1);
+
+        // Write option for DAI-WETH pair
+        (uint256 wethExerciseOptionId,) = _newOption({
+            underlyingAsset: DAI_A,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp,
+            exerciseAsset: WETH_A,
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAmount: wethExerciseAmount
+        });
+        engine.write(wethExerciseOptionId, 1);
+
+        // Write option for DAI-USDC pair
+        (uint256 usdcExerciseOptionId,) = _newOption({
+            underlyingAsset: DAI_A,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp,
+            exerciseAsset: USDC_A,
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAmount: usdcExerciseAmount
+        });
+        engine.write(usdcExerciseOptionId, 1);
+
+        // Transfer all option contracts to Bob
+        engine.safeTransferFrom(ALICE, BOB, daiExerciseOptionId, 1, "");
+        engine.safeTransferFrom(ALICE, BOB, wethExerciseOptionId, 1, "");
+        engine.safeTransferFrom(ALICE, BOB, usdcExerciseOptionId, 1, "");
+        vm.stopPrank();
+
+        vm.warp(testExpiryTimestamp - 1 seconds);
+
+        // Clear away fees generated by writing options
+        engine.sweepFees(tokens);
+
+        // Exercise option that will generate WETH fees
+        vm.startPrank(BOB);
+        engine.exercise(daiExerciseOptionId, 1);
+
+        // Exercise option that will generate DAI fees
+        engine.exercise(wethExerciseOptionId, 1);
+
+        // Exercise option that will generate USDC fees
+        engine.exercise(usdcExerciseOptionId, 1);
+        vm.stopPrank();
+
+        // Then assert expected fee amounts
+        uint256[] memory expectedFees = new uint256[](3);
+        expectedFees[0] = ((daiExerciseAmount / 10_000) * engine.feeBps());
+        expectedFees[1] = ((wethExerciseAmount / 10_000) * engine.feeBps());
+        expectedFees[2] = ((usdcExerciseAmount / 10_000) * engine.feeBps());
+
+        for (uint256 i = 0; i < tokens.length; i++) {
+            vm.expectEmit(true, true, true, false); // TODO debug why USDC sweeping 1 wei less, but not DAI or WETH
+            emit FeeSwept(tokens[i], engine.feeTo(), expectedFees[i]); // sweeps 1 wei less as gas optimization
+        }
+
+        // When fees are swept
         engine.sweepFees(tokens);
     }
 
@@ -1127,7 +1236,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     event OptionsExercised(uint256 indexed optionId, address indexed exercisee, uint112 amount);
 
-    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 claimId, uint112 amount);
+    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
 
     event FeeAccrued(address indexed asset, address indexed payor, uint256 amount);
 

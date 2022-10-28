@@ -156,7 +156,7 @@ interface IOptionSettlementEngine {
      * @param claimId The claim ID for the option.
      * @param amount The amount of options written.
      */
-    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 claimId, uint112 amount);
+    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
 
     /**
      * @notice Emitted when protocol fees are accrued for a given asset.

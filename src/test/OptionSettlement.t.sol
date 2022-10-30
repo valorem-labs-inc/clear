@@ -1116,7 +1116,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             expiryTimestamp,
             exerciseAsset,
             underlyingAmount,
-            0, // default zero for settelement seed
+            0, // default zero for settlement seed
             exerciseAmount,
             0 // default zero for next claim id
         );

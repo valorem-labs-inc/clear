@@ -569,7 +569,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         option.settlementSeed = optionKey; // settlement seed is initially equal to option key
         option.nextClaimId = 1; // next claim ID has been incremented
 
-        // assertEq(engine.getOptionFromEncodedId(oTokenId), option);
+        assertEq(engine.getOptionFromEncodedId(oTokenId), option);
     }
 
     function testIsOptionInitialized() public {
@@ -1347,18 +1347,18 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(assignedAmount, bucket.amountExercised);
     }
 
-    // function assertEq(IOptionSettlementEngine.Option memory actual, IOptionSettlementEngine.Option memory expected)
-    //     public
-    // {
-    //     assertEq(actual.underlyingAsset, expected.underlyingAsset);
-    //     assertEq(actual.underlyingAmount, expected.underlyingAmount);
-    //     assertEq(actual.exerciseAsset, expected.exerciseAsset);
-    //     assertEq(actual.exerciseAmount, expected.exerciseAmount);
-    //     assertEq(actual.exerciseTimestamp, expected.exerciseTimestamp);
-    //     assertEq(actual.expiryTimestamp, expected.expiryTimestamp);
-    //     assertEq(actual.settlementSeed, expected.settlementSeed);
-    //     assertEq(actual.nextClaimId, expected.nextClaimId);
-    // }
+    function assertEq(IOptionSettlementEngine.Option memory actual, IOptionSettlementEngine.Option memory expected)
+        public
+    {
+        assertEq(actual.underlyingAsset, expected.underlyingAsset);
+        assertEq(actual.underlyingAmount, expected.underlyingAmount);
+        assertEq(actual.exerciseAsset, expected.exerciseAsset);
+        assertEq(actual.exerciseAmount, expected.exerciseAmount);
+        assertEq(actual.exerciseTimestamp, expected.exerciseTimestamp);
+        assertEq(actual.expiryTimestamp, expected.expiryTimestamp);
+        assertEq(actual.settlementSeed, expected.settlementSeed);
+        assertEq(actual.nextClaimId, expected.nextClaimId);
+    }
 
     event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);
 

@@ -574,15 +574,25 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     // **********************************************************************
     //                    TOKEN ID ENCODING HELPERS
     // **********************************************************************
+
     /**
-     * @dev Claim and option type ids are encoded as follows:
-     * (MSb)
-     * [160b hash of option data structure]
-     * [96b encoding of claim id]
-     * (LSb)
-     * This function decodes a supplied id.
-     * @return optionId claimId The decoded components of the id as described above,
-     * padded as required.
+     * @notice Decode the supplied token id
+     * @dev Option and claim type ids are encoded as follows:
+     * 
+     *   MSb
+     *   0000 0000   0000 0000   0000 0000   0000 0000 ┐
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │ 
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │ 160b hash of option data structure
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │
+     *   0000 0000   0000 0000   0000 0000   0000 0000 ┘
+     *   0000 0000   0000 0000   0000 0000   0000 0000 ┐
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │ 96b encoding of claim id
+     *   0000 0000   0000 0000   0000 0000   0000 0000 ┘
+     *                                             LSb
+     * 
+     * @param id The token id to decode
+     * @return optionId claimId The decoded components of the id as described above, padded as required.
      */
     function getDecodedIdComponents(uint256 id) public pure returns (uint160 optionId, uint96 claimId) {
         // grab lower 96b of id for claim id
@@ -593,16 +603,34 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         claimId = uint96(id & claimIdMask);
     }
 
-    function getOptionFromEncodedId(uint256 id) public view returns (Option memory) {
-        (uint160 optionId,) = getDecodedIdComponents(id);
-        return _option[optionId];
-    }
-
+    /**
+     * @notice Encode the supplied option id and claim id
+     * @dev See getDecodedIdComponents() for encoding scheme
+     * @param optionId The optionId to encode
+     * @param claimIndex The claimIndex to encode
+     * @return claimId The encoded token id
+     */
     function getTokenId(uint160 optionId, uint96 claimIndex) public pure returns (uint256 claimId) {
         claimId |= (uint256(optionId) << 96);
         claimId |= uint256(claimIndex);
     }
 
+    /**
+     * @notice Return the option for the supplied token id
+     * @dev See getDecodedIdComponents() for encoding scheme
+     * @param id The token id of the Option
+     * @return The stored Option
+     */
+    function getOptionFromEncodedId(uint256 id) public view returns (Option memory) {
+        (uint160 optionId,) = getDecodedIdComponents(id);
+        return _option[optionId];
+    }
+
+    /**
+     * @notice Check to see if an option is already initialized
+     * @param optionId The option id to check
+     * @return Whether or not the option is initialized
+     */
     function isOptionInitialized(uint160 optionId) public view returns (bool) {
         return _option[optionId].underlyingAsset != address(0x0);
     }

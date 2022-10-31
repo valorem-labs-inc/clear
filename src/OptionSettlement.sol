@@ -230,10 +230,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert ExpiredOption(uint256(_optionIdU160b) << 96, expiry);
         }
 
-        if (optionRecord.expiryTimestamp <= block.timestamp) {
-            revert ExpiredOption(uint256(_optionIdU160b) << 96, optionRecord.expiryTimestamp);
-        }
-
         uint256 rxAmount = amount * optionRecord.underlyingAmount;
         uint256 fee = ((rxAmount / 10000) * feeBps);
         address underlyingAsset = optionRecord.underlyingAsset;

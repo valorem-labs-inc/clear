@@ -578,10 +578,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /**
      * @notice Decode the supplied token id
      * @dev Option and claim type ids are encoded as follows:
-     * 
+     *
      *   MSb
      *   0000 0000   0000 0000   0000 0000   0000 0000 ┐
-     *   0000 0000   0000 0000   0000 0000   0000 0000 │ 
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │
      *   0000 0000   0000 0000   0000 0000   0000 0000 │ 160b hash of option data structure
      *   0000 0000   0000 0000   0000 0000   0000 0000 │
      *   0000 0000   0000 0000   0000 0000   0000 0000 │
@@ -590,7 +590,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      *   0000 0000   0000 0000   0000 0000   0000 0000 │ 96b encoding of claim id
      *   0000 0000   0000 0000   0000 0000   0000 0000 ┘
      *                                             LSb
-     * 
+     *
      * @param id The token id to decode
      * @return optionId claimId The decoded components of the id as described above, padded as required.
      */

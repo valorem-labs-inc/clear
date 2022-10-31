@@ -482,7 +482,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 cTokenId2 = engine.write(oTokenId, 3);
 
         // Check encoding the first claim
-        (uint160 decodedOptionId, ) = engine.getDecodedIdComponents(cTokenId1);
+        (uint160 decodedOptionId,) = engine.getDecodedIdComponents(cTokenId1);
         uint96 expectedClaimIndex1 = 1;
         assertEq(engine.getTokenId(decodedOptionId, expectedClaimIndex1), cTokenId1);
 
@@ -521,18 +521,18 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.prank(ALICE);
         uint256 cTokenId2 = engine.write(oTokenId, 3);
 
-        (uint160 decodedOptionIdFromOTokenId, uint96 decodedClaimIndexFromOTokenId)
-             = engine.getDecodedIdComponents(oTokenId);
+        (uint160 decodedOptionIdFromOTokenId, uint96 decodedClaimIndexFromOTokenId) =
+            engine.getDecodedIdComponents(oTokenId);
         assertEq(decodedOptionIdFromOTokenId, oTokenId >> 96);
         assertEq(decodedClaimIndexFromOTokenId, 0); // no claims when initially creating a new option type
 
-        (uint160 decodedOptionIdFromCTokenId1, uint96 decodedClaimIndexFromCTokenId1)
-             = engine.getDecodedIdComponents(cTokenId1);
+        (uint160 decodedOptionIdFromCTokenId1, uint96 decodedClaimIndexFromCTokenId1) =
+            engine.getDecodedIdComponents(cTokenId1);
         assertEq(decodedOptionIdFromCTokenId1, oTokenId >> 96);
         assertEq(decodedClaimIndexFromCTokenId1, 1); // first claim
 
-        (uint160 decodedOptionIdFromCTokenId2, uint96 decodedClaimIndexFromCTokenId2)
-             = engine.getDecodedIdComponents(cTokenId2);
+        (uint160 decodedOptionIdFromCTokenId2, uint96 decodedClaimIndexFromCTokenId2) =
+            engine.getDecodedIdComponents(cTokenId2);
         assertEq(decodedOptionIdFromCTokenId2, oTokenId >> 96);
         assertEq(decodedClaimIndexFromCTokenId2, 2); // second claim
     }
@@ -585,7 +585,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         });
         uint256 oTokenId = engine.newOptionType(option);
 
-        (uint160 decodedOptionId, ) = engine.getDecodedIdComponents(oTokenId);
+        (uint160 decodedOptionId,) = engine.getDecodedIdComponents(oTokenId);
 
         assertTrue(engine.isOptionInitialized(decodedOptionId));
         assertFalse(engine.isOptionInitialized(1337));
@@ -1347,7 +1347,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(assignedAmount, bucket.amountExercised);
     }
 
-    function assertEq(IOptionSettlementEngine.Option memory actual, IOptionSettlementEngine.Option memory expected) public {
+    function assertEq(IOptionSettlementEngine.Option memory actual, IOptionSettlementEngine.Option memory expected)
+        public
+    {
         assertEq(actual.underlyingAsset, expected.underlyingAsset);
         assertEq(actual.underlyingAmount, expected.underlyingAmount);
         assertEq(actual.exerciseAsset, expected.exerciseAsset);

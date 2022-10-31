@@ -1058,6 +1058,156 @@ contract OptionSettlementTest is Test, NFTreceiver {
         _assertTokenIsClaim(claimId);
     }
 
+    function testFuzzWriteExerciseRedeem(uint32 seed) public {
+        uint256[] memory claimIds1 = new uint256[](30);
+        uint256 claimIds1Length = 0;
+        uint256 totalWritten1 = 0;
+        uint256 totalExercised1 = 0;
+
+        uint256[] memory claimIds2 = new uint256[](90);
+        uint256 claimIds2Length = 0;
+        uint256 totalWritten2 = 0;
+        uint256 totalExercised2 = 0;
+
+        // create monthly option
+        (uint256 optionId1M, IOptionSettlementEngine.Option memory option1M) = _newOption(
+            WETH_A, // underlyingAsset
+            testExerciseTimestamp, // exerciseTimestamp
+            uint40(block.timestamp + 30 days), // expiryTimestamp
+            WETH_A, // exerciseAsset
+            testUnderlyingAmount, // underlyingAmount
+            testExerciseAmount // exerciseAmount
+        );
+
+        // create quarterly option
+        (uint256 optionId3M, IOptionSettlementEngine.Option memory option3M) = _newOption(
+            WETH_A, // underlyingAsset
+            testExerciseTimestamp, // exerciseTimestamp
+            uint40(block.timestamp + 90 days), // expiryTimestamp
+            WETH_A, // exerciseAsset
+            testUnderlyingAmount, // underlyingAmount
+            testExerciseAmount // exerciseAmount
+        );
+
+        for (uint256 i = 0; i < 90; i++) {
+            // loop until expiry
+            (uint256 written1, uint256 exercised1, bool newClaim1) = _writeExercise(
+                ALICE,
+                BOB,
+                seed++,
+                5000, // write chance bips
+                100,
+                5000, // exercise chance bips
+                option1M,
+                optionId1M,
+                claimIds1,
+                claimIds1Length
+            );
+            if (newClaim1) {
+                claimIds1Length += 1;
+            }
+            totalWritten1 += written1;
+            totalExercised1 += exercised1;
+
+            (uint256 written2, uint256 exercised2, bool newClaim2) = _writeExercise(
+                ALICE,
+                BOB,
+                seed++,
+                5000, // write chance bips
+                100,
+                5000, // exercise chance bips
+                option3M,
+                optionId3M,
+                claimIds2,
+                claimIds2Length
+            );
+            if (newClaim2) {
+                claimIds2Length += 1;
+            }
+            totalWritten2 += written2;
+            totalExercised2 += exercised2;
+
+            // advance 1 d
+            vm.warp(block.timestamp + 1 days);
+        }
+
+        // claim
+        for (uint256 i = 0; i < claimIds1Length; i++) {
+            uint256 claimId = claimIds1[i];
+            _claimAndAssert(ALICE, claimId, optionId1M, option1M, totalWritten1, totalExercised1);
+        }
+
+        for (uint256 i = 0; i < claimIds2Length; i++) {
+            uint256 claimId = claimIds1[i];
+            _claimAndAssert(ALICE, claimId, optionId3M, option3M, totalWritten2, totalExercised2);
+        }
+    }
+
+    function _claimAndAssert(
+        address claimant,
+        uint256 claimId,
+        uint256 optionId,
+        IOptionSettlementEngine.Option memory option,
+        uint256 written,
+        uint256 exercised
+    ) internal {
+        vm.prank(claimant);
+        engine.claim(claimId);
+    }
+
+    function _writeExercise(
+        address writer,
+        address exerciser,
+        uint32 seed,
+        uint16 writeChanceBips,
+        uint16 maxWrite,
+        uint16 exerciseChanceBips,
+        IOptionSettlementEngine.Option memory option,
+        uint256 optionId,
+        uint256[] memory claimIds,
+        uint256 claimIdLength
+    ) internal returns (uint256 written, uint256 exercised, bool newClaim) {
+        if (option.expiryTimestamp < uint40(block.timestamp)) {
+            return (0, 0, false);
+        }
+
+        // with X pctg chance, write some amount of options
+        if (_coinflip(seed++, writeChanceBips)) {
+            uint16 toWrite = uint16(_randBetween(seed++, maxWrite));
+            // 50/50 to add to existing claim lot or create new claim lot
+            if (_coinflip(seed++, 5000)) {
+                newClaim = true;
+                claimIds[claimIdLength] = engine.write(optionId, toWrite);
+            } else {
+                uint256 claimId = claimIds[_randBetween(seed, claimIdLength - 1)];
+                engine.write(optionId, toWrite, claimId);
+            }
+
+            // add to total written
+            written += toWrite;
+
+            // transfer to exerciser
+            vm.prank(writer);
+            engine.safeTransferFrom(writer, exerciser, optionId, written, "");
+        }
+
+        if (option.exerciseTimestamp > uint40(block.timestamp)) {
+            return (written, 0, newClaim);
+        }
+
+        // with Y pctg chance, exercise some amount of options
+        if (_coinflip(seed++, exerciseChanceBips)) {
+            // check that we're not exercising more than have been written
+            uint16 toExercise = uint16(_randBetween(seed++, maxWrite));
+
+            vm.prank(exerciser);
+            engine.exercise(optionId, toExercise);
+
+            // add to total exercised
+            exercised += toExercise;
+        }
+    }
+
     // **********************************************************************
     //                            TEST HELPERS
     // **********************************************************************
@@ -1219,6 +1369,16 @@ contract OptionSettlementTest is Test, NFTreceiver {
             return;
         }
         assertEq(assignedAmount, bucket.amountExercised);
+    }
+
+    /// @dev probability in bips
+    function _coinflip(uint32 seed, uint16 probability) internal pure returns (bool) {
+        return _randBetween(seed, 10000) < probability;
+    }
+
+    function _randBetween(uint32 seed, uint256 max) internal pure returns (uint256) {
+        uint256 h = uint256(keccak256(abi.encode(seed)));
+        return h % max;
     }
 
     event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);

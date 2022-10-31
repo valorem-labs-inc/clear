@@ -21,7 +21,7 @@ The core of Valorem is the Settlement Engine, which follows the an ERC-1155 mult
 
 The options writer claim to the underlying asset (if not exercised) and exercise asset (if exercised) is represented by a Claim NFT. This Claim NFT can be redeemed for their share of the underlying plus exercise assets, based on current.
 
-XYZ, high-level on claim bucketing functionality
+XYZ test, high-level on claim bucketing functionality
 
 The structure of an options contract is as follows:
 

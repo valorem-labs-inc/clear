@@ -69,13 +69,14 @@ jobs:
     steps:
 
       - uses: actions/checkout@v3
-        with:
-          submodules: recursive
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
+      
+      - name: Install submodules
+        run: forge install
 
       - name: Run Slither
         uses: crytic/slither-action@v0.1.1

@@ -6,12 +6,12 @@ on:
   pull_request:
 
 jobs:
-  build-check-test:
-    name: Forge build, checks, unit tests
+  quick-checks-unit-tests:
+    name: Forge quick checks and unit tests
     runs-on: ubuntu-latest
     steps:
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install Foundry
         uses: onbjerg/foundry-toolchain@v1
@@ -25,7 +25,7 @@ jobs:
         run: forge install
 
       - name: Check gas snapshots
-        run: forge snapshot # --check
+        run: forge snapshot # --check TODO get /master gas snapshot up-to-date
         env:
           RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
@@ -43,6 +43,33 @@ jobs:
 
       - uses: codecov/codecov-action@v2
 
+  # integration-tests:
+  #   name: Forge integration tests
+  #   runs-on: ubuntu-latest
+  #   steps:
+
+  #     - uses: actions/checkout@v3
+
+  #     - name: Install Foundry
+  #       uses: onbjerg/foundry-toolchain@v1
+  #       with:
+  #         version: nightly
+      
+  #     - name: Install submodules
+  #       run: forge install
+
+  #     - name: Run tests
+  #       run: forge test --optimize --match-contract integration
+  #       env:
+  #         RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
+
+  # static-analysis:
+  #   name: Slither static analysis
+  #   runs-on: ubuntu-latest
+  #   steps:
+
+  #     - uses: actions/checkout@v3
+  
 
 
       # - uses: actions/setup-node@v2

@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-check-test:
-    name: Forge build, format check, snapshot check, run unit tests
+    name: Forge build, checks, unit tests
     runs-on: ubuntu-latest
     steps:
 
@@ -17,17 +17,17 @@ jobs:
         uses: onbjerg/foundry-toolchain@v1
         with:
           version: nightly
+
+      - name: Check code formatting
+        run: forge fmt --check
       
       - name: Install submodules
         run: forge install
 
       - name: Check gas snapshots
-        run: forge snapshot --check
+        run: forge snapshot # --check
         env:
           RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
-
-      - name: Check code formatting
-        run: forge fmt --check
 
       - name: Run tests
         run: forge test --optimize --no-match-contract integration

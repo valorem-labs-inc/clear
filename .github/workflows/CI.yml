@@ -38,6 +38,8 @@ jobs:
         run: |
           forge coverage --report lcov
         id: coverage
+        env:
+          RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
       - uses: codecov/codecov-action@v2
 

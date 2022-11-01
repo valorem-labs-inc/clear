@@ -79,7 +79,7 @@ jobs:
         run: forge install
 
       - name: Run Slither
-        uses: crytic/slither-action@v0.1.1
+        uses: crytic/slither-action@v0.2.0
         with:
           target: "src/"
           slither-config: slither.config.json

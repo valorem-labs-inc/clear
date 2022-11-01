@@ -23,6 +23,8 @@ jobs:
 
       - name: Check gas snapshots
         run: forge snapshot --check
+        env:
+          RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
       - name: Check code formatting
         run: forge fmt --check

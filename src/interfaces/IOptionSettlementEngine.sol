@@ -178,7 +178,7 @@ interface IOptionSettlementEngine {
      * @param exerciseAmount The amount of options being
      * @param underlyingAmount The amount of underlying
      */
-    event ClaimRedeemed(
+    event ClaimRedeemed   (
         uint256 indexed claimId,
         uint256 indexed optionId,
         address indexed redeemer,

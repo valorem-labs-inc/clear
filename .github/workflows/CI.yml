@@ -85,7 +85,7 @@ jobs:
           target: "src/"
           slither-config: slither.config.json
           sarif: results.sarif
-          fail-on: medium
+          fail-on: high
 
 
 

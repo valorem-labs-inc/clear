@@ -41,7 +41,7 @@ jobs:
         env:
           RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
-      - uses: codecov/codecov-action@v3 # TODO grant access and add token
+      - uses: codecov/codecov-action@v3 # TODO grant access, add token, and determine fail threshold
 
   # integration-tests:
   #   name: Forge integration tests
@@ -69,7 +69,6 @@ jobs:
     steps:
 
       - uses: actions/checkout@v3
-
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -120,13 +119,6 @@ jobs:
       # - name: Run lint check
       #   run: npm run lint:check
 
-
-
-
       # Too slow to run regularly
       #- name: Run audit
       #  run: poetry run slither --solc-remaps @openzeppelin=lib/openzeppelin-contracts --solc-args optimize src/
-
-
-  # run-ci:
-  #   name: Forge build and tests

@@ -3,7 +3,7 @@ pragma solidity 0.8.11;
 
 import "forge-std/Test.sol";
 import "./interfaces/IERC20.sol";
-import "../OptionSettlement.sol";
+import "../src/OptionSettlement.sol";
 
 /// @notice Receiver hook utility for NFT 'safe' transfers
 abstract contract NFTreceiver {

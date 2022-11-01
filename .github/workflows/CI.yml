@@ -41,7 +41,7 @@ jobs:
         env:
           RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
-      - uses: codecov/codecov-action@v2
+      - uses: codecov/codecov-action@v3 # TODO grant access and add token
 
   # integration-tests:
   #   name: Forge integration tests
@@ -63,12 +63,12 @@ jobs:
   #       env:
   #         RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
-  # static-analysis:
-  #   name: Slither static analysis
-  #   runs-on: ubuntu-latest
-  #   steps:
+  static-analysis:
+    name: Slither static analysis
+    runs-on: ubuntu-latest
+    steps:
 
-  #     - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
   
 
 

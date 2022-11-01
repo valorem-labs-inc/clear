@@ -1093,9 +1093,12 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         for (i = 0; i < 90; i++) {
             // loop until expiry
-            _writeExerciseOptions(seed++, option1M, optionId1M, claimIds1, opt1);
-
-            _writeExerciseOptions(seed++, option3M, optionId3M, claimIds2, opt2);
+            unchecked {
+                _writeExerciseOptions(seed, option1M, optionId1M, claimIds1, opt1);
+                seed += 10;
+                _writeExerciseOptions(seed++, option3M, optionId3M, claimIds2, opt2);
+                seed += 10;
+            }
 
             // advance 1 d
             vm.warp(block.timestamp + 1 days);
@@ -1114,7 +1117,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function _writeExerciseOptions(
-        uint32 i,
+        uint32 seed,
         IOptionSettlementEngine.Option memory option1M,
         uint256 optionId1M,
         uint256[] memory claimIds1,
@@ -1123,7 +1126,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         (uint256 written, uint256 exercised, bool newClaim) = _writeExercise(
             ALICE,
             BOB,
-            i,
+            seed,
             5000, // write chance bips
             1,
             5000, // exercise chance bips
@@ -1174,31 +1177,34 @@ contract OptionSettlementTest is Test, NFTreceiver {
         }
 
         // with X pctg chance, write some amount of options
-        if (_coinflip(seed++, writeChanceBips)) {
-            uint16 toWrite = uint16(1 + _randBetween(seed++, maxWrite));
-            emit log_named_uint("WRITING", optionId);
-            emit log_named_uint("amount", toWrite);
-            vm.startPrank(writer);
-            // 50/50 to add to existing claim lot or create new claim lot
-            if (claimIdLength == 0 || _coinflip(seed++, 5000)) {
-                newClaim = true;
-                uint256 claimId = engine.write(optionId, toWrite);
-                emit log_named_uint("ADD NEW CLAIM", claimId);
-                claimIds[claimIdLength] = claimId;
+        unchecked {
+            // allow seed to overflow
+            if (_coinflip(seed++, writeChanceBips)) {
+                uint16 toWrite = uint16(1 + _randBetween(seed++, maxWrite));
+                emit log_named_uint("WRITING", optionId);
+                emit log_named_uint("amount", toWrite);
+                vm.startPrank(writer);
+                // 50/50 to add to existing claim lot or create new claim lot
+                if (claimIdLength == 0 || _coinflip(seed++, 5000)) {
+                    newClaim = true;
+                    uint256 claimId = engine.write(optionId, toWrite);
+                    emit log_named_uint("ADD NEW CLAIM", claimId);
+                    claimIds[claimIdLength] = claimId;
+                } else {
+                    uint256 claimId = claimIds[_randBetween(seed++, claimIdLength)];
+                    emit log_named_uint("ADD EXISTING CLAIM", claimId);
+                    engine.write(optionId, toWrite, claimId);
+                }
+
+                // add to total written
+                written += toWrite;
+
+                // transfer to exerciser
+                engine.safeTransferFrom(writer, exerciser, optionId, written, "");
+                vm.stopPrank();
             } else {
-                uint256 claimId = claimIds[_randBetween(seed, claimIdLength)];
-                emit log_named_uint("ADD EXISTING CLAIM", claimId);
-                engine.write(optionId, toWrite, claimId);
+                emit log_named_uint("SKIP WRITING", optionId);
             }
-
-            // add to total written
-            written += toWrite;
-
-            // transfer to exerciser
-            engine.safeTransferFrom(writer, exerciser, optionId, written, "");
-            vm.stopPrank();
-        } else {
-            emit log_named_uint("SKIP WRITING", optionId);
         }
 
         if (option.exerciseTimestamp >= uint40(block.timestamp)) {
@@ -1208,19 +1214,22 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         uint256 maxToExercise = engine.balanceOf(exerciser, optionId);
         // with Y pctg chance, exercise some amount of options
-        if (maxToExercise != 0 && _coinflip(seed++, exerciseChanceBips)) {
-            // check that we're not exercising more than have been written
-            uint16 toExercise = uint16(1 + _randBetween(seed++, maxToExercise));
-            emit log_named_uint("EXERCISING", optionId);
-            emit log_named_uint("amount", toExercise);
+        unchecked {
+            // allow seed to overflow
+            if (maxToExercise != 0 && _coinflip(seed++, exerciseChanceBips)) {
+                // check that we're not exercising more than have been written
+                emit log_named_uint("EXERCISING", optionId);
+                uint16 toExercise = uint16(1 + _randBetween(seed++, maxToExercise));
+                emit log_named_uint("amount", toExercise);
 
-            vm.prank(exerciser);
-            engine.exercise(optionId, toExercise);
+                vm.prank(exerciser);
+                engine.exercise(optionId, toExercise);
 
-            // add to total exercised
-            exercised += toExercise;
-        } else {
-            emit log_named_uint("SKIP EXERCISING", optionId);
+                // add to total exercised
+                exercised += toExercise;
+            } else {
+                emit log_named_uint("SKIP EXERCISING", optionId);
+            }
         }
     }
 

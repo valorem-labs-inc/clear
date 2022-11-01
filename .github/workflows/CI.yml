@@ -46,7 +46,7 @@ jobs:
           version: nightly
       
       - name: Pull Submodules
-        run: forge update
+        run: forge install
 
       - name: Run tests
         run: forge test --optimize

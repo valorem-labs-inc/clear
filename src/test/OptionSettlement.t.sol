@@ -1058,23 +1058,25 @@ contract OptionSettlementTest is Test, NFTreceiver {
         _assertTokenIsClaim(claimId);
     }
 
-    function testFuzzWriteExerciseRedeem(uint32 seed) public {
-        uint256[] memory claimIds1 = new uint256[](30);
-        uint256 claimIds1Length = 0;
-        uint256 totalWritten1 = 0;
-        uint256 totalExercised1 = 0;
+    struct FuzzMetadata {
+        uint256 claimsLength;
+        uint256 totalWritten;
+        uint256 totalExercised;
+    }
 
+    function testFuzzWriteExerciseRedeem(uint32 seed) public {
+        uint32 i = 0;
+        uint256[] memory claimIds1 = new uint256[](30);
+        FuzzMetadata memory opt1 = FuzzMetadata(0, 0, 0);
         uint256[] memory claimIds2 = new uint256[](90);
-        uint256 claimIds2Length = 0;
-        uint256 totalWritten2 = 0;
-        uint256 totalExercised2 = 0;
+        FuzzMetadata memory opt2 = FuzzMetadata(0, 0, 0);
 
         // create monthly option
         (uint256 optionId1M, IOptionSettlementEngine.Option memory option1M) = _newOption(
             WETH_A, // underlyingAsset
             testExerciseTimestamp, // exerciseTimestamp
             uint40(block.timestamp + 30 days), // expiryTimestamp
-            WETH_A, // exerciseAsset
+            DAI_A, // exerciseAsset
             testUnderlyingAmount, // underlyingAmount
             testExerciseAmount // exerciseAmount
         );
@@ -1084,75 +1086,75 @@ contract OptionSettlementTest is Test, NFTreceiver {
             WETH_A, // underlyingAsset
             testExerciseTimestamp, // exerciseTimestamp
             uint40(block.timestamp + 90 days), // expiryTimestamp
-            WETH_A, // exerciseAsset
+            DAI_A, // exerciseAsset
             testUnderlyingAmount, // underlyingAmount
             testExerciseAmount // exerciseAmount
         );
 
-        for (uint256 i = 0; i < 90; i++) {
+        for (i = 0; i < 90; i++) {
             // loop until expiry
-            (uint256 written1, uint256 exercised1, bool newClaim1) = _writeExercise(
-                ALICE,
-                BOB,
-                seed++,
-                5000, // write chance bips
-                100,
-                5000, // exercise chance bips
-                option1M,
-                optionId1M,
-                claimIds1,
-                claimIds1Length
-            );
-            if (newClaim1) {
-                claimIds1Length += 1;
-            }
-            totalWritten1 += written1;
-            totalExercised1 += exercised1;
+            _writeExerciseOptions(seed++, option1M, optionId1M, claimIds1, opt1);
 
-            (uint256 written2, uint256 exercised2, bool newClaim2) = _writeExercise(
-                ALICE,
-                BOB,
-                seed++,
-                5000, // write chance bips
-                100,
-                5000, // exercise chance bips
-                option3M,
-                optionId3M,
-                claimIds2,
-                claimIds2Length
-            );
-            if (newClaim2) {
-                claimIds2Length += 1;
-            }
-            totalWritten2 += written2;
-            totalExercised2 += exercised2;
+            _writeExerciseOptions(seed++, option3M, optionId3M, claimIds2, opt2);
 
             // advance 1 d
             vm.warp(block.timestamp + 1 days);
         }
 
         // claim
-        for (uint256 i = 0; i < claimIds1Length; i++) {
+        for (i = 0; i < opt1.claimsLength - 1; i++) {
             uint256 claimId = claimIds1[i];
-            _claimAndAssert(ALICE, claimId, optionId1M, option1M, totalWritten1, totalExercised1);
+            _claimAndAssert(ALICE, claimId);
         }
 
-        for (uint256 i = 0; i < claimIds2Length; i++) {
-            uint256 claimId = claimIds1[i];
-            _claimAndAssert(ALICE, claimId, optionId3M, option3M, totalWritten2, totalExercised2);
+        for (i = 0; i < opt2.claimsLength - 1; i++) {
+            uint256 claimId = claimIds2[i];
+            _claimAndAssert(ALICE, claimId);
         }
     }
 
-    function _claimAndAssert(
-        address claimant,
-        uint256 claimId,
-        uint256 optionId,
-        IOptionSettlementEngine.Option memory option,
-        uint256 written,
-        uint256 exercised
+    function _writeExerciseOptions(
+        uint32 i,
+        IOptionSettlementEngine.Option memory option1M,
+        uint256 optionId1M,
+        uint256[] memory claimIds1,
+        FuzzMetadata memory opt1
     ) internal {
-        vm.prank(claimant);
-        engine.claim(claimId);
+        (uint256 written, uint256 exercised, bool newClaim) = _writeExercise(
+            ALICE,
+            BOB,
+            i,
+            5000, // write chance bips
+            1,
+            5000, // exercise chance bips
+            option1M,
+            optionId1M,
+            claimIds1,
+            opt1.claimsLength
+        );
+        if (newClaim) {
+            opt1.claimsLength += 1;
+        }
+        opt1.totalWritten += written;
+        opt1.totalExercised += exercised;
+    }
+
+    function _claimAndAssert(address claimant, uint256 claimId) internal {
+        vm.startPrank(claimant);
+        IOptionSettlementEngine.Underlying memory underlying = engine.underlying(claimId);
+        uint256 exerciseAssetAmount = ERC20(underlying.exerciseAsset).balanceOf(claimant);
+        uint256 underlyingAssetAmount = ERC20(underlying.underlyingAsset).balanceOf(claimant);
+        engine.redeem(claimId);
+
+        assertEq(
+            ERC20(underlying.underlyingAsset).balanceOf(claimant),
+            underlyingAssetAmount + uint256(underlying.underlyingPosition)
+        );
+        assertEq(
+            ERC20(underlying.exerciseAsset).balanceOf(claimant),
+            exerciseAssetAmount + uint256(underlying.exercisePosition)
+        );
+        vm.stopPrank();
     }
 
     function _writeExercise(
@@ -1167,19 +1169,25 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256[] memory claimIds,
         uint256 claimIdLength
     ) internal returns (uint256 written, uint256 exercised, bool newClaim) {
-        if (option.expiryTimestamp < uint40(block.timestamp)) {
+        if (option.expiryTimestamp <= uint40(block.timestamp)) {
             return (0, 0, false);
         }
 
         // with X pctg chance, write some amount of options
         if (_coinflip(seed++, writeChanceBips)) {
-            uint16 toWrite = uint16(_randBetween(seed++, maxWrite));
+            uint16 toWrite = uint16(1 + _randBetween(seed++, maxWrite));
+            emit log_named_uint("WRITING", optionId);
+            emit log_named_uint("amount", toWrite);
+            vm.startPrank(writer);
             // 50/50 to add to existing claim lot or create new claim lot
-            if (_coinflip(seed++, 5000)) {
+            if (claimIdLength == 0 || _coinflip(seed++, 5000)) {
                 newClaim = true;
-                claimIds[claimIdLength] = engine.write(optionId, toWrite);
+                uint256 claimId = engine.write(optionId, toWrite);
+                emit log_named_uint("ADD NEW CLAIM", claimId);
+                claimIds[claimIdLength] = claimId;
             } else {
-                uint256 claimId = claimIds[_randBetween(seed, claimIdLength - 1)];
+                uint256 claimId = claimIds[_randBetween(seed, claimIdLength)];
+                emit log_named_uint("ADD EXISTING CLAIM", claimId);
                 engine.write(optionId, toWrite, claimId);
             }
 
@@ -1187,24 +1195,32 @@ contract OptionSettlementTest is Test, NFTreceiver {
             written += toWrite;
 
             // transfer to exerciser
-            vm.prank(writer);
             engine.safeTransferFrom(writer, exerciser, optionId, written, "");
+            vm.stopPrank();
+        } else {
+            emit log_named_uint("SKIP WRITING", optionId);
         }
 
-        if (option.exerciseTimestamp > uint40(block.timestamp)) {
+        if (option.exerciseTimestamp >= uint40(block.timestamp)) {
+            emit log_named_uint("exercise timestamp not hit", option.exerciseTimestamp);
             return (written, 0, newClaim);
         }
 
+        uint256 maxToExercise = engine.balanceOf(exerciser, optionId);
         // with Y pctg chance, exercise some amount of options
-        if (_coinflip(seed++, exerciseChanceBips)) {
+        if (maxToExercise != 0 && _coinflip(seed++, exerciseChanceBips)) {
             // check that we're not exercising more than have been written
-            uint16 toExercise = uint16(_randBetween(seed++, maxWrite));
+            uint16 toExercise = uint16(1 + _randBetween(seed++, maxToExercise));
+            emit log_named_uint("EXERCISING", optionId);
+            emit log_named_uint("amount", toExercise);
 
             vm.prank(exerciser);
             engine.exercise(optionId, toExercise);
 
             // add to total exercised
             exercised += toExercise;
+        } else {
+            emit log_named_uint("SKIP EXERCISING", optionId);
         }
     }
 

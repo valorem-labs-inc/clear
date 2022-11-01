@@ -282,14 +282,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(underlyingPositions.exercisePosition, 0);
     }
 
-    function testGetEncodedIdComponents() public {
-        uint256 testId = 1;
-        testId |= 23 << 96;
-        (uint160 optionId, uint96 claimId) = engine.getDecodedIdComponents(testId);
-        assertEq(optionId, 23);
-        assertEq(claimId, 1);
-    }
-
     function testUnderlyingAfterExercise() public {
         uint256 claimId = _writeAndExerciseOption(testOptionId, ALICE, BOB, 2, 0);
         IOptionSettlementEngine.Underlying memory underlyingPositions = engine.underlying(claimId);
@@ -463,6 +455,140 @@ contract OptionSettlementTest is Test, NFTreceiver {
         _assertAssignedInBucket(optionId, 1, 1);
         _assertAssignedInBucket(optionId, 2, 1);
         _assertAssignedInBucket(optionId, 3, 1);
+    }
+
+    // **********************************************************************
+    //                            TOKEN ID ENCODING HELPERS
+    // **********************************************************************
+
+    function testGetEncodedIdComponents() public {
+        // Create new option type
+        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
+            underlyingAsset: DAI_A,
+            underlyingAmount: 1,
+            exerciseAsset: USDC_A,
+            exerciseAmount: 100,
+            exerciseTimestamp: uint40(block.timestamp),
+            expiryTimestamp: uint40(block.timestamp + 30 days),
+            settlementSeed: 0,
+            nextClaimId: 0
+        });
+        uint256 oTokenId = engine.newOptionType(option);
+
+        // Write 2 separate options lots
+        vm.prank(ALICE);
+        uint256 cTokenId1 = engine.write(oTokenId, 7);
+        vm.prank(ALICE);
+        uint256 cTokenId2 = engine.write(oTokenId, 3);
+
+        // Check encoding the first claim
+        (uint160 decodedOptionId,) = engine.getDecodedIdComponents(cTokenId1);
+        uint96 expectedClaimIndex1 = 1;
+        assertEq(engine.getTokenId(decodedOptionId, expectedClaimIndex1), cTokenId1);
+
+        // Check encoding the second claim
+        uint96 expectedClaimIndex2 = 2;
+        assertEq(engine.getTokenId(decodedOptionId, expectedClaimIndex2), cTokenId2);
+    }
+
+    function testFuzzGetEncodedIdComponents(uint256 optionId, uint256 claimIndex) public {
+        optionId = bound(optionId, 0, type(uint160).max);
+        claimIndex = bound(claimIndex, 0, type(uint96).max);
+
+        uint256 expectedTokenId = claimIndex;
+        expectedTokenId |= optionId << 96;
+
+        assertEq(engine.getTokenId(uint160(optionId), uint96(claimIndex)), expectedTokenId);
+    }
+
+    function testGetDecodedIdComponents() public {
+        // Create new option type
+        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
+            underlyingAsset: DAI_A,
+            underlyingAmount: 1,
+            exerciseAsset: USDC_A,
+            exerciseAmount: 100,
+            exerciseTimestamp: uint40(block.timestamp),
+            expiryTimestamp: uint40(block.timestamp + 30 days),
+            settlementSeed: 0,
+            nextClaimId: 0
+        });
+        uint256 oTokenId = engine.newOptionType(option);
+
+        // Write 2 separate options lots
+        vm.prank(ALICE);
+        uint256 cTokenId1 = engine.write(oTokenId, 7);
+        vm.prank(ALICE);
+        uint256 cTokenId2 = engine.write(oTokenId, 3);
+
+        (uint160 decodedOptionIdFromOTokenId, uint96 decodedClaimIndexFromOTokenId) =
+            engine.getDecodedIdComponents(oTokenId);
+        assertEq(decodedOptionIdFromOTokenId, oTokenId >> 96);
+        assertEq(decodedClaimIndexFromOTokenId, 0); // no claims when initially creating a new option type
+
+        (uint160 decodedOptionIdFromCTokenId1, uint96 decodedClaimIndexFromCTokenId1) =
+            engine.getDecodedIdComponents(cTokenId1);
+        assertEq(decodedOptionIdFromCTokenId1, oTokenId >> 96);
+        assertEq(decodedClaimIndexFromCTokenId1, 1); // first claim
+
+        (uint160 decodedOptionIdFromCTokenId2, uint96 decodedClaimIndexFromCTokenId2) =
+            engine.getDecodedIdComponents(cTokenId2);
+        assertEq(decodedOptionIdFromCTokenId2, oTokenId >> 96);
+        assertEq(decodedClaimIndexFromCTokenId2, 2); // second claim
+    }
+
+    function testFuzzGetDecodedIdComponents(uint256 optionId, uint256 claimId) public {
+        optionId = bound(optionId, 0, type(uint160).max);
+        claimId = bound(claimId, 0, type(uint96).max);
+
+        uint256 testTokenId = claimId;
+        testTokenId |= optionId << 96;
+
+        (uint160 decodedOptionId, uint96 decodedClaimId) = engine.getDecodedIdComponents(testTokenId);
+        assertEq(decodedOptionId, optionId);
+        assertEq(decodedClaimId, claimId);
+    }
+
+    function testGetOptionFromEncodedId() public {
+        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
+            underlyingAsset: DAI_A,
+            underlyingAmount: 1,
+            exerciseAsset: USDC_A,
+            exerciseAmount: 100,
+            exerciseTimestamp: uint40(block.timestamp),
+            expiryTimestamp: uint40(block.timestamp + 30 days),
+            settlementSeed: 0,
+            nextClaimId: 0
+        });
+        uint256 oTokenId = engine.newOptionType(option);
+
+        // Update struct values to match stored option data structure
+        bytes20 optionHash = bytes20(keccak256(abi.encode(option)));
+        uint160 optionKey = uint160(optionHash);
+
+        option.settlementSeed = optionKey; // settlement seed is initially equal to option key
+        option.nextClaimId = 1; // next claim ID has been incremented
+
+        assertEq(engine.getOptionFromEncodedId(oTokenId), option);
+    }
+
+    function testIsOptionInitialized() public {
+        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
+            underlyingAsset: DAI_A,
+            underlyingAmount: 1,
+            exerciseAsset: USDC_A,
+            exerciseAmount: 100,
+            exerciseTimestamp: uint40(block.timestamp),
+            expiryTimestamp: uint40(block.timestamp + 30 days),
+            settlementSeed: 0,
+            nextClaimId: 0
+        });
+        uint256 oTokenId = engine.newOptionType(option);
+
+        (uint160 decodedOptionId,) = engine.getDecodedIdComponents(oTokenId);
+
+        assertTrue(engine.isOptionInitialized(decodedOptionId));
+        assertFalse(engine.isOptionInitialized(1337));
     }
 
     // **********************************************************************
@@ -1291,7 +1417,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             expiryTimestamp,
             exerciseAsset,
             underlyingAmount,
-            0, // default zero for settelement seed
+            0, // default zero for settlement seed
             exerciseAmount,
             0 // default zero for next claim id
         );
@@ -1404,6 +1530,19 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function _randBetween(uint32 seed, uint256 max) internal pure returns (uint256) {
         uint256 h = uint256(keccak256(abi.encode(seed)));
         return h % max;
+    }
+
+    function assertEq(IOptionSettlementEngine.Option memory actual, IOptionSettlementEngine.Option memory expected)
+        public
+    {
+        assertEq(actual.underlyingAsset, expected.underlyingAsset);
+        assertEq(actual.underlyingAmount, expected.underlyingAmount);
+        assertEq(actual.exerciseAsset, expected.exerciseAsset);
+        assertEq(actual.exerciseAmount, expected.exerciseAmount);
+        assertEq(actual.exerciseTimestamp, expected.exerciseTimestamp);
+        assertEq(actual.expiryTimestamp, expected.expiryTimestamp);
+        assertEq(actual.settlementSeed, expected.settlementSeed);
+        assertEq(actual.nextClaimId, expected.nextClaimId);
     }
 
     event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);

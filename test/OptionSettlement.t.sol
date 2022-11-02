@@ -35,7 +35,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     address public constant USDC_A = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
     // Admin
-    address public constant FEE_TO = 0x2dbd50A4Ef9B172698596217b7DB0163D3607b41; 
+    address public constant FEE_TO = 0x2dbd50A4Ef9B172698596217b7DB0163D3607b41;
     // TODO this was existing, what is the correct address? -- 0x36273803306a3C22bc848f8Db761e974697ece0d
 
     // Users
@@ -473,25 +473,14 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function testRevertSetFeeToWhenNotCurrentFeeTo() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOptionSettlementEngine.AccessControlViolation.selector,
-                ALICE,
-                FEE_TO
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
 
         vm.prank(ALICE);
         engine.setFeeTo(address(0xCAFE));
     }
 
     function testRevertSetFeeToWhenZeroAddress() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOptionSettlementEngine.InvalidFeeToAddress.selector,
-                address(0)
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidFeeToAddress.selector, address(0)));
 
         vm.prank(FEE_TO);
         engine.setFeeTo(address(0));
@@ -883,13 +872,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseAmount: testExerciseAmount
         });
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOptionSettlementEngine.OptionsTypeExists.selector,
-                optionId
-            )
-        );
-        
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.OptionsTypeExists.selector, optionId));
+
         engine.newOptionType(option);
     }
 
@@ -909,9 +893,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOptionSettlementEngine.ExpiryTooSoon.selector,
-                tooSoonOptionId,
-                tooSoonExpiryTimestamp
+                IOptionSettlementEngine.ExpiryTooSoon.selector, tooSoonOptionId, tooSoonExpiryTimestamp
             )
         );
 
@@ -928,7 +910,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testRevertNewOptionTypeWhenExerciseWindowTooShort() public {
         vm.expectRevert(IOptionSettlementEngine.ExerciseWindowTooShort.selector);
 
-        (uint256 optionId, IOptionSettlementEngine.Option memory option) = _newOption({
+        _newOption({
             underlyingAsset: DAI_A,
             exerciseTimestamp: 2_000_000_000,
             expiryTimestamp: 2_000_000_000 + 1 days - 1 seconds,
@@ -939,13 +921,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function testRevertNewOptionTypeWhenInvalidAssets() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOptionSettlementEngine.InvalidAssets.selector,
-                DAI_A,
-                DAI_A
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, DAI_A, DAI_A));
 
         _newOption({
             underlyingAsset: DAI_A,
@@ -1433,7 +1409,11 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(assignedAmount, bucket.amountExercised);
     }
 
-    function _createOptionIdFromStruct(IOptionSettlementEngine.Option memory optionInfo) internal pure returns (uint256) {
+    function _createOptionIdFromStruct(IOptionSettlementEngine.Option memory optionInfo)
+        internal
+        pure
+        returns (uint256)
+    {
         bytes20 optionHash = bytes20(keccak256(abi.encode(optionInfo)));
         uint160 optionKey = uint160(optionHash);
 

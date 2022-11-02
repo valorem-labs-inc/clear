@@ -10,7 +10,7 @@ The Core is designed to be gas efficient, minimal, and provide a secure settleme
 system. The Core consists, primarily, of a settlement engine which allows users
 to write options, exercise options, redeem claims for assets, and settles assignments
 of exercises to claims written.
-
+x
 ## Building the Project
 1. Clone the git repository
 2. Copy `.env.template` to `.env` and replace "XYZ" with your `RPC_URL` (e.g., https://mainnet.infura.io/v3/apikey or https://eth-mainnet.g.alchemy.com/v2/apikey)

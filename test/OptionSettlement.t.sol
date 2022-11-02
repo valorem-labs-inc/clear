@@ -35,7 +35,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
     address public constant USDC_A = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
     // Admin
-    address public constant FEE_TO = 0x36273803306a3C22bc848f8Db761e974697ece0d;
+    address public constant FEE_TO = 0x2dbd50A4Ef9B172698596217b7DB0163D3607b41; 
+    // TODO this was existing, what is the correct address? -- 0x36273803306a3C22bc848f8Db761e974697ece0d
 
     // Users
     address public constant ALICE = address(0xA);
@@ -458,6 +459,45 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     // **********************************************************************
+    //                            PROTOCOL ADMIN
+    // **********************************************************************
+
+    function testSetFeeTo() public {
+        // precondition check
+        assertEq(engine.feeTo(), FEE_TO);
+
+        vm.prank(FEE_TO);
+        engine.setFeeTo(address(0xCAFE));
+
+        assertEq(engine.feeTo(), address(0xCAFE));
+    }
+
+    function testRevertSetFeeToWhenNotCurrentFeeTo() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOptionSettlementEngine.AccessControlViolation.selector,
+                ALICE,
+                FEE_TO
+            )
+        );
+
+        vm.prank(ALICE);
+        engine.setFeeTo(address(0xCAFE));
+    }
+
+    function testRevertSetFeeToWhenZeroAddress() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOptionSettlementEngine.InvalidFeeToAddress.selector,
+                address(0)
+            )
+        );
+
+        vm.prank(FEE_TO);
+        engine.setFeeTo(address(0));
+    }
+
+    // **********************************************************************
     //                            TOKEN ID ENCODING HELPERS
     // **********************************************************************
 
@@ -607,9 +647,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             nextClaimId: 1
         });
 
-        bytes20 optionHash = bytes20(keccak256(abi.encode(optionInfo)));
-        uint160 optionKey = uint160(optionHash);
-        uint256 expectedOptionId = uint256(optionKey) << 96;
+        uint256 expectedOptionId = _createOptionIdFromStruct(optionInfo);
 
         vm.expectEmit(true, true, true, true);
         emit NewOptionType(
@@ -835,43 +873,91 @@ contract OptionSettlementTest is Test, NFTreceiver {
     //                            FAIL TESTS
     // **********************************************************************
 
-    function testFailNewOptionTypeOptionsTypeExists() public {
-        (, IOptionSettlementEngine.Option memory option) = _newOption(
-            WETH_A, // underlyingAsset
-            testExerciseTimestamp, // exerciseTimestamp
-            testExpiryTimestamp, // expiryTimestamp
-            DAI_A, // exerciseAsset
-            testUnderlyingAmount, // underlyingAmount
-            testExerciseAmount // exerciseAmount
-        );
+    function testRevertNewOptionTypeWhenOptionsTypeExists() public {
+        (uint256 optionId, IOptionSettlementEngine.Option memory option) = _newOption({
+            underlyingAsset: DAI_A,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp,
+            exerciseAsset: WETH_A,
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAmount: testExerciseAmount
+        });
 
-        vm.expectRevert(IOptionSettlementEngine.OptionsTypeExists.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOptionSettlementEngine.OptionsTypeExists.selector,
+                optionId
+            )
+        );
+        
         engine.newOptionType(option);
     }
 
-    function testFailNewOptionTypeExerciseWindowTooShort() public {
-        vm.expectRevert(IOptionSettlementEngine.ExerciseWindowTooShort.selector);
-        _newOption(
-            WETH_A, // underlyingAsset
-            testExerciseTimestamp, // exerciseTimestamp
-            testExpiryTimestamp - 1, // expiryTimestamp
-            DAI_A, // exerciseAsset
-            testUnderlyingAmount, // underlyingAmount
-            testExerciseAmount // exerciseAmount
+    function testRevertNewOptionTypeWhenExpiryTooSoon() public {
+        uint40 tooSoonExpiryTimestamp = uint40(block.timestamp + 1 days - 1 seconds);
+        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
+            underlyingAsset: DAI_A,
+            exerciseTimestamp: uint40(block.timestamp),
+            expiryTimestamp: tooSoonExpiryTimestamp,
+            exerciseAsset: WETH_A,
+            underlyingAmount: testUnderlyingAmount,
+            settlementSeed: 0, // default zero for settlement seed
+            exerciseAmount: testExerciseAmount,
+            nextClaimId: 0 // default zero for next claim id
+        });
+        uint256 tooSoonOptionId = _createOptionIdFromStruct(option);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOptionSettlementEngine.ExpiryTooSoon.selector,
+                tooSoonOptionId,
+                tooSoonExpiryTimestamp
+            )
         );
+
+        _newOption({
+            underlyingAsset: DAI_A,
+            exerciseTimestamp: uint40(block.timestamp),
+            expiryTimestamp: tooSoonExpiryTimestamp,
+            exerciseAsset: WETH_A,
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAmount: testExerciseAmount
+        });
     }
 
-    function testNewOptionTypeInvalidAssets() public {
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, DAI_A, DAI_A));
-        _newOption(
-            DAI_A, // underlyingAsset
-            testExerciseTimestamp, // exerciseTimestamp
-            testExpiryTimestamp, // expiryTimestamp
-            DAI_A, // exerciseAsset
-            testUnderlyingAmount, // underlyingAmount
-            testExerciseAmount // exerciseAmount
-        );
+    function testRevertNewOptionTypeWhenExerciseWindowTooShort() public {
+        vm.expectRevert(IOptionSettlementEngine.ExerciseWindowTooShort.selector);
+
+        (uint256 optionId, IOptionSettlementEngine.Option memory option) = _newOption({
+            underlyingAsset: DAI_A,
+            exerciseTimestamp: 2_000_000_000,
+            expiryTimestamp: 2_000_000_000 + 1 days - 1 seconds,
+            exerciseAsset: WETH_A,
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAmount: testExerciseAmount
+        });
     }
+
+    function testRevertNewOptionTypeWhenInvalidAssets() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOptionSettlementEngine.InvalidAssets.selector,
+                DAI_A,
+                DAI_A
+            )
+        );
+
+        _newOption({
+            underlyingAsset: DAI_A,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp,
+            exerciseAsset: DAI_A,
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAmount: testExerciseAmount
+        });
+    }
+
+    // TODO test for Check total supplies and ensure the option will be exercisable
 
     function testFailAssignExercise() public {
         // Exercise an option before anyone has written it
@@ -1345,6 +1431,13 @@ contract OptionSettlementTest is Test, NFTreceiver {
             return;
         }
         assertEq(assignedAmount, bucket.amountExercised);
+    }
+
+    function _createOptionIdFromStruct(IOptionSettlementEngine.Option memory optionInfo) internal pure returns (uint256) {
+        bytes20 optionHash = bytes20(keccak256(abi.encode(optionInfo)));
+        uint160 optionKey = uint160(optionHash);
+
+        return uint256(optionKey) << 96;
     }
 
     function assertEq(IOptionSettlementEngine.Option memory actual, IOptionSettlementEngine.Option memory expected)

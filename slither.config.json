@@ -1,4 +1,5 @@
 {
+    "compile_force_framework": "foundry",
     "solc_remaps": [
         "base64/=lib/base64/src/",
         "chainlink/=lib/chainlink/src/",

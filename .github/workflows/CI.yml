@@ -90,4 +90,6 @@ jobs:
         run: forge install
 
       - name: Run Slither
-        run: poetry run slither --solc-remaps "solmate=lib/solmate/src chainlink=lib/chainlink base64=lib/base64/src" --sarif results.sarif --fail_high --solc-args optimize src/
+        run: poetry run slither --solc-remaps "solmate=lib/solmate/src chainlink=lib/chainlink base64=lib/base64/src" --sarif results.sarif --solc-args optimize src/
+        with:
+          fail_on: high

@@ -63,5 +63,6 @@ jobs:
         with:
           target: "src/"
           slither-config: slither.config.json
+          foundry_ignore_compile: true
           sarif: results.sarif
           fail-on: high

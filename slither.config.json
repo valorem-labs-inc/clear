@@ -1,5 +1,5 @@
 {
-    "settings": {
+    "solc_args": {
         "optimizer": true
     },
     "solc_remaps": [

@@ -1,5 +1,8 @@
 # Valorem Options V1 Core
 
+![ci](https://github.com/valorem-labs-inc/valorem-core/actions/workflows/CI.yml/badge.svg)
+[![codecov](https://codecov.io/gh/valorem-labs-inc/valorem-core/branch/master/graph/badge.svg?token=M52NC4Q3SW)](https://codecov.io/gh/valorem-labs-inc/valorem-core)
+
 This repository contains a binary smart contract system comprised of many libraries,
 which together make the Valorem Options V1 Core. The Core contracts provide an option
 settlement engine upon which more complex systems can be built.

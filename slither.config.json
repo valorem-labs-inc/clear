@@ -1,0 +1,10 @@
+{
+    "solc_args": "optimize",
+    "solc_remaps": [
+        "base64/=lib/base64/src/",
+        "chainlink/=lib/chainlink/src/",
+        "ds-test/=lib/ds-test/src/",
+        "forge-std/=lib/forge-std/src/",
+        "solmate/=lib/solmate/src/"
+    ]
+}

@@ -25,7 +25,7 @@ jobs:
         run: forge install
 
       - name: Check gas snapshots
-        run: forge snapshot # --check TODO get /master gas snapshot up-to-date
+        run: forge snapshot # --check TODO re-enable once /master gas snapshot is up-to-date
         env:
           RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
@@ -41,27 +41,7 @@ jobs:
         env:
           RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
-      - uses: codecov/codecov-action@v3 # TODO grant access, add token, and determine fail threshold
-
-  # integration-tests:
-  #   name: Forge integration tests
-  #   runs-on: ubuntu-latest
-  #   steps:
-
-  #     - uses: actions/checkout@v3
-
-  #     - name: Install Foundry
-  #       uses: onbjerg/foundry-toolchain@v1
-  #       with:
-  #         version: nightly
-      
-  #     - name: Install submodules
-  #       run: forge install
-
-  #     - name: Run tests
-  #       run: forge test --optimize --match-contract integration
-  #       env:
-  #         RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
+      - uses: codecov/codecov-action@v3
 
   static-analysis:
     name: Slither static analysis
@@ -85,40 +65,3 @@ jobs:
           slither-config: slither.config.json
           sarif: results.sarif
           fail-on: high
-
-
-
-      # - uses: actions/setup-node@v2
-
-      # - name: Install dev dependencies
-      #   run: npm install
-
-      # - name: Set up python
-      #   id: setup-python
-      #   uses: actions/setup-python@v2
-      #   with:
-      #     python-version: 3.9
-
-      # - name: Install Poetry
-      #   uses: snok/install-poetry@v1
-
-      # - name: Load cached venv
-      #   id: cached-poetry-dependencies
-      #   uses: actions/cache@v2
-      #   with:
-      #     path: .venv
-      #     key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
-
-      # - name: Install dependencies
-      #   if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      #   run: poetry install --no-interaction --no-root
-
-      # - name: Install library
-      #   run: poetry install --no-interaction
-
-      # - name: Run lint check
-      #   run: npm run lint:check
-
-      # Too slow to run regularly
-      #- name: Run audit
-      #  run: poetry run slither --solc-remaps @openzeppelin=lib/openzeppelin-contracts --solc-args optimize src/

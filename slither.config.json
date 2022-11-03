@@ -1,5 +1,5 @@
 {
-    "solc_args": "optimizer",
+    "solc_args": "optimize",
     "solc_remaps": [
         "base64/=lib/base64/src/",
         "chainlink/=lib/chainlink/src/",

@@ -7,7 +7,7 @@ on:
 
 jobs:
   quick-checks-unit-tests:
-    name: Forge quick checks and unit tests
+    name: Quick checks and unit tests
     runs-on: ubuntu-latest
     steps:
 

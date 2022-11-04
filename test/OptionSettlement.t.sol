@@ -960,7 +960,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseAmount: exerciseAmountExceedsTotalSupply
         });
     }
-    
+
     // write()
     // L211
     // L277
@@ -981,50 +981,118 @@ contract OptionSettlementTest is Test, NFTreceiver {
     // L392
     // L399–400
 
-    // _writeOptions()
+    function testRevertWriteWhenInvalidOption() public {
+        uint256 invalidOptionId = testOptionId + 1;
 
-
-    function testFailAssignExercise() public {
-        // Exercise an option before anyone has written it
-        vm.expectRevert(IOptionSettlementEngine.NoClaims.selector);
-        engine.exercise(testOptionId, 1);
-    }
-
-    function testFailWriteInvalidOption() public {
-        vm.expectRevert(IOptionSettlementEngine.InvalidOption.selector);
-        engine.write(testOptionId + 1, 1);
-    }
-
-    function testFailWriteExpiredOption() public {
-        vm.warp(testExpiryTimestamp);
-        vm.expectRevert(IOptionSettlementEngine.ExpiredOption.selector);
-    }
-
-    function testFailExerciseBeforeExcercise() public {
-        (, IOptionSettlementEngine.Option memory option) = _newOption(
-            WETH_A, // underlyingAsset
-            testExerciseTimestamp + 1, // exerciseTimestamp
-            testExpiryTimestamp + 1, // expiryTimestamp
-            WETH_A, // exerciseAsset
-            testUnderlyingAmount, // underlyingAmount
-            testExerciseAmount // exerciseAmount
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId)
         );
-        uint256 badOptionId = engine.newOptionType(option);
 
+        engine.write(invalidOptionId, 1);
+    }
+
+    function testRevertWriteWhenClaimIdDoesNotEncodeOptionId() public {
+        uint256 option1Claim1 = engine.getTokenId(0xDEADBEEF1, 0xCAFECAFE1);
+        uint256 option2WithoutClaim = engine.getTokenId(0xDEADBEEF2, 0x0);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOptionSettlementEngine.EncodedOptionIdInClaimIdDoesNotMatchProvidedOptionId.selector,
+                option1Claim1,
+                option2WithoutClaim
+            )
+        );
+
+        engine.write(option2WithoutClaim, 1, option1Claim1);
+    }
+
+    function testRevertWriteWhenAmountWrittenIsZero() public {
+        uint112 invalidWriteAmount = 0;
+
+        vm.expectRevert(IOptionSettlementEngine.AmountWrittenCannotBeZero.selector);
+
+        engine.write(testOptionId, invalidWriteAmount);
+    }
+
+    // TODO how can a user hit InvalidOption revert on write() L227 ?
+
+    function testRevertWriteExpiredOption() public {
+        vm.warp(testExpiryTimestamp);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
+        );
+
+        engine.write(testOptionId, 1);
+    }
+
+    function testRevertWriteWhenWriterDoesNotOwnClaim() public {
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 1);
+        vm.stopPrank();
+
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
+
+        vm.prank(BOB);
+        engine.write(testOptionId, 1, claimId);
+    }
+
+    // TODO how can a user redeem a claim (>= expiry) and write new options to the same contract ?
+
+    // function testRevertWriteWhenWritingToLotAlreadyClaimed() public {
+    //     vm.startPrank(ALICE);
+    //     uint256 claimId = engine.write(testOptionId, 1);
+
+    //     vm.warp(testExerciseTimestamp + 1 seconds);
+
+    //     engine.redeem(claimId);
+
+    //     vm.expectRevert(
+    //         abi.encodeWithSelector(IOptionSettlementEngine.AlreadyClaimed.selector, claimId)
+    //     );
+
+    //     engine.write(testOptionId, 1, claimId);
+    //     vm.stopPrank();
+    // }
+
+    // TODO NoClaims error is not being thrown anywhere anymore
+
+    // function testRevertExerciseFailAssignExercise() public {
+    //     // Exercise an option before anyone has written it
+    //     vm.expectRevert(IOptionSettlementEngine.NoClaims.selector);
+    //     engine.exercise(testOptionId, 1);
+    // }
+
+    function testRevertExerciseWhenBeforeExerciseTimestamp() public {
         // Alice writes
         vm.startPrank(ALICE);
-        engine.write(badOptionId, 1);
-        engine.safeTransferFrom(ALICE, BOB, badOptionId, 1, "");
+        engine.write(testOptionId, 1);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
         vm.stopPrank();
 
         // Bob immediately exercises before exerciseTimestamp
         vm.startPrank(BOB);
-        vm.expectRevert(IOptionSettlementEngine.ExpiredOption.selector);
-        engine.exercise(badOptionId, 1);
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.ExerciseTooEarly.selector, testOptionId, testExerciseTimestamp)
+        );
+        engine.exercise(testOptionId, 1);
         vm.stopPrank();
     }
 
-    function testFailExerciseAtExpiry() public {
+    function testRevertExerciseWhenInvalidOptionId() public {
+        vm.startPrank(ALICE);
+        engine.write(testOptionId, 1);
+
+        uint256 invalidOptionId = testOptionId + 1;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId)
+        );
+
+        engine.exercise(invalidOptionId, 1);
+    }
+
+    function testRevertExerciseWhenAtExpiry() public {
         // Alice writes
         vm.startPrank(ALICE);
         engine.write(testOptionId, 1);
@@ -1036,27 +1104,33 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Bob exercises
         vm.startPrank(BOB);
-        vm.expectRevert(IOptionSettlementEngine.ExpiredOption.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
+        );
         engine.exercise(testOptionId, 1);
         vm.stopPrank();
     }
 
-    function testFailExerciseExpiredOption() public {
+    function testRevertExerciseWhenAfterExpiry() public {
         // Alice writes
         vm.startPrank(ALICE);
         engine.write(testOptionId, 1);
         engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
         vm.stopPrank();
 
-        // Fast-forward to after expiry
-        vm.warp(testExpiryTimestamp + 1);
+        // Fast-forward to at expiry
+        vm.warp(testExpiryTimestamp + 1 seconds);
 
         // Bob exercises
         vm.startPrank(BOB);
-        vm.expectRevert(IOptionSettlementEngine.ExpiredOption.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
+        );
         engine.exercise(testOptionId, 1);
         vm.stopPrank();
     }
+
+    
 
     function testFailRedeemInvalidClaim() public {
         vm.startPrank(ALICE);
@@ -1105,40 +1179,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.redeem(claimId);
     }
 
-    function testWriteZeroOptionsFails() public {
-        vm.startPrank(ALICE);
-        vm.expectRevert(IOptionSettlementEngine.AmountWrittenCannotBeZero.selector);
-        engine.write(testOptionId, 0);
-    }
-
     function testUriFailsWithTokenIdEncodingNonexistantOptionType() public {
         uint256 tokenId = 420;
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, tokenId));
         engine.uri(420);
-    }
-
-    function testRevertIfClaimIdDoesNotEncodeOptionId() public {
-        uint256 option1Claim1 = engine.getTokenId(0xDEADBEEF1, 0xCAFECAFE1);
-        uint256 option2 = engine.getTokenId(0xDEADBEEF2, 0x0);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOptionSettlementEngine.EncodedOptionIdInClaimIdDoesNotMatchProvidedOptionId.selector,
-                option1Claim1,
-                option2
-            )
-        );
-        engine.write(option2, 1, option1Claim1);
-    }
-
-    function testRevertIfWriterDoesNotOwnClaim() public {
-        vm.startPrank(ALICE);
-        uint256 claimId = engine.write(testOptionId, 1);
-        vm.stopPrank();
-
-        vm.startPrank(BOB);
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
-        engine.write(testOptionId, 1, claimId);
     }
 
     // **********************************************************************

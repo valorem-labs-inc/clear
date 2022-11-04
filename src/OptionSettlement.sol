@@ -420,37 +420,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     // **********************************************************************
     //                        INTERNAL HELPERS
     // **********************************************************************
-    /**
-     * @dev Writes the specified number of options, transferring in the requisite
-     * underlying assets, and trasnsferring fungible ERC1155 tokens to caller.
-     * Reverts if insufficient underlying assets are not available from caller.
-     * @param _optionId The options to write.
-     * @param amount The amount of options to write.
-     */
-    function _writeOptions(uint160 _optionId, uint112 amount) internal returns (Option storage) {
-        if (amount == 0) {
-            revert AmountWrittenCannotBeZero();
-        }
-
-        Option storage optionRecord = _option[_optionId];
-
-        if (optionRecord.expiryTimestamp <= block.timestamp) {
-            revert ExpiredOption(uint256(_optionId) << 96, optionRecord.expiryTimestamp);
-        }
-
-        uint256 rxAmount = amount * optionRecord.underlyingAmount;
-        uint256 fee = ((rxAmount / 10000) * feeBps);
-        address underlyingAsset = optionRecord.underlyingAsset;
-
-        // Transfer the requisite underlying asset
-        SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
-
-        feeBalance[underlyingAsset] += fee;
-
-        emit FeeAccrued(underlyingAsset, msg.sender, fee);
-
-        return optionRecord;
-    }
 
     /// @dev Performs fair exercise assignment by pseudorandomly selecting a claim
     /// bucket between the intial creation of the option type and "today". The buckets

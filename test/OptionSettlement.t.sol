@@ -920,7 +920,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         });
     }
 
-    function testRevertNewOptionTypeWhenInvalidAssets() public {
+    function testRevertNewOptionTypeWhenAssetsAreTheSame() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, DAI_A, DAI_A));
 
         _newOption({
@@ -933,7 +933,56 @@ contract OptionSettlementTest is Test, NFTreceiver {
         });
     }
 
-    // TODO test for Check total supplies and ensure the option will be exercisable
+    function testRevertNewOptionTypeWhenTotalSuppliesAreTooLowToExercise() public {
+        uint96 underlyingAmountExceedsTotalSupply = uint96(IERC20(DAI_A).totalSupply() + 1);
+
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, DAI_A, WETH_A));
+
+        _newOption({
+            underlyingAsset: DAI_A,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp,
+            exerciseAsset: WETH_A,
+            underlyingAmount: underlyingAmountExceedsTotalSupply,
+            exerciseAmount: testExerciseAmount
+        });
+        
+        uint96 exerciseAmountExceedsTotalSupply = uint96(IERC20(USDC_A).totalSupply() + 1);
+
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, USDC_A, WETH_A));
+
+        _newOption({
+            underlyingAsset: USDC_A,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp,
+            exerciseAsset: WETH_A,
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAmount: exerciseAmountExceedsTotalSupply
+        });
+    }
+    
+    // write()
+    // L211
+    // L277
+    // L230
+    // L263
+
+    // exercise()
+    // L297
+    // L303
+    // L307
+
+    // redeem()
+    // L341
+    // L347
+    // L353
+
+    // underlying()
+    // L392
+    // L399–400
+
+    // _writeOptions()
+
 
     function testFailAssignExercise() public {
         // Exercise an option before anyone has written it

@@ -141,25 +141,27 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     ///// @inheritdoc IOptionSettlementEngine
     function newOptionType(
         address underlyingAsset,
-        uint256 exerciseTimestamp,
-        uint256 expiryTimestamp,
+        uint40 exerciseTimestamp,
+        uint40 expiryTimestamp,
         address exerciseAsset,
-        uint256 underlyingAmount,
-        uint256 exerciseAmount
+        uint96 underlyingAmount,
+        uint96 exerciseAmount
     ) external returns (uint256 optionId) {
-        Option memory optionInfo = Option({
-            underlyingAsset: underlyingAsset,
-            underlyingAmount: uint96(underlyingAmount),
-            exerciseAsset: exerciseAsset,
-            exerciseAmount: uint96(exerciseAmount),
-            exerciseTimestamp: uint40(exerciseTimestamp),
-            expiryTimestamp: uint40(expiryTimestamp),
-            settlementSeed: 0,
-            nextClaimId: 0
-        });
-
         // Check that a duplicate option type doesn't exist
-        bytes20 optionHash = bytes20(keccak256(abi.encode(optionInfo)));
+        bytes20 optionHash = bytes20(
+            keccak256(
+                abi.encode(
+                    underlyingAsset,
+                    exerciseTimestamp,
+                    expiryTimestamp,
+                    exerciseAsset,
+                    underlyingAmount,
+                    uint160(0),
+                    exerciseAmount,
+                    uint96(0)
+                )
+            )
+        );
         uint160 optionKey = uint160(optionHash);
         optionId = uint256(optionKey) << 96;
 
@@ -169,46 +171,49 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
 
         // Make sure that expiry is at least 24 hours from now
-        if (optionInfo.expiryTimestamp < (block.timestamp + 1 days)) {
-            revert ExpiryTooSoon(optionId, optionInfo.expiryTimestamp); // TODO what is the point of including optionId that will never get created here?
+        if (expiryTimestamp < (block.timestamp + 1 days)) {
+            revert ExpiryTooSoon(optionId, expiryTimestamp); // TODO what is the point of including optionId that will never get created here?
         }
 
         // Ensure the exercise window is at least 24 hours
-        if (optionInfo.expiryTimestamp < (optionInfo.exerciseTimestamp + 1 days)) {
+        if (expiryTimestamp < (exerciseTimestamp + 1 days)) {
             revert ExerciseWindowTooShort();
         }
 
         // The exercise and underlying assets can't be the same
-        if (optionInfo.exerciseAsset == optionInfo.underlyingAsset) {
-            revert InvalidAssets(optionInfo.exerciseAsset, optionInfo.underlyingAsset);
+        if (exerciseAsset == underlyingAsset) {
+            revert InvalidAssets(exerciseAsset, underlyingAsset);
         }
-
-        optionInfo.settlementSeed = optionKey;
-        optionInfo.nextClaimId = 1;
 
         // Check that both tokens are ERC20 by instantiating them and checking supply
-        ERC20 underlyingToken = ERC20(optionInfo.underlyingAsset);
-        ERC20 exerciseToken = ERC20(optionInfo.exerciseAsset);
+        ERC20 underlyingToken = ERC20(underlyingAsset);
+        ERC20 exerciseToken = ERC20(exerciseAsset);
 
         // Check total supplies and ensure the option will be exercisable
-        if (
-            underlyingToken.totalSupply() < optionInfo.underlyingAmount
-                || exerciseToken.totalSupply() < optionInfo.exerciseAmount
-        ) {
-            revert InvalidAssets(optionInfo.underlyingAsset, optionInfo.exerciseAsset);
+        if (underlyingToken.totalSupply() < underlyingAmount || exerciseToken.totalSupply() < exerciseAmount) {
+            revert InvalidAssets(underlyingAsset, exerciseAsset);
         }
 
-        _option[optionKey] = optionInfo;
+        _option[optionKey] = Option({
+            underlyingAsset: underlyingAsset,
+            underlyingAmount: underlyingAmount,
+            exerciseAsset: exerciseAsset,
+            exerciseAmount: exerciseAmount,
+            exerciseTimestamp: exerciseTimestamp,
+            expiryTimestamp: expiryTimestamp,
+            settlementSeed: optionKey,
+            nextClaimId: 1
+        });
 
         emit NewOptionType(
             optionId,
-            optionInfo.exerciseAsset,
-            optionInfo.underlyingAsset,
-            optionInfo.exerciseAmount,
-            optionInfo.underlyingAmount,
-            optionInfo.exerciseTimestamp,
-            optionInfo.expiryTimestamp,
-            optionInfo.nextClaimId
+            exerciseAsset,
+            underlyingAsset,
+            exerciseAmount,
+            underlyingAmount,
+            exerciseTimestamp,
+            expiryTimestamp,
+            1
             );
     }
 

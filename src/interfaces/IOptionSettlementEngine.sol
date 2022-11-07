@@ -341,11 +341,11 @@ interface IOptionSettlementEngine {
     //  */
     function newOptionType(
         address underlyingAsset,
-        uint256 exerciseTimestamp,
-        uint256 expiryTimestamp,
+        uint40 exerciseTimestamp,
+        uint40 expiryTimestamp,
         address exerciseAsset,
-        uint256 underlyingAmount,
-        uint256 exerciseAmount
+        uint96 underlyingAmount,
+        uint96 exerciseAmount
     ) external returns (uint256 optionId);
     // function newOptionType(
     //     address underlyingAsset,

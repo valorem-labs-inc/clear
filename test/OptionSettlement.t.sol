@@ -503,7 +503,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
             settlementSeed: 0,
             nextClaimId: 0
         });
-        uint256 oTokenId = engine.newOptionType(DAI_A, block.timestamp, block.timestamp + 30 days, USDC_A, 1, 100);
+        uint256 oTokenId =
+            engine.newOptionType(DAI_A, uint40(block.timestamp), uint40(block.timestamp + 30 days), USDC_A, 1, 100);
 
         // Write 2 separate options lots
         vm.prank(ALICE);
@@ -543,7 +544,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
             settlementSeed: 0,
             nextClaimId: 0
         });
-        uint256 oTokenId = engine.newOptionType(DAI_A, block.timestamp, block.timestamp + 30 days, USDC_A, 1, 100);
+        uint256 oTokenId =
+            engine.newOptionType(DAI_A, uint40(block.timestamp), uint40(block.timestamp + 30 days), USDC_A, 1, 100);
 
         // Write 2 separate options lots
         vm.prank(ALICE);
@@ -590,7 +592,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
             settlementSeed: 0,
             nextClaimId: 0
         });
-        uint256 oTokenId = engine.newOptionType(DAI_A, block.timestamp, block.timestamp + 30 days, USDC_A, 1, 100);
+        uint256 oTokenId =
+            engine.newOptionType(DAI_A, uint40(block.timestamp), uint40(block.timestamp + 30 days), USDC_A, 1, 100);
 
         // Update struct values to match stored option data structure
         bytes20 optionHash = bytes20(keccak256(abi.encode(option)));
@@ -613,7 +616,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
             settlementSeed: 0,
             nextClaimId: 0
         });
-        uint256 oTokenId = engine.newOptionType(DAI_A, block.timestamp, block.timestamp + 30 days, USDC_A, 1, 100);
+        uint256 oTokenId =
+            engine.newOptionType(DAI_A, uint40(block.timestamp), uint40(block.timestamp + 30 days), USDC_A, 1, 100);
 
         (uint160 decodedOptionId,) = engine.getDecodedIdComponents(oTokenId);
 

@@ -138,8 +138,26 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return TokenURIGenerator.constructTokenURI(params);
     }
 
-    /// @inheritdoc IOptionSettlementEngine
-    function newOptionType(Option memory optionInfo) external returns (uint256 optionId) {
+    ///// @inheritdoc IOptionSettlementEngine
+    function newOptionType(
+        address underlyingAsset,
+        uint256 exerciseTimestamp,
+        uint256 expiryTimestamp,
+        address exerciseAsset,
+        uint256 underlyingAmount,
+        uint256 exerciseAmount
+    ) external returns (uint256 optionId) {
+        Option memory optionInfo = Option({
+            underlyingAsset: underlyingAsset,
+            underlyingAmount: uint96(underlyingAmount),
+            exerciseAsset: exerciseAsset,
+            exerciseAmount: uint96(exerciseAmount),
+            exerciseTimestamp: uint40(exerciseTimestamp),
+            expiryTimestamp: uint40(expiryTimestamp),
+            settlementSeed: 0,
+            nextClaimId: 0
+        });
+        
         // Check that a duplicate option type doesn't exist
         bytes20 optionHash = bytes20(keccak256(abi.encode(optionInfo)));
         uint160 optionKey = uint160(optionHash);

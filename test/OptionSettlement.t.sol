@@ -651,7 +651,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
             1
             );
 
-        uint256 oTokenId = engine.newOptionType(DAI_A, testExerciseTimestamp, testExpiryTimestamp, WETH_A, testUnderlyingAmount, testExerciseAmount);
+        uint256 oTokenId = engine.newOptionType(
+            DAI_A, testExerciseTimestamp, testExpiryTimestamp, WETH_A, testUnderlyingAmount, testExerciseAmount
+        );
     }
 
     function testEventWriteWhenNewClaim() public {
@@ -875,7 +877,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.OptionsTypeExists.selector, optionId));
 
-        engine.newOptionType(DAI_A, testExerciseTimestamp, testExpiryTimestamp, WETH_A, testUnderlyingAmount, testExerciseAmount);
+        engine.newOptionType(
+            DAI_A, testExerciseTimestamp, testExpiryTimestamp, WETH_A, testUnderlyingAmount, testExerciseAmount
+        );
     }
 
     function testRevertNewOptionTypeWhenExpiryTooSoon() public {
@@ -961,7 +965,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
             testUnderlyingAmount, // underlyingAmount
             testExerciseAmount // exerciseAmount
         );
-        uint256 badOptionId = engine.newOptionType(WETH_A, testExerciseTimestamp, testExpiryTimestamp, WETH_A, testUnderlyingAmount, testExerciseAmount);
+        uint256 badOptionId = engine.newOptionType(
+            WETH_A, testExerciseTimestamp, testExpiryTimestamp, WETH_A, testUnderlyingAmount, testExerciseAmount
+        );
 
         // Alice writes
         vm.startPrank(ALICE);
@@ -1484,7 +1490,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseAmount,
             0 // default zero for next claim id
         );
-        optionId = engine.newOptionType(underlyingAsset, exerciseTimestamp, expiryTimestamp, exerciseAsset, underlyingAmount, exerciseAmount);
+        optionId = engine.newOptionType(
+            underlyingAsset, exerciseTimestamp, expiryTimestamp, exerciseAsset, underlyingAmount, exerciseAmount
+        );
     }
 
     function _writeAndExerciseOption(uint256 optionId, address writer, address exerciser)

@@ -1015,6 +1015,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     // TODO how can a user hit InvalidOption revert on write() L227 ?
+    // 
 
     function testRevertWriteExpiredOption() public {
         vm.warp(testExpiryTimestamp);
@@ -1037,8 +1038,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.write(testOptionId, 1, claimId);
     }
 
-    // TODO how can a user redeem a claim (>= expiry) and write new options to the same contract ?
-
+    // TODO how can a user redeem a claim (>= expiry) and write new options to the same contract,
+    // when we can't add new options to an expired contract ?
     // function testRevertWriteWhenWritingToLotAlreadyClaimed() public {
     //     vm.startPrank(ALICE);
     //     uint256 claimId = engine.write(testOptionId, 1);
@@ -1056,7 +1057,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
     // }
 
     // TODO NoClaims error is not being thrown anywhere anymore
-
     // function testRevertExerciseFailAssignExercise() public {
     //     // Exercise an option before anyone has written it
     //     vm.expectRevert(IOptionSettlementEngine.NoClaims.selector);
@@ -1128,55 +1128,100 @@ contract OptionSettlementTest is Test, NFTreceiver {
         );
         engine.exercise(testOptionId, 1);
         vm.stopPrank();
+    }    
+
+    function testRevertRedeemWhenInvalidClaim() public {
+        uint256 badClaimId = engine.getTokenId(0xDEADBEEF, 0);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.InvalidClaim.selector, badClaimId)
+        );
+
+        vm.prank(ALICE);
+        engine.redeem(badClaimId);
     }
 
-    
-
-    function testFailRedeemInvalidClaim() public {
-        vm.startPrank(ALICE);
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidClaim.selector, abi.encode(69)));
-        engine.redeem(69);
-    }
-
-    function testFailRedeemBalanceTooLow() public {
-        // Alice writes and transfers to bob, then alice tries to redeem
+    function testRevertRedeemWhenBalanceTooLow() public {
+        // Alice writes and transfers to Bob, then Alice tries to redeem
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
-        engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
-        vm.expectRevert(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector);
+        engine.safeTransferFrom(ALICE, BOB, claimId, 1, "");
+
+        vm.warp(testExpiryTimestamp);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId
+        ));
+
         engine.redeem(claimId);
         vm.stopPrank();
+
         // Carol feels left out and tries to redeem what she can't
-        vm.startPrank(CAROL);
-        vm.expectRevert(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId
+        ));
+
+        vm.prank(CAROL);
         engine.redeem(claimId);
-        vm.stopPrank();
-        // Bob redeems, which should burn, and then be unable to redeem a second time
+
+        // Bob redeems, which burns the Claim NFT, and then is unable to redeem a second time
         vm.startPrank(BOB);
         engine.redeem(claimId);
-        vm.expectRevert(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId
+        ));
+
         engine.redeem(claimId);
+        vm.stopPrank();
     }
 
-    function testFailRedeemAlreadyClaimed() public {
-        vm.startPrank(ALICE);
-        uint256 claimId = engine.write(testOptionId, 1);
-        // write a second option so balance will be > 0
-        engine.write(testOptionId, 1);
-        vm.warp(testExpiryTimestamp + 1);
-        engine.redeem(claimId);
-        vm.expectRevert(IOptionSettlementEngine.AlreadyClaimed.selector);
-        engine.redeem(claimId);
-    }
+    // TODO how can a user have balance != 0 of a claim which is burned ?
+    // in other words, the second claimId returned by write() is what would be the token
+    // of balance > 0, but that is not used here
 
-    function testRedeemClaimTooSoon() public {
+    // Note I'm not sure AlreadyClaimed() error is reachable, either via redeem() or write()
+
+    // function testRevertRedeemAlreadyClaimed() public {
+    //     vm.startPrank(ALICE);
+    //     uint256 claimId = engine.write(testOptionId, 1);
+
+    //     // write a second option so balance will be > 0
+    //     engine.write(testOptionId, 1);
+
+    //     vm.warp(testExpiryTimestamp);
+
+    //     engine.redeem(claimId);
+
+    //     vm.expectRevert(
+    //         abi.encodeWithSelector(IOptionSettlementEngine.AlreadyClaimed.selector, claimId
+    //     ));
+
+    //     engine.redeem(claimId);
+    //     vm.stopPrank();
+    // }
+
+    function testRevertRedeemClaimTooSoon() public {
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
-        vm.warp(testExerciseTimestamp - 1);
+
+        vm.warp(testExerciseTimestamp - 1 seconds);
+
         vm.expectRevert(
             abi.encodeWithSelector(IOptionSettlementEngine.ClaimTooSoon.selector, claimId, testExpiryTimestamp)
         );
+
         engine.redeem(claimId);
+    }
+
+    function testRevertUnderlyingWhenNoOptionIsInitialized() public {
+        uint256 badOptionId = 123;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, badOptionId)
+        );
+
+        engine.underlying(badOptionId);
     }
 
     function testUriFailsWithTokenIdEncodingNonexistantOptionType() public {

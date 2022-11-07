@@ -946,7 +946,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: underlyingAmountExceedsTotalSupply,
             exerciseAmount: testExerciseAmount
         });
-        
+
         uint96 exerciseAmountExceedsTotalSupply = uint96(IERC20(USDC_A).totalSupply() + 1);
 
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, USDC_A, WETH_A));
@@ -984,9 +984,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testRevertWriteWhenInvalidOption() public {
         uint256 invalidOptionId = testOptionId + 1;
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId));
 
         engine.write(invalidOptionId, 1);
     }
@@ -1014,8 +1012,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.write(testOptionId, invalidWriteAmount);
     }
 
-    // TODO how can a user hit InvalidOption revert on write() L227 ?
-    // 
+    // TODO write() L227
 
     function testRevertWriteExpiredOption() public {
         vm.warp(testExpiryTimestamp);
@@ -1038,8 +1035,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.write(testOptionId, 1, claimId);
     }
 
-    // TODO how can a user redeem a claim (>= expiry) and write new options to the same contract,
-    // when we can't add new options to an expired contract ?
+    // TODO write() L263
     // function testRevertWriteWhenWritingToLotAlreadyClaimed() public {
     //     vm.startPrank(ALICE);
     //     uint256 claimId = engine.write(testOptionId, 1);
@@ -1056,7 +1052,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     //     vm.stopPrank();
     // }
 
-    // TODO NoClaims error is not being thrown anywhere anymore
+    // TODO exercise()
     // function testRevertExerciseFailAssignExercise() public {
     //     // Exercise an option before anyone has written it
     //     vm.expectRevert(IOptionSettlementEngine.NoClaims.selector);
@@ -1073,7 +1069,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // Bob immediately exercises before exerciseTimestamp
         vm.startPrank(BOB);
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ExerciseTooEarly.selector, testOptionId, testExerciseTimestamp)
+            abi.encodeWithSelector(
+                IOptionSettlementEngine.ExerciseTooEarly.selector, testOptionId, testExerciseTimestamp
+            )
         );
         engine.exercise(testOptionId, 1);
         vm.stopPrank();
@@ -1085,9 +1083,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         uint256 invalidOptionId = testOptionId + 1;
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId));
 
         engine.exercise(invalidOptionId, 1);
     }
@@ -1128,14 +1124,12 @@ contract OptionSettlementTest is Test, NFTreceiver {
         );
         engine.exercise(testOptionId, 1);
         vm.stopPrank();
-    }    
+    }
 
     function testRevertRedeemWhenInvalidClaim() public {
         uint256 badClaimId = engine.getTokenId(0xDEADBEEF, 0);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.InvalidClaim.selector, badClaimId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidClaim.selector, badClaimId));
 
         vm.prank(ALICE);
         engine.redeem(badClaimId);
@@ -1149,17 +1143,13 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         vm.warp(testExpiryTimestamp);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId
-        ));
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
 
         engine.redeem(claimId);
         vm.stopPrank();
 
         // Carol feels left out and tries to redeem what she can't
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId
-        ));
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
 
         vm.prank(CAROL);
         engine.redeem(claimId);
@@ -1168,20 +1158,13 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.startPrank(BOB);
         engine.redeem(claimId);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId
-        ));
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
 
         engine.redeem(claimId);
         vm.stopPrank();
     }
 
-    // TODO how can a user have balance != 0 of a claim which is burned ?
-    // in other words, the second claimId returned by write() is what would be the token
-    // of balance > 0, but that is not used here
-
-    // Note I'm not sure AlreadyClaimed() error is reachable, either via redeem() or write()
-
+    // TODO redeem() L353
     // function testRevertRedeemAlreadyClaimed() public {
     //     vm.startPrank(ALICE);
     //     uint256 claimId = engine.write(testOptionId, 1);
@@ -1217,9 +1200,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testRevertUnderlyingWhenNoOptionIsInitialized() public {
         uint256 badOptionId = 123;
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, badOptionId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, badOptionId));
 
         engine.underlying(badOptionId);
     }

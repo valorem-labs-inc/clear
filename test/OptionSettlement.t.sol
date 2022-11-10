@@ -442,21 +442,33 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // assign a single option on day 2
         engine.exercise(optionId, 1);
+        _assertAssignedInBucket(optionId, 0, 0);
         _assertAssignedInBucket(optionId, 1, 0);
         _assertAssignedInBucket(optionId, 2, 1);
         _assertAssignedInBucket(optionId, 3, 0);
+        _assertAssignedInBucket(optionId, 4, 0);
+        _assertAssignedInBucket(optionId, 5, 0);
+        _assertAssignedInBucket(optionId, 6, 0);
+
+        // assigns a single option on day 4
+        engine.exercise(optionId, 1);
+        _assertAssignedInBucket(optionId, 0, 0);
+        _assertAssignedInBucket(optionId, 1, 0);
+        _assertAssignedInBucket(optionId, 2, 1);
+        _assertAssignedInBucket(optionId, 3, 0);
+        _assertAssignedInBucket(optionId, 4, 1);
+        _assertAssignedInBucket(optionId, 5, 0);
+        _assertAssignedInBucket(optionId, 6, 0);
 
         // assigns a single option on day 1
         engine.exercise(optionId, 1);
+        _assertAssignedInBucket(optionId, 0, 0);
         _assertAssignedInBucket(optionId, 1, 1);
         _assertAssignedInBucket(optionId, 2, 1);
         _assertAssignedInBucket(optionId, 3, 0);
-
-        // assigns a single option on day 3
-        engine.exercise(optionId, 1);
-        _assertAssignedInBucket(optionId, 1, 1);
-        _assertAssignedInBucket(optionId, 2, 1);
-        _assertAssignedInBucket(optionId, 3, 1);
+        _assertAssignedInBucket(optionId, 4, 1);
+        _assertAssignedInBucket(optionId, 5, 0);
+        _assertAssignedInBucket(optionId, 6, 0);
     }
 
     // **********************************************************************
@@ -1594,7 +1606,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         } catch {
             return;
         }
-        assertEq(assignedAmount, bucket.amountExercised);
+        assertEq(bucket.amountExercised, assignedAmount);
     }
 
     /// @dev probability in bips

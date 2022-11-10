@@ -262,7 +262,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert InvalidOption(_optionIdU160b);
         }
         if (expiry <= block.timestamp) {
-            revert ExpiredOption(uint256(_optionIdU160b) << 96, expiry);
+            revert ExpiredOption(uint256(_optionIdU160b) << 96, expiry); // TODO measure gas savings and just use optionId
         }
 
         uint256 rxAmount = amount * optionRecord.underlyingAmount;

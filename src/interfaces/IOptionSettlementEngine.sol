@@ -6,6 +6,10 @@ import "./IERC1155Metadata.sol";
 /// @title A settlement engine for options
 /// @author 0xAlcibiades
 interface IOptionSettlementEngine {
+    /*//////////////////////////////////////////////////////////////
+    // Errors
+    //////////////////////////////////////////////////////////////*/
+
     /**
      * @notice The requested token is not found.
      * @param token token requested.
@@ -110,6 +114,10 @@ interface IOptionSettlementEngine {
     /// @notice The amount provided to write() must be > 0.
     error AmountWrittenCannotBeZero();
 
+    /*//////////////////////////////////////////////////////////////
+    // Events
+    //////////////////////////////////////////////////////////////*/
+
     /**
      * @notice Emitted when accrued protocol fees for a given token are swept to the
      * feeTo address.
@@ -196,6 +204,10 @@ interface IOptionSettlementEngine {
      */
     event ExerciseAssigned(uint256 indexed claimId, uint256 indexed optionId, uint112 amountAssigned);
 
+    /*//////////////////////////////////////////////////////////////
+    // Data structures
+    //////////////////////////////////////////////////////////////*/
+
     /// @dev This enumeration is used to determine the type of an ERC1155 subtoken in the engine.
     enum Type {
         None,
@@ -266,25 +278,9 @@ interface IOptionSettlementEngine {
         int256 exercisePosition;
     }
 
-    /**
-     * @notice The balance of protocol fees for a given token which have not yet
-     * been swept.
-     * @param token The token for the unswept fee balance.
-     * @return The balance of unswept fees.
-     */
-    function feeBalance(address token) external view returns (uint256);
-
-    /**
-     * @notice The protocol fee, expressed in basis points.
-     * @return The fee in basis points.
-     */
-    function feeBps() external view returns (uint8);
-
-    /**
-     * @notice Returns the address to which protocol fees are swept.
-     * @return The address to which fees are swept
-     */
-    function feeTo() external view returns (address);
+    /*//////////////////////////////////////////////////////////////
+    // Options Info
+    //////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Returns the token type (e.g. Option/Claim) for a given token Id
@@ -321,17 +317,16 @@ interface IOptionSettlementEngine {
         returns (ClaimBucket memory claimBucketInfo);
 
     /**
-     * @notice Updates the address fees can be swept to.
-     * @param newFeeTo The new address to which fees will be swept.
+     * @notice Information about the position underlying a token, useful for determining
+     * value.
+     * @param tokenId The token id for which to retrieve the Underlying position.
+     * @return underlyingPositions The Underlying struct for the supplied tokenId.
      */
-    function setFeeTo(address newFeeTo) external;
+    function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions);
 
-    /**
-     * @notice Sweeps fees to the feeTo address if there are more than 0 wei for
-     * each address in tokens.
-     * @param tokens The tokens for which fees will be swept to the feeTo address.
-     */
-    function sweepFees(address[] memory tokens) external;
+    /*//////////////////////////////////////////////////////////////
+    // Write Options
+    //////////////////////////////////////////////////////////////*/
 
     // /**
     //  * @notice Create a new options type from optionInfo if it doesn't already exist
@@ -347,14 +342,6 @@ interface IOptionSettlementEngine {
         uint96 underlyingAmount,
         uint96 exerciseAmount
     ) external returns (uint256 optionId);
-    // function newOptionType(
-    //     address underlyingAsset,
-    //     uint256 underlyingAmount,
-    //     address exerciseAsset,
-    //     uint256 exerciseAmount,
-    //     uint256 exerciseTimestamp,
-    //     uint256 expiryTimestamp
-    // ) external returns (uint256 optionId);
 
     /**
      * @notice Writes a specified amount of the specified option, returning claim NFT id.
@@ -374,6 +361,10 @@ interface IOptionSettlementEngine {
      */
     function write(uint256 optionId, uint112 amount, uint256 claimId) external returns (uint256);
 
+    /*//////////////////////////////////////////////////////////////
+    // Exercise Options
+    //////////////////////////////////////////////////////////////*/
+
     /**
      * @notice Exercises specified amount of optionId, transferring in the exercise asset,
      * and transferring out the underlying asset if requirements are met. Will revert with
@@ -383,17 +374,50 @@ interface IOptionSettlementEngine {
      */
     function exercise(uint256 optionId, uint112 amount) external;
 
+    /*//////////////////////////////////////////////////////////////
+    // Redeem Options
+    //////////////////////////////////////////////////////////////*/
+
     /**
      * @notice Redeem a claim NFT, transfers the underlying tokens.
      * @param claimId The ID of the claim to redeem.
      */
     function redeem(uint256 claimId) external;
 
+    /*//////////////////////////////////////////////////////////////
+    // Protocol Admin
+    //////////////////////////////////////////////////////////////*/
+
     /**
-     * @notice Information about the position underlying a token, useful for determining
-     * value.
-     * @param tokenId The token id for which to retrieve the Underlying position.
-     * @return underlyingPositions The Underlying struct for the supplied tokenId.
+     * @notice The protocol fee, expressed in basis points.
+     * @return The fee in basis points.
      */
-    function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions);
+    function feeBps() external view returns (uint8);
+
+    /**
+     * @notice The balance of protocol fees for a given token which have not yet
+     * been swept.
+     * @param token The token for the unswept fee balance.
+     * @return The balance of unswept fees.
+     */
+    function feeBalance(address token) external view returns (uint256);
+
+    /**
+     * @notice Returns the address to which protocol fees are swept.
+     * @return The address to which fees are swept
+     */
+    function feeTo() external view returns (address);
+
+    /**
+     * @notice Updates the address fees can be swept to.
+     * @param newFeeTo The new address to which fees will be swept.
+     */
+    function setFeeTo(address newFeeTo) external;
+
+    /**
+     * @notice Sweeps fees to the feeTo address if there are more than 0 wei for
+     * each address in tokens.
+     * @param tokens The tokens for which fees will be swept to the feeTo address.
+     */
+    function sweepFees(address[] memory tokens) external;
 }

@@ -3,7 +3,7 @@ pragma solidity 0.8.11;
 
 import "forge-std/Test.sol";
 import "./interfaces/IERC20.sol";
-import "../src/OptionSettlement.sol";
+import "../src/OptionSettlementEngine.sol";
 
 /// @notice Receiver hook utility for NFT 'safe' transfers
 abstract contract NFTreceiver {
@@ -68,7 +68,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         testExpiryTimestamp = uint40(block.timestamp + testDuration);
         (testOptionId,) = _newOption({
             underlyingAsset: WETH_A,
-            exerciseTimestamp: testExerciseTimestamp,
+            earliestExerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
             exerciseAsset: DAI_A,
             underlyingAmount: testUnderlyingAmount,
@@ -339,7 +339,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         (uint256 optionId, IOptionSettlementEngine.Option memory option) = _newOption({
             underlyingAsset: WETH_A,
-            exerciseTimestamp: testExerciseTimestamp,
+            earliestExerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
             exerciseAsset: DAI_A,
             underlyingAmount: testUnderlyingAmount,
@@ -419,7 +419,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         testExpiryTimestamp = uint40(block.timestamp + numDays * 1 days + 1);
         (uint256 optionId, IOptionSettlementEngine.Option memory optionInfo) = _newOption({
             underlyingAsset: WETH_A,
-            exerciseTimestamp: testExerciseTimestamp,
+            earliestExerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
             exerciseAsset: DAI_A,
             underlyingAmount: testUnderlyingAmount + 1, // to mess w seed
@@ -510,13 +510,13 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: 1,
             exerciseAsset: USDC_A,
             exerciseAmount: 100,
-            exerciseTimestamp: uint40(block.timestamp),
+            earliestExerciseTimestamp: uint40(block.timestamp),
             expiryTimestamp: uint40(block.timestamp + 30 days),
             settlementSeed: 0,
             nextClaimId: 0
         });
         uint256 oTokenId =
-            engine.newOptionType(DAI_A, uint40(block.timestamp), uint40(block.timestamp + 30 days), USDC_A, 1, 100);
+            engine.newOptionType(DAI_A, 1, USDC_A, 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
 
         // Write 2 separate options lots
         vm.prank(ALICE);
@@ -551,13 +551,13 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: 1,
             exerciseAsset: USDC_A,
             exerciseAmount: 100,
-            exerciseTimestamp: uint40(block.timestamp),
+            earliestExerciseTimestamp: uint40(block.timestamp),
             expiryTimestamp: uint40(block.timestamp + 30 days),
             settlementSeed: 0,
             nextClaimId: 0
         });
         uint256 oTokenId =
-            engine.newOptionType(DAI_A, uint40(block.timestamp), uint40(block.timestamp + 30 days), USDC_A, 1, 100);
+            engine.newOptionType(DAI_A, 1, USDC_A, 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
 
         // Write 2 separate options lots
         vm.prank(ALICE);
@@ -599,13 +599,13 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: 1,
             exerciseAsset: USDC_A,
             exerciseAmount: 100,
-            exerciseTimestamp: uint40(block.timestamp),
+            earliestExerciseTimestamp: uint40(block.timestamp),
             expiryTimestamp: uint40(block.timestamp + 30 days),
             settlementSeed: 0,
             nextClaimId: 0
         });
         uint256 oTokenId =
-            engine.newOptionType(DAI_A, uint40(block.timestamp), uint40(block.timestamp + 30 days), USDC_A, 1, 100);
+            engine.newOptionType(DAI_A, 1, USDC_A, 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
 
         // Update struct values to match stored option data structure
         bytes20 optionHash = bytes20(keccak256(abi.encode(option)));
@@ -623,13 +623,13 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: 1,
             exerciseAsset: USDC_A,
             exerciseAmount: 100,
-            exerciseTimestamp: uint40(block.timestamp),
+            earliestExerciseTimestamp: uint40(block.timestamp),
             expiryTimestamp: uint40(block.timestamp + 30 days),
             settlementSeed: 0,
             nextClaimId: 0
         });
         uint256 oTokenId =
-            engine.newOptionType(DAI_A, uint40(block.timestamp), uint40(block.timestamp + 30 days), USDC_A, 1, 100);
+            engine.newOptionType(DAI_A, 1, USDC_A, 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
 
         (uint160 decodedOptionId,) = engine.getDecodedIdComponents(oTokenId);
 
@@ -644,7 +644,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testEventNewOptionType() public {
         IOptionSettlementEngine.Option memory optionInfo = IOptionSettlementEngine.Option({
             underlyingAsset: DAI_A,
-            exerciseTimestamp: testExerciseTimestamp,
+            earliestExerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
             exerciseAsset: WETH_A,
             underlyingAmount: testUnderlyingAmount,
@@ -668,7 +668,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             );
 
         uint256 oTokenId = engine.newOptionType(
-            DAI_A, testExerciseTimestamp, testExpiryTimestamp, WETH_A, testUnderlyingAmount, testExerciseAmount
+            DAI_A, testUnderlyingAmount, WETH_A, testExerciseAmount, testExerciseTimestamp, testExpiryTimestamp
         );
     }
 
@@ -761,7 +761,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // Write option that will generate DAI fees
         (uint256 daiOptionId,) = _newOption({
             underlyingAsset: DAI_A,
-            exerciseTimestamp: testExerciseTimestamp,
+            earliestExerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
             exerciseAsset: WETH_A,
             underlyingAmount: daiUnderlyingAmount,
@@ -772,7 +772,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // Write option that will generate USDC fees
         (uint256 usdcOptionId,) = _newOption({
             underlyingAsset: USDC_A,
-            exerciseTimestamp: testExerciseTimestamp,
+            earliestExerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
             exerciseAsset: DAI_A,
             underlyingAmount: usdcUnderlyingAmount,
@@ -810,7 +810,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.startPrank(ALICE);
         (uint256 daiExerciseOptionId,) = _newOption({
             underlyingAsset: WETH_A,
-            exerciseTimestamp: testExerciseTimestamp,
+            earliestExerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
             exerciseAsset: DAI_A,
             underlyingAmount: testUnderlyingAmount,
@@ -821,7 +821,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // Write option for DAI-WETH pair
         (uint256 wethExerciseOptionId,) = _newOption({
             underlyingAsset: DAI_A,
-            exerciseTimestamp: testExerciseTimestamp,
+            earliestExerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
             exerciseAsset: WETH_A,
             underlyingAmount: testUnderlyingAmount,
@@ -832,7 +832,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // Write option for DAI-USDC pair
         (uint256 usdcExerciseOptionId,) = _newOption({
             underlyingAsset: DAI_A,
-            exerciseTimestamp: testExerciseTimestamp,
+            earliestExerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
             exerciseAsset: USDC_A,
             underlyingAmount: testUnderlyingAmount,
@@ -884,7 +884,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testRevertNewOptionTypeWhenOptionsTypeExists() public {
         (uint256 optionId, IOptionSettlementEngine.Option memory option) = _newOption({
             underlyingAsset: DAI_A,
-            exerciseTimestamp: testExerciseTimestamp,
+            earliestExerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
             exerciseAsset: WETH_A,
             underlyingAmount: testUnderlyingAmount,
@@ -894,7 +894,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.OptionsTypeExists.selector, optionId));
 
         engine.newOptionType(
-            DAI_A, testExerciseTimestamp, testExpiryTimestamp, WETH_A, testUnderlyingAmount, testExerciseAmount
+            DAI_A, testUnderlyingAmount, WETH_A, testExerciseAmount, testExerciseTimestamp, testExpiryTimestamp
         );
     }
 
@@ -902,7 +902,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint40 tooSoonExpiryTimestamp = uint40(block.timestamp + 1 days - 1 seconds);
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
             underlyingAsset: DAI_A,
-            exerciseTimestamp: uint40(block.timestamp),
+            earliestExerciseTimestamp: uint40(block.timestamp),
             expiryTimestamp: tooSoonExpiryTimestamp,
             exerciseAsset: WETH_A,
             underlyingAmount: testUnderlyingAmount,
@@ -920,7 +920,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         _newOption({
             underlyingAsset: DAI_A,
-            exerciseTimestamp: uint40(block.timestamp),
+            earliestExerciseTimestamp: uint40(block.timestamp),
             expiryTimestamp: tooSoonExpiryTimestamp,
             exerciseAsset: WETH_A,
             underlyingAmount: testUnderlyingAmount,
@@ -933,7 +933,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         _newOption({
             underlyingAsset: DAI_A,
-            exerciseTimestamp: 2_000_000_000,
+            earliestExerciseTimestamp: 2_000_000_000,
             expiryTimestamp: 2_000_000_000 + 1 days - 1 seconds,
             exerciseAsset: WETH_A,
             underlyingAmount: testUnderlyingAmount,
@@ -946,7 +946,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         _newOption({
             underlyingAsset: DAI_A,
-            exerciseTimestamp: testExerciseTimestamp,
+            earliestExerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
             exerciseAsset: DAI_A,
             underlyingAmount: testUnderlyingAmount,
@@ -961,7 +961,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         _newOption({
             underlyingAsset: DAI_A,
-            exerciseTimestamp: testExerciseTimestamp,
+            earliestExerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
             exerciseAsset: WETH_A,
             underlyingAmount: underlyingAmountExceedsTotalSupply,
@@ -974,7 +974,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         _newOption({
             underlyingAsset: USDC_A,
-            exerciseTimestamp: testExerciseTimestamp,
+            earliestExerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
             exerciseAsset: WETH_A,
             underlyingAmount: testUnderlyingAmount,
@@ -1087,7 +1087,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
         vm.stopPrank();
 
-        // Bob immediately exercises before exerciseTimestamp
+        // Bob immediately exercises before earliestExerciseTimestamp
         vm.startPrank(BOB);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -1239,20 +1239,20 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testFuzzNewOptionType(
         uint96 underlyingAmount,
         uint96 exerciseAmount,
-        uint40 exerciseTimestamp,
+        uint40 earliestExerciseTimestamp,
         uint40 expiryTimestamp
     ) public {
         vm.assume(expiryTimestamp >= block.timestamp + 86400);
-        vm.assume(exerciseTimestamp >= block.timestamp);
-        vm.assume(exerciseTimestamp <= expiryTimestamp - 86400);
+        vm.assume(earliestExerciseTimestamp >= block.timestamp);
+        vm.assume(earliestExerciseTimestamp <= expiryTimestamp - 86400);
         vm.assume(expiryTimestamp <= type(uint64).max);
-        vm.assume(exerciseTimestamp <= type(uint64).max);
+        vm.assume(earliestExerciseTimestamp <= type(uint64).max);
         vm.assume(underlyingAmount <= WETH.totalSupply());
         vm.assume(exerciseAmount <= DAI.totalSupply());
 
         (uint256 optionId, IOptionSettlementEngine.Option memory optionInfo) = _newOption(
             WETH_A, // underlyingAsset
-            exerciseTimestamp, // exerciseTimestamp
+            earliestExerciseTimestamp, // earliestExerciseTimestamp
             expiryTimestamp, // expiryTimestamp
             DAI_A, // exerciseAsset
             underlyingAmount, // underlyingAmount
@@ -1269,7 +1269,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(optionId, expectedOptionId);
         assertEq(optionRecord.underlyingAsset, WETH_A);
         assertEq(optionRecord.exerciseAsset, DAI_A);
-        assertEq(optionRecord.exerciseTimestamp, exerciseTimestamp);
+        assertEq(optionRecord.earliestExerciseTimestamp, earliestExerciseTimestamp);
         assertEq(optionRecord.expiryTimestamp, expiryTimestamp);
         assertEq(optionRecord.underlyingAmount, underlyingAmount);
         assertEq(optionRecord.exerciseAmount, exerciseAmount);
@@ -1402,7 +1402,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // create monthly option
         (uint256 optionId1M, IOptionSettlementEngine.Option memory option1M) = _newOption(
             WETH_A, // underlyingAsset
-            testExerciseTimestamp, // exerciseTimestamp
+            testExerciseTimestamp, // earliestExerciseTimestamp
             uint40(block.timestamp + 30 days), // expiryTimestamp
             DAI_A, // exerciseAsset
             testUnderlyingAmount, // underlyingAmount
@@ -1412,7 +1412,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // create quarterly option
         (uint256 optionId3M, IOptionSettlementEngine.Option memory option3M) = _newOption(
             WETH_A, // underlyingAsset
-            testExerciseTimestamp, // exerciseTimestamp
+            testExerciseTimestamp, // earliestExerciseTimestamp
             uint40(block.timestamp + 90 days), // expiryTimestamp
             DAI_A, // exerciseAsset
             testUnderlyingAmount, // underlyingAmount
@@ -1535,8 +1535,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
             }
         }
 
-        if (option.exerciseTimestamp >= uint40(block.timestamp)) {
-            emit log_named_uint("exercise timestamp not hit", option.exerciseTimestamp);
+        if (option.earliestExerciseTimestamp >= uint40(block.timestamp)) {
+            emit log_named_uint("exercise timestamp not hit", option.earliestExerciseTimestamp);
             return (written, 0, newClaim);
         }
 
@@ -1591,7 +1591,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function _writeAndExerciseNewOption(
         address underlyingAsset,
-        uint40 exerciseTimestamp,
+        uint40 earliestExerciseTimestamp,
         uint40 expiryTimestamp,
         address exerciseAsset,
         uint96 underlyingAmount,
@@ -1600,31 +1600,31 @@ contract OptionSettlementTest is Test, NFTreceiver {
         address exerciser
     ) internal returns (uint256 optionId, uint256 claimId) {
         (optionId,) = _newOption(
-            underlyingAsset, exerciseTimestamp, expiryTimestamp, exerciseAsset, underlyingAmount, exerciseAmount
+            underlyingAsset, earliestExerciseTimestamp, expiryTimestamp, exerciseAsset, underlyingAmount, exerciseAmount
         );
         claimId = _writeAndExerciseOption(optionId, writer, exerciser);
     }
 
     function _newOption(
         address underlyingAsset,
-        uint40 exerciseTimestamp,
+        uint40 earliestExerciseTimestamp,
         uint40 expiryTimestamp,
         address exerciseAsset,
         uint96 underlyingAmount,
         uint96 exerciseAmount
     ) internal returns (uint256 optionId, IOptionSettlementEngine.Option memory option) {
-        option = IOptionSettlementEngine.Option(
-            underlyingAsset,
-            exerciseTimestamp,
-            expiryTimestamp,
-            exerciseAsset,
-            underlyingAmount,
-            0, // default zero for settlement seed
-            exerciseAmount,
-            0 // default zero for next claim id
-        );
+        option = IOptionSettlementEngine.Option({
+            underlyingAsset: underlyingAsset,
+            underlyingAmount: underlyingAmount,
+            exerciseAsset: exerciseAsset,
+            exerciseAmount: exerciseAmount,
+            earliestExerciseTimestamp: earliestExerciseTimestamp,
+            expiryTimestamp: expiryTimestamp,
+            settlementSeed: 0, // default zero for settlement seed
+            nextClaimId: 0 // default zero for next claim id
+        });
         optionId = engine.newOptionType(
-            underlyingAsset, exerciseTimestamp, expiryTimestamp, exerciseAsset, underlyingAmount, exerciseAmount
+            underlyingAsset, underlyingAmount, exerciseAsset, exerciseAmount, earliestExerciseTimestamp, expiryTimestamp
         );
     }
 
@@ -1754,7 +1754,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(actual.underlyingAmount, expected.underlyingAmount);
         assertEq(actual.exerciseAsset, expected.exerciseAsset);
         assertEq(actual.exerciseAmount, expected.exerciseAmount);
-        assertEq(actual.exerciseTimestamp, expected.exerciseTimestamp);
+        assertEq(actual.earliestExerciseTimestamp, expected.earliestExerciseTimestamp);
         assertEq(actual.expiryTimestamp, expected.expiryTimestamp);
         assertEq(actual.settlementSeed, expected.settlementSeed);
         assertEq(actual.nextClaimId, expected.nextClaimId);
@@ -1768,7 +1768,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         address indexed underlyingAsset,
         uint96 exerciseAmount,
         uint96 underlyingAmount,
-        uint40 exerciseTimestamp,
+        uint40 earliestExerciseTimestamp,
         uint40 expiryTimestamp,
         uint96 nextClaimId
     );

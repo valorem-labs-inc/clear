@@ -140,7 +140,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             underlyingSymbol: ERC20(optionInfo.underlyingAsset).symbol(),
             exerciseAsset: optionInfo.exerciseAsset,
             exerciseSymbol: ERC20(optionInfo.exerciseAsset).symbol(),
-            exerciseTimestamp: optionInfo.exerciseTimestamp,
+            earliestExerciseTimestamp: optionInfo.earliestExerciseTimestamp,
             expiryTimestamp: optionInfo.expiryTimestamp,
             underlyingAmount: optionInfo.underlyingAmount,
             exerciseAmount: optionInfo.exerciseAmount,
@@ -153,23 +153,23 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     ///// @inheritdoc IOptionSettlementEngine
     function newOptionType(
         address underlyingAsset,
-        uint40 exerciseTimestamp,
-        uint40 expiryTimestamp,
-        address exerciseAsset,
         uint96 underlyingAmount,
-        uint96 exerciseAmount
+        address exerciseAsset,
+        uint96 exerciseAmount,
+        uint40 earliestExerciseTimestamp,
+        uint40 expiryTimestamp
     ) external returns (uint256 optionId) {
         // Check that a duplicate option type doesn't exist
         bytes20 optionHash = bytes20(
             keccak256(
                 abi.encode(
                     underlyingAsset,
-                    exerciseTimestamp,
-                    expiryTimestamp,
-                    exerciseAsset,
                     underlyingAmount,
-                    uint160(0),
+                    exerciseAsset,
                     exerciseAmount,
+                    earliestExerciseTimestamp,
+                    expiryTimestamp,
+                    uint160(0),
                     uint96(0)
                 )
             )
@@ -188,7 +188,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
 
         // Ensure the exercise window is at least 24 hours
-        if (expiryTimestamp < (exerciseTimestamp + 1 days)) {
+        if (expiryTimestamp < (earliestExerciseTimestamp + 1 days)) {
             revert ExerciseWindowTooShort();
         }
 
@@ -211,7 +211,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             underlyingAmount: underlyingAmount,
             exerciseAsset: exerciseAsset,
             exerciseAmount: exerciseAmount,
-            exerciseTimestamp: exerciseTimestamp,
+            earliestExerciseTimestamp: earliestExerciseTimestamp,
             expiryTimestamp: expiryTimestamp,
             settlementSeed: optionKey,
             nextClaimId: 1
@@ -223,7 +223,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             underlyingAsset,
             exerciseAmount,
             underlyingAmount,
-            exerciseTimestamp,
+            earliestExerciseTimestamp,
             expiryTimestamp,
             1
             );
@@ -338,8 +338,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert ExpiredOption(optionId, optionRecord.expiryTimestamp);
         }
         // Require that we have reached the exercise timestamp
-        if (optionRecord.exerciseTimestamp >= block.timestamp) {
-            revert ExerciseTooEarly(optionId, optionRecord.exerciseTimestamp);
+        if (optionRecord.earliestExerciseTimestamp >= block.timestamp) {
+            revert ExerciseTooEarly(optionId, optionRecord.earliestExerciseTimestamp);
         }
 
         uint256 rxAmount = optionRecord.exerciseAmount * amount;

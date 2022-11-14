@@ -134,7 +134,7 @@ interface IOptionSettlementEngine {
      * @param underlyingAsset The contract address of the underlying asset.
      * @param exerciseAmount The amount of the exercise asset to be exercised.
      * @param underlyingAmount The amount of the underlying asset in the option.
-     * @param exerciseTimestamp The timestamp for exercising the option.
+     * @param earliestExerciseTimestamp The timestamp for exercising the option.
      * @param expiryTimestamp The expiry timestamp of the option.
      * @param nextClaimId The next claim ID.
      */
@@ -144,7 +144,7 @@ interface IOptionSettlementEngine {
         address indexed underlyingAsset,
         uint96 exerciseAmount,
         uint96 underlyingAmount,
-        uint40 exerciseTimestamp,
+        uint40 earliestExerciseTimestamp,
         uint40 expiryTimestamp,
         uint96 nextClaimId
     );
@@ -217,21 +217,21 @@ interface IOptionSettlementEngine {
 
     /// @dev This struct contains the data about an options type associated with an ERC-1155 token.
     struct Option {
-        // The underlying asset to be received
+        /// @param underlyingAsset The underlying asset to be received
         address underlyingAsset;
-        // The timestamp after which this option may be exercised
-        uint40 exerciseTimestamp;
-        // The timestamp before which this option must be exercised
-        uint40 expiryTimestamp;
-        // The address of the asset needed for exercise
-        address exerciseAsset;
-        // The amount of the underlying asset contained within an option contract of this type
+        /// @param underlyingAmount The amount of the underlying asset contained within an option contract of this type
         uint96 underlyingAmount;
-        // Random seed created at the time of option type creation
-        uint160 settlementSeed;
-        // The amount of the exercise asset required to exercise this option
+        /// @param exerciseAsset The address of the asset needed for exercise
+        address exerciseAsset;
+        /// @param exerciseAmount The amount of the exercise asset required to exercise this option
         uint96 exerciseAmount;
-        // Which option was written
+        /// @param earliestExerciseTimestamp The timestamp after which this option may be exercised
+        uint40 earliestExerciseTimestamp;
+        /// @param expiryTimestamp The timestamp before which this option must be exercised
+        uint40 expiryTimestamp;
+        /// @param settlementSeed Random seed created at the time of option type creation
+        uint160 settlementSeed;
+        /// @param nextClaimId Which option was written
         uint96 nextClaimId;
     }
 
@@ -336,11 +336,11 @@ interface IOptionSettlementEngine {
     //  */
     function newOptionType(
         address underlyingAsset,
-        uint40 exerciseTimestamp,
-        uint40 expiryTimestamp,
-        address exerciseAsset,
         uint96 underlyingAmount,
-        uint96 exerciseAmount
+        address exerciseAsset,
+        uint96 exerciseAmount,
+        uint40 earliestExerciseTimestamp,
+        uint40 expiryTimestamp
     ) external returns (uint256 optionId);
 
     /**

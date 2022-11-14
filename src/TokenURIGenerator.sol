@@ -17,7 +17,7 @@ library TokenURIGenerator {
         // The symbol of the underlying asset
         string exerciseSymbol;
         // The timestamp after which this option may be exercised
-        uint40 exerciseTimestamp;
+        uint40 earliestExerciseTimestamp;
         // The timestamp before which this option must be exercised
         uint40 expiryTimestamp;
         // The amount of the underlying asset contained within an option contract of this type
@@ -160,7 +160,7 @@ library TokenURIGenerator {
         return string(
             abi.encodePacked(
                 "<text x='16px' y='236px' font-size='14' letter-spacing='0.01em' fill='#fff' font-family='Helvetica'>EXERCISE DATE</text>",
-                _generateTimestampString(params.exerciseTimestamp, 16, 260),
+                _generateTimestampString(params.earliestExerciseTimestamp, 16, 260),
                 "<text x='200px' y='236px' font-size='14' letter-spacing='0.01em' fill='#fff' font-family='Helvetica'>EXPIRY DATE</text>",
                 _generateTimestampString(params.expiryTimestamp, 200, 260)
             )

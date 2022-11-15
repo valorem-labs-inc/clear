@@ -600,7 +600,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return uint16(block.timestamp / 1 days);
     }
 
-    function _getAmountExercised(OptionLotClaimIndex storage claimNum, OptionLotClaimBucket storage claimBucketInfo)
+    function _getAmountExercised(OptionLotClaimIndex storage claimIndex, OptionLotClaimBucket storage claimBucketInfo)
         internal
         view
         returns (uint256 _exercised, uint256 _unexercised)
@@ -608,14 +608,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // The ratio of exercised to written options in the bucket multiplied by the
         // number of options actaully written in the claim.
         _exercised = FixedPointMathLib.mulDivDown(
-            claimBucketInfo.amountExercised, claimNum.amountWritten, claimBucketInfo.amountWritten
+            claimBucketInfo.amountExercised, claimIndex.amountWritten, claimBucketInfo.amountWritten
         );
 
         // The ration of unexercised to written options in the bucket multiplied by the
         // number of options actually written in the claim.
         _unexercised = FixedPointMathLib.mulDivDown(
             claimBucketInfo.amountWritten - claimBucketInfo.amountExercised,
-            claimNum.amountWritten,
+            claimIndex.amountWritten,
             claimBucketInfo.amountWritten
         );
     }
@@ -625,11 +625,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         view
         returns (uint256 exerciseAmount, uint256 underlyingAmount)
     {
-        OptionLotClaimIndex[] storage claimNumArray = _claimIdToClaimIndexArray[claimId];
-        for (uint256 i = 0; i < claimNumArray.length; i++) {
-            OptionLotClaimIndex storage claimNum = claimNumArray[i];
-            OptionLotClaimBucket storage claimBucketInfo = _claimBucketByOption[optionId][claimNum.bucketIndex];
-            (uint256 amountExercised, uint256 amountUnexercised) = _getAmountExercised(claimNum, claimBucketInfo);
+        OptionLotClaimIndex[] storage claimIndexArray = _claimIdToClaimIndexArray[claimId];
+        for (uint256 i = 0; i < claimIndexArray.length; i++) {
+            OptionLotClaimIndex storage claimIndex = claimIndexArray[i];
+            OptionLotClaimBucket storage claimBucketInfo = _claimBucketByOption[optionId][claimIndex.bucketIndex];
+            (uint256 amountExercised, uint256 amountUnexercised) = _getAmountExercised(claimIndex, claimBucketInfo);
             exerciseAmount += optionRecord.exerciseAmount * amountExercised;
             underlyingAmount += optionRecord.underlyingAmount * amountUnexercised;
         }
@@ -679,20 +679,20 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     function _addOrUpdateClaimIndex(uint256 claimId, uint16 bucketIndex, uint112 amount) internal {
         OptionLotClaimIndex storage lastIndex;
-        OptionLotClaimIndex[] storage claimNumArray = _claimIdToClaimIndexArray[claimId];
-        uint256 arrayLength = claimNumArray.length;
+        OptionLotClaimIndex[] storage claimIndexArray = _claimIdToClaimIndexArray[claimId];
+        uint256 arrayLength = claimIndexArray.length;
 
         // if no indices have been created previously, create one
         if (arrayLength == 0) {
-            claimNumArray.push(OptionLotClaimIndex({amountWritten: amount, bucketIndex: bucketIndex}));
+            claimIndexArray.push(OptionLotClaimIndex({amountWritten: amount, bucketIndex: bucketIndex}));
             return;
         }
 
-        lastIndex = claimNumArray[arrayLength - 1];
+        lastIndex = claimIndexArray[arrayLength - 1];
 
         // create a new claim index if we're writing to a new index
         if (lastIndex.bucketIndex < bucketIndex) {
-            claimNumArray.push(OptionLotClaimIndex({amountWritten: amount, bucketIndex: bucketIndex}));
+            claimIndexArray.push(OptionLotClaimIndex({amountWritten: amount, bucketIndex: bucketIndex}));
             return;
         }
 

@@ -212,7 +212,7 @@ interface IOptionSettlementEngine {
     enum Type {
         None,
         Option,
-        Claim
+        OptionLotClaim
     }
 
     /// @dev This struct contains the data about an options type associated with an ERC-1155 token.
@@ -235,8 +235,8 @@ interface IOptionSettlementEngine {
         uint96 nextClaimId;
     }
 
-    /// @dev This struct contains the data about a claim ERC-1155 NFT associated with an option type.
-    struct Claim {
+    /// @dev This struct contains the data about a claim ERC-1155 NFT associated with an option lot.
+    struct OptionLotClaim {
         // These are 1:1 contracts with the underlying Option struct
         // The number of contracts written in this claim
         uint112 amountWritten;
@@ -247,7 +247,7 @@ interface IOptionSettlementEngine {
     /// @dev Claims are options lots which are able to have options added to them on different
     /// bucketed days. This struct is used to keep track of how many options in a single lot are
     /// written on each day, in order to correctly perform fair assignment.
-    struct ClaimIndex {
+    struct OptionLotClaimIndex {
         // The amount of options written on a given day
         uint112 amountWritten;
         // The index of the bucket on which the options are written
@@ -257,7 +257,7 @@ interface IOptionSettlementEngine {
     /// @dev Represents the total amount of options written and exercised for a group of
     /// claims bucketed by day. Used in fair assignement to calculate the ratio of
     /// underlying to exercise assets to be transferred to claimants.
-    struct ClaimBucket {
+    struct OptionLotClaimBucket {
         // The number of options written in this bucket
         uint112 amountWritten;
         // The number of options exercised in this bucket
@@ -279,15 +279,8 @@ interface IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
-    // Options Info
+    // Option Info
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Returns the token type (e.g. Option/Claim) for a given token Id
-     * @param tokenId The id of the option or claim.
-     * @return The enum (uint8) Type of the tokenId
-     */
-    function tokenType(uint256 tokenId) external view returns (Type);
 
     /**
      * @notice Returns Option struct details about a given tokenID if that token is
@@ -298,23 +291,23 @@ interface IOptionSettlementEngine {
     function option(uint256 tokenId) external view returns (Option memory optionInfo);
 
     /**
-     * @notice Returns Claim struct details about a given tokenId if that token is a
+     * @notice Returns OptionLotClaim struct details about a given tokenId if that token is a
      * claim NFT.
      * @param tokenId The id of the claim.
      * @return claimInfo The Claim struct for tokenId.
      */
-    function claim(uint256 tokenId) external view returns (Claim memory claimInfo);
+    function claim(uint256 tokenId) external view returns (OptionLotClaim memory claimInfo);
 
     /**
-     * @notice Returns the total amount of options written and exercised for all claims /
-     * option lots created on the supplied index.
+     * @notice Returns the total amount of options written and exercised for all
+     * option lot claims created on the supplied index.
      * @param optionId The id of the option for the claim buckets.
      * @param dayBucket The index of the claimBucket to return.
      */
     function claimBucket(uint256 optionId, uint16 dayBucket)
         external
         view
-        returns (ClaimBucket memory claimBucketInfo);
+        returns (OptionLotClaimBucket memory claimBucketInfo);
 
     /**
      * @notice Information about the position underlying a token, useful for determining
@@ -323,6 +316,13 @@ interface IOptionSettlementEngine {
      * @return underlyingPositions The Underlying struct for the supplied tokenId.
      */
     function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions);
+
+    /**
+     * @notice Returns the token type (e.g. Option/OptionLotClaim) for a given token Id
+     * @param tokenId The id of the option or claim.
+     * @return The enum (uint8) Type of the tokenId
+     */
+    function tokenType(uint256 tokenId) external view returns (Type);
 
     /*//////////////////////////////////////////////////////////////
     // Write Options
@@ -375,7 +375,7 @@ interface IOptionSettlementEngine {
     function exercise(uint256 optionId, uint112 amount) external;
 
     /*//////////////////////////////////////////////////////////////
-    // Redeem Options
+    // Redeem Option Lot Claims
     //////////////////////////////////////////////////////////////*/
 
     /**

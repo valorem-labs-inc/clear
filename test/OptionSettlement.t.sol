@@ -132,7 +132,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function testWriteMultipleWriteSameOptionType() public {
-        IOptionSettlementEngine.Claim memory claim;
+        IOptionSettlementEngine.OptionLotClaim memory claim;
 
         // Alice writes a few options and later decides to write more
         vm.startPrank(ALICE);
@@ -232,7 +232,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     // NOTE: This test needed as testFuzz_redeem does not check if exerciseAmount == 0
     function testRedeemNotExercised() public {
-        IOptionSettlementEngine.Claim memory claimRecord;
+        IOptionSettlementEngine.OptionLotClaim memory claimRecord;
         uint256 wethBalanceEngine = WETH.balanceOf(address(engine));
         uint256 wethBalanceA = WETH.balanceOf(ALICE);
         // Alice writes 7 and no one exercises
@@ -306,7 +306,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
 
-        IOptionSettlementEngine.Claim memory claimRecord = engine.claim(claimId);
+        IOptionSettlementEngine.OptionLotClaim memory claimRecord = engine.claim(claimId);
 
         assertEq(1, claimRecord.amountWritten);
         _assertClaimAmountExercised(claimId, 0);
@@ -1289,7 +1289,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, amount);
-        IOptionSettlementEngine.Claim memory claimRecord = engine.claim(claimId);
+        IOptionSettlementEngine.OptionLotClaim memory claimRecord = engine.claim(claimId);
 
         assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + rxAmount + fee);
         assertEq(WETH.balanceOf(ALICE), wethBalance - rxAmount - fee);
@@ -1333,7 +1333,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         engine.exercise(testOptionId, amountExercise);
 
-        IOptionSettlementEngine.Claim memory claimRecord = engine.claim(claimId);
+        IOptionSettlementEngine.OptionLotClaim memory claimRecord = engine.claim(claimId);
 
         assertTrue(!claimRecord.claimed);
         assertEq(claimRecord.amountWritten, amountWrite);
@@ -1373,7 +1373,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         engine.redeem(claimId);
 
-        IOptionSettlementEngine.Claim memory claimRecord = engine.claim(claimId);
+        IOptionSettlementEngine.OptionLotClaim memory claimRecord = engine.claim(claimId);
 
         assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + writeFee);
         assertEq(WETH.balanceOf(ALICE), wethBalance - writeFee);
@@ -1566,13 +1566,13 @@ contract OptionSettlementTest is Test, NFTreceiver {
     // **********************************************************************
 
     function _assertTokenIsClaim(uint256 tokenId) internal {
-        if (engine.tokenType(tokenId) != IOptionSettlementEngine.Type.Claim) {
+        if (engine.tokenType(tokenId) != IOptionSettlementEngine.Type.OptionLotClaim) {
             assertTrue(false);
         }
     }
 
     function _assertTokenIsOption(uint256 tokenId) internal {
-        if (engine.tokenType(tokenId) == IOptionSettlementEngine.Type.Claim) {
+        if (engine.tokenType(tokenId) == IOptionSettlementEngine.Type.OptionLotClaim) {
             assertTrue(false);
         }
     }
@@ -1698,8 +1698,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint16 daysRange = uint16(optionInfo.expiryTimestamp / 1 days);
 
         for (uint16 i = 0; i < daysRange; i++) {
-            IOptionSettlementEngine.ClaimBucket memory bucket;
-            try engine.claimBucket(optionId, i) returns (IOptionSettlementEngine.ClaimBucket memory _bucket) {
+            IOptionSettlementEngine.OptionLotClaimBucket memory bucket;
+            try engine.claimBucket(optionId, i) returns (IOptionSettlementEngine.OptionLotClaimBucket memory _bucket) {
                 bucket = _bucket;
             } catch {
                 return;
@@ -1710,15 +1710,15 @@ contract OptionSettlementTest is Test, NFTreceiver {
         }
     }
 
-    function _emitBucket(IOptionSettlementEngine.ClaimBucket memory bucket) internal {
+    function _emitBucket(IOptionSettlementEngine.OptionLotClaimBucket memory bucket) internal {
         emit log_named_uint("bucket amount exercised", bucket.amountExercised);
         emit log_named_uint("bucket amount written", bucket.amountWritten);
         emit log_named_uint("bucket daysAfterEpoch", bucket.daysAfterEpoch);
     }
 
     function _assertAssignedInBucket(uint256 optionId, uint16 bucketIndex, uint112 assignedAmount) internal {
-        IOptionSettlementEngine.ClaimBucket memory bucket;
-        try engine.claimBucket(optionId, bucketIndex) returns (IOptionSettlementEngine.ClaimBucket memory _bucket) {
+        IOptionSettlementEngine.OptionLotClaimBucket memory bucket;
+        try engine.claimBucket(optionId, bucketIndex) returns (IOptionSettlementEngine.OptionLotClaimBucket memory _bucket) {
             bucket = _bucket;
         } catch {
             return;

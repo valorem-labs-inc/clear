@@ -190,7 +190,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      *   0000 0000   0000 0000   0000 0000   0000 0000 ┐
      *   0000 0000   0000 0000   0000 0000   0000 0000 │ 96b auto-incrementing option lot claim number
      *   0000 0000   0000 0000   0000 0000   0000 0000 ┘
-     *                                             LSb     
+     *                                             LSb
      * @param optionKey The optionKey to encode
      * @param claimNum The claimNum to encode
      * @return tokenId The encoded token id

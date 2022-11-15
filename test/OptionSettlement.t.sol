@@ -565,18 +565,15 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.prank(ALICE);
         uint256 cTokenId2 = engine.write(oTokenId, 3);
 
-        (uint160 decodedOptionIdFromOTokenId, uint96 decodedClaimIndexFromOTokenId) =
-            engine.decodeTokenId(oTokenId);
+        (uint160 decodedOptionIdFromOTokenId, uint96 decodedClaimIndexFromOTokenId) = engine.decodeTokenId(oTokenId);
         assertEq(decodedOptionIdFromOTokenId, oTokenId >> 96);
         assertEq(decodedClaimIndexFromOTokenId, 0); // no claims when initially creating a new option type
 
-        (uint160 decodedOptionIdFromCTokenId1, uint96 decodedClaimIndexFromCTokenId1) =
-            engine.decodeTokenId(cTokenId1);
+        (uint160 decodedOptionIdFromCTokenId1, uint96 decodedClaimIndexFromCTokenId1) = engine.decodeTokenId(cTokenId1);
         assertEq(decodedOptionIdFromCTokenId1, oTokenId >> 96);
         assertEq(decodedClaimIndexFromCTokenId1, 1); // first claim
 
-        (uint160 decodedOptionIdFromCTokenId2, uint96 decodedClaimIndexFromCTokenId2) =
-            engine.decodeTokenId(cTokenId2);
+        (uint160 decodedOptionIdFromCTokenId2, uint96 decodedClaimIndexFromCTokenId2) = engine.decodeTokenId(cTokenId2);
         assertEq(decodedOptionIdFromCTokenId2, oTokenId >> 96);
         assertEq(decodedClaimIndexFromCTokenId2, 2); // second claim
     }
@@ -1717,7 +1714,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function _assertAssignedInBucket(uint256 optionId, uint16 bucketIndex, uint112 assignedAmount) internal {
         IOptionSettlementEngine.OptionLotClaimBucket memory bucket;
-        try engine.claimBucket(optionId, bucketIndex) returns (IOptionSettlementEngine.OptionLotClaimBucket memory _bucket) {
+        try engine.claimBucket(optionId, bucketIndex) returns (
+            IOptionSettlementEngine.OptionLotClaimBucket memory _bucket
+        ) {
             bucket = _bucket;
         } catch {
             return;

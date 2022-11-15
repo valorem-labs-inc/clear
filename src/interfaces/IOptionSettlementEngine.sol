@@ -9,6 +9,96 @@ interface IOptionSettlementEngine {
     //
 
     /*//////////////////////////////////////////////////////////////
+    // Events
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Emitted when accrued protocol fees for a given token are swept to the
+     * feeTo address.
+     * @param token The token for which protocol fees are being swept.
+     * @param feeTo The account to which fees are being swept.
+     * @param amount The total amount being swept.
+     */
+    event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);
+
+    /**
+     * @notice Emitted when a new unique options type is created.
+     * @param optionId The id of the initial option created.
+     * @param exerciseAsset The contract address of the exercise asset.
+     * @param underlyingAsset The contract address of the underlying asset.
+     * @param exerciseAmount The amount of the exercise asset to be exercised.
+     * @param underlyingAmount The amount of the underlying asset in the option.
+     * @param earliestExerciseTimestamp The timestamp for exercising the option.
+     * @param expiryTimestamp The expiry timestamp of the option.
+     * @param nextClaimNum The next claim ID.
+     */
+    event NewOptionType(
+        uint256 indexed optionId,
+        address indexed exerciseAsset,
+        address indexed underlyingAsset,
+        uint96 exerciseAmount,
+        uint96 underlyingAmount,
+        uint40 earliestExerciseTimestamp,
+        uint40 expiryTimestamp,
+        uint96 nextClaimNum
+    );
+
+    /**
+     * @notice Emitted when an option is exercised.
+     * @param optionId The id of the option being exercised.
+     * @param exercisee The contract address of the asset being exercised.
+     * @param amount The amount of the exercissee being exercised.
+     */
+    event OptionsExercised(uint256 indexed optionId, address indexed exercisee, uint112 amount);
+
+    /**
+     * @notice Emitted when a new option is written.
+     * @param optionId The id of the newly written option.
+     * @param writer The address of the writer of the new option.
+     * @param claimId The claim ID for the option.
+     * @param amount The amount of options written.
+     */
+    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
+
+    /**
+     * @notice Emitted when protocol fees are accrued for a given asset.
+     * @dev Emitted on write() when fees are accrued on the underlying asset,
+     * or exercise() when fees are accrued on the exercise asset.
+     * @param asset Asset for which fees are accrued.
+     * @param payor The address paying the fee.
+     * @param amount The amount of fees which are accrued.
+     */
+    event FeeAccrued(address indexed asset, address indexed payor, uint256 amount);
+
+    /**
+     * @notice Emitted when a claim is redeemed.
+     * @param claimId The id of the claim being redeemed.
+     * @param optionId The option id associated with the redeeming claim.
+     * @param redeemer The address redeeming the claim.
+     * @param exerciseAsset The exercise asset of the option.
+     * @param underlyingAsset The underlying asset of the option.
+     * @param exerciseAmount The amount of options being
+     * @param underlyingAmount The amount of underlying
+     */
+    event ClaimRedeemed(
+        uint256 indexed claimId,
+        uint256 indexed optionId,
+        address indexed redeemer,
+        address exerciseAsset,
+        address underlyingAsset,
+        uint96 exerciseAmount,
+        uint96 underlyingAmount
+    );
+
+    /**
+     * @notice Emitted when an option id is exercised and assigned to a particular claim NFT.
+     * @param claimId The claim NFT id being assigned.
+     * @param optionId The id of the option being exercised.
+     * @param amountAssigned The total amount of options contracts assigned.
+     */
+    event ExerciseAssigned(uint256 indexed claimId, uint256 indexed optionId, uint112 amountAssigned);
+
+    /*//////////////////////////////////////////////////////////////
     // Errors
     //////////////////////////////////////////////////////////////*/
 
@@ -115,96 +205,6 @@ interface IOptionSettlementEngine {
 
     /// @notice The amount provided to write() must be > 0.
     error AmountWrittenCannotBeZero();
-
-    /*//////////////////////////////////////////////////////////////
-    // Events
-    //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Emitted when accrued protocol fees for a given token are swept to the
-     * feeTo address.
-     * @param token The token for which protocol fees are being swept.
-     * @param feeTo The account to which fees are being swept.
-     * @param amount The total amount being swept.
-     */
-    event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);
-
-    /**
-     * @notice Emitted when a new unique options type is created.
-     * @param optionId The id of the initial option created.
-     * @param exerciseAsset The contract address of the exercise asset.
-     * @param underlyingAsset The contract address of the underlying asset.
-     * @param exerciseAmount The amount of the exercise asset to be exercised.
-     * @param underlyingAmount The amount of the underlying asset in the option.
-     * @param earliestExerciseTimestamp The timestamp for exercising the option.
-     * @param expiryTimestamp The expiry timestamp of the option.
-     * @param nextClaimNum The next claim ID.
-     */
-    event NewOptionType(
-        uint256 indexed optionId,
-        address indexed exerciseAsset,
-        address indexed underlyingAsset,
-        uint96 exerciseAmount,
-        uint96 underlyingAmount,
-        uint40 earliestExerciseTimestamp,
-        uint40 expiryTimestamp,
-        uint96 nextClaimNum
-    );
-
-    /**
-     * @notice Emitted when an option is exercised.
-     * @param optionId The id of the option being exercised.
-     * @param exercisee The contract address of the asset being exercised.
-     * @param amount The amount of the exercissee being exercised.
-     */
-    event OptionsExercised(uint256 indexed optionId, address indexed exercisee, uint112 amount);
-
-    /**
-     * @notice Emitted when a new option is written.
-     * @param optionId The id of the newly written option.
-     * @param writer The address of the writer of the new option.
-     * @param claimId The claim ID for the option.
-     * @param amount The amount of options written.
-     */
-    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
-
-    /**
-     * @notice Emitted when protocol fees are accrued for a given asset.
-     * @dev Emitted on write() when fees are accrued on the underlying asset,
-     * or exercise() when fees are accrued on the exercise asset.
-     * @param asset Asset for which fees are accrued.
-     * @param payor The address paying the fee.
-     * @param amount The amount of fees which are accrued.
-     */
-    event FeeAccrued(address indexed asset, address indexed payor, uint256 amount);
-
-    /**
-     * @notice Emitted when a claim is redeemed.
-     * @param claimId The id of the claim being redeemed.
-     * @param optionId The option id associated with the redeeming claim.
-     * @param redeemer The address redeeming the claim.
-     * @param exerciseAsset The exercise asset of the option.
-     * @param underlyingAsset The underlying asset of the option.
-     * @param exerciseAmount The amount of options being
-     * @param underlyingAmount The amount of underlying
-     */
-    event ClaimRedeemed(
-        uint256 indexed claimId,
-        uint256 indexed optionId,
-        address indexed redeemer,
-        address exerciseAsset,
-        address underlyingAsset,
-        uint96 exerciseAmount,
-        uint96 underlyingAmount
-    );
-
-    /**
-     * @notice Emitted when an option id is exercised and assigned to a particular claim NFT.
-     * @param claimId The claim NFT id being assigned.
-     * @param optionId The id of the option being exercised.
-     * @param amountAssigned The total amount of options contracts assigned.
-     */
-    event ExerciseAssigned(uint256 indexed claimId, uint256 indexed optionId, uint112 amountAssigned);
 
     /*//////////////////////////////////////////////////////////////
     // Data structures

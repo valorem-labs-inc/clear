@@ -6,6 +6,8 @@ import "./IERC1155Metadata.sol";
 /// @title A settlement engine for options
 /// @author 0xAlcibiades
 interface IOptionSettlementEngine {
+    //
+    
     /*//////////////////////////////////////////////////////////////
     // Errors
     //////////////////////////////////////////////////////////////*/
@@ -136,7 +138,7 @@ interface IOptionSettlementEngine {
      * @param underlyingAmount The amount of the underlying asset in the option.
      * @param earliestExerciseTimestamp The timestamp for exercising the option.
      * @param expiryTimestamp The expiry timestamp of the option.
-     * @param nextClaimId The next claim ID.
+     * @param nextClaimNum The next claim ID.
      */
     event NewOptionType(
         uint256 indexed optionId,
@@ -146,7 +148,7 @@ interface IOptionSettlementEngine {
         uint96 underlyingAmount,
         uint40 earliestExerciseTimestamp,
         uint40 expiryTimestamp,
-        uint96 nextClaimId
+        uint96 nextClaimNum
     );
 
     /**
@@ -231,8 +233,8 @@ interface IOptionSettlementEngine {
         uint40 expiryTimestamp;
         /// @param settlementSeed Random seed created at the time of option type creation
         uint160 settlementSeed;
-        /// @param nextClaimId Which option was written
-        uint96 nextClaimId;
+        /// @param nextClaimNum Which option was written
+        uint96 nextClaimNum;
     }
 
     /// @dev This struct contains the data about a claim ERC-1155 NFT associated with an option lot.

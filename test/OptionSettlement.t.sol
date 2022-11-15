@@ -102,14 +102,14 @@ contract OptionSettlementTest is Test, NFTreceiver {
     // **********************************************************************
 
     // TODO fix
-    // function testNewOptionTypeDisregardsNextClaimIdAndCreationTimestamp() public {
+    // function testNewOptionTypeDisregardsNextClaimNumAndCreationTimestamp() public {
     //     IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option(
     //         WETH_A, testExerciseTimestamp, testExpiryTimestamp, DAI_A, testUnderlyingAmount, 42, testExerciseAmount, 420
     //     );
     //     uint256 optionId = engine.newOptionType(WETH_A, testExerciseTimestamp, testExpiryTimestamp, DAI_A, testUnderlyingAmount, testExerciseAmount);
     //     option = engine.option(optionId);
 
-    //     assertEq(option.nextClaimId, 1);
+    //     assertEq(option.nextClaimNum, 1);
     //     assertEq(option.settlementSeed, uint160(optionId >> 96));
     // }
 
@@ -146,7 +146,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(engine.balanceOf(ALICE, claimId2), 1);
 
         claim = engine.claim(claimId1);
-        (uint160 _optionId, uint96 claimIdx) = engine.getDecodedIdComponents(claimId1);
+        (uint160 _optionId, uint96 claimIdx) = engine.decodeTokenId(claimId1);
         uint256 optionId = uint256(_optionId) << 96;
         assertEq(optionId, testOptionId);
         assertEq(claimIdx, 1);
@@ -155,7 +155,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertTrue(!claim.claimed);
 
         claim = engine.claim(claimId2);
-        (optionId, claimIdx) = engine.getDecodedIdComponents(claimId2);
+        (optionId, claimIdx) = engine.decodeTokenId(claimId2);
         optionId = uint256(_optionId) << 96;
         assertEq(optionId, testOptionId);
         assertEq(claimIdx, 2);
@@ -503,7 +503,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     //                            TOKEN ID ENCODING HELPERS
     // **********************************************************************
 
-    function testGetEncodedIdComponents() public {
+    function testEncodeTokenId() public {
         // Create new option type
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
             underlyingAsset: DAI_A,
@@ -513,7 +513,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             earliestExerciseTimestamp: uint40(block.timestamp),
             expiryTimestamp: uint40(block.timestamp + 30 days),
             settlementSeed: 0,
-            nextClaimId: 0
+            nextClaimNum: 0
         });
         uint256 oTokenId =
             engine.newOptionType(DAI_A, 1, USDC_A, 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
@@ -525,26 +525,26 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 cTokenId2 = engine.write(oTokenId, 3);
 
         // Check encoding the first claim
-        (uint160 decodedOptionId,) = engine.getDecodedIdComponents(cTokenId1);
+        (uint160 decodedOptionId,) = engine.decodeTokenId(cTokenId1);
         uint96 expectedClaimIndex1 = 1;
-        assertEq(engine.getTokenId(decodedOptionId, expectedClaimIndex1), cTokenId1);
+        assertEq(engine.encodeTokenId(decodedOptionId, expectedClaimIndex1), cTokenId1);
 
         // Check encoding the second claim
         uint96 expectedClaimIndex2 = 2;
-        assertEq(engine.getTokenId(decodedOptionId, expectedClaimIndex2), cTokenId2);
+        assertEq(engine.encodeTokenId(decodedOptionId, expectedClaimIndex2), cTokenId2);
     }
 
-    function testFuzzGetEncodedIdComponents(uint256 optionId, uint256 claimIndex) public {
+    function testFuzzEncodeTokenId(uint256 optionId, uint256 claimIndex) public {
         optionId = bound(optionId, 0, type(uint160).max);
         claimIndex = bound(claimIndex, 0, type(uint96).max);
 
         uint256 expectedTokenId = claimIndex;
         expectedTokenId |= optionId << 96;
 
-        assertEq(engine.getTokenId(uint160(optionId), uint96(claimIndex)), expectedTokenId);
+        assertEq(engine.encodeTokenId(uint160(optionId), uint96(claimIndex)), expectedTokenId);
     }
 
-    function testGetDecodedIdComponents() public {
+    function testDecodeTokenId() public {
         // Create new option type
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
             underlyingAsset: DAI_A,
@@ -554,7 +554,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             earliestExerciseTimestamp: uint40(block.timestamp),
             expiryTimestamp: uint40(block.timestamp + 30 days),
             settlementSeed: 0,
-            nextClaimId: 0
+            nextClaimNum: 0
         });
         uint256 oTokenId =
             engine.newOptionType(DAI_A, 1, USDC_A, 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
@@ -566,34 +566,34 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 cTokenId2 = engine.write(oTokenId, 3);
 
         (uint160 decodedOptionIdFromOTokenId, uint96 decodedClaimIndexFromOTokenId) =
-            engine.getDecodedIdComponents(oTokenId);
+            engine.decodeTokenId(oTokenId);
         assertEq(decodedOptionIdFromOTokenId, oTokenId >> 96);
         assertEq(decodedClaimIndexFromOTokenId, 0); // no claims when initially creating a new option type
 
         (uint160 decodedOptionIdFromCTokenId1, uint96 decodedClaimIndexFromCTokenId1) =
-            engine.getDecodedIdComponents(cTokenId1);
+            engine.decodeTokenId(cTokenId1);
         assertEq(decodedOptionIdFromCTokenId1, oTokenId >> 96);
         assertEq(decodedClaimIndexFromCTokenId1, 1); // first claim
 
         (uint160 decodedOptionIdFromCTokenId2, uint96 decodedClaimIndexFromCTokenId2) =
-            engine.getDecodedIdComponents(cTokenId2);
+            engine.decodeTokenId(cTokenId2);
         assertEq(decodedOptionIdFromCTokenId2, oTokenId >> 96);
         assertEq(decodedClaimIndexFromCTokenId2, 2); // second claim
     }
 
-    function testFuzzGetDecodedIdComponents(uint256 optionId, uint256 claimId) public {
+    function testFuzzDecodeTokenId(uint256 optionId, uint256 claimId) public {
         optionId = bound(optionId, 0, type(uint160).max);
         claimId = bound(claimId, 0, type(uint96).max);
 
         uint256 testTokenId = claimId;
         testTokenId |= optionId << 96;
 
-        (uint160 decodedOptionId, uint96 decodedClaimId) = engine.getDecodedIdComponents(testTokenId);
+        (uint160 decodedOptionId, uint96 decodedClaimId) = engine.decodeTokenId(testTokenId);
         assertEq(decodedOptionId, optionId);
         assertEq(decodedClaimId, claimId);
     }
 
-    function testGetOptionFromEncodedId() public {
+    function testGetOptionForTokenId() public {
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
             underlyingAsset: DAI_A,
             underlyingAmount: 1,
@@ -602,19 +602,18 @@ contract OptionSettlementTest is Test, NFTreceiver {
             earliestExerciseTimestamp: uint40(block.timestamp),
             expiryTimestamp: uint40(block.timestamp + 30 days),
             settlementSeed: 0,
-            nextClaimId: 0
+            nextClaimNum: 0
         });
         uint256 oTokenId =
             engine.newOptionType(DAI_A, 1, USDC_A, 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
 
         // Update struct values to match stored option data structure
-        bytes20 optionHash = bytes20(keccak256(abi.encode(option)));
-        uint160 optionKey = uint160(optionHash);
+        uint160 optionKey = uint160(bytes20(keccak256(abi.encode(option))));
 
         option.settlementSeed = optionKey; // settlement seed is initially equal to option key
-        option.nextClaimId = 1; // next claim ID has been incremented
+        option.nextClaimNum = 1; // next claim num has been incremented
 
-        assertEq(engine.getOptionFromEncodedId(oTokenId), option);
+        assertEq(engine.getOptionForTokenId(oTokenId), option);
     }
 
     function testIsOptionInitialized() public {
@@ -626,12 +625,12 @@ contract OptionSettlementTest is Test, NFTreceiver {
             earliestExerciseTimestamp: uint40(block.timestamp),
             expiryTimestamp: uint40(block.timestamp + 30 days),
             settlementSeed: 0,
-            nextClaimId: 0
+            nextClaimNum: 0
         });
         uint256 oTokenId =
             engine.newOptionType(DAI_A, 1, USDC_A, 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
 
-        (uint160 decodedOptionId,) = engine.getDecodedIdComponents(oTokenId);
+        (uint160 decodedOptionId,) = engine.decodeTokenId(oTokenId);
 
         assertTrue(engine.isOptionInitialized(decodedOptionId));
         assertFalse(engine.isOptionInitialized(1337));
@@ -650,7 +649,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: testUnderlyingAmount,
             settlementSeed: 0,
             exerciseAmount: testExerciseAmount,
-            nextClaimId: 1
+            nextClaimNum: 1
         });
 
         uint256 expectedOptionId = _createOptionIdFromStruct(optionInfo);
@@ -709,7 +708,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         vm.warp(testExpiryTimestamp - 1 seconds);
 
-        engine.getDecodedIdComponents(testOptionId);
+        engine.decodeTokenId(testOptionId);
         uint256 expectedFeeAccruedAmount = (testExerciseAmount / 10_000) * engine.feeBps();
 
         vm.expectEmit(true, true, true, true);
@@ -726,7 +725,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.startPrank(ALICE);
         uint96 amountWritten = 7;
         uint256 claimId = engine.write(testOptionId, amountWritten);
-        (uint256 optionId,) = engine.getDecodedIdComponents(claimId);
+        (uint256 optionId,) = engine.decodeTokenId(claimId);
         uint96 expectedUnderlyingAmount = testUnderlyingAmount * amountWritten;
 
         vm.warp(testExpiryTimestamp + 1 seconds);
@@ -908,7 +907,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: testUnderlyingAmount,
             settlementSeed: 0, // default zero for settlement seed
             exerciseAmount: testExerciseAmount,
-            nextClaimId: 0 // default zero for next claim id
+            nextClaimNum: 0 // default zero for next claim id
         });
         uint256 tooSoonOptionId = _createOptionIdFromStruct(option);
 
@@ -1011,8 +1010,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function testRevertWriteWhenClaimIdDoesNotEncodeOptionId() public {
-        uint256 option1Claim1 = engine.getTokenId(0xDEADBEEF1, 0xCAFECAFE1);
-        uint256 option2WithoutClaim = engine.getTokenId(0xDEADBEEF2, 0x0);
+        uint256 option1Claim1 = engine.encodeTokenId(0xDEADBEEF1, 0xCAFECAFE1);
+        uint256 option2WithoutClaim = engine.encodeTokenId(0xDEADBEEF2, 0x0);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -1148,7 +1147,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function testRevertRedeemWhenInvalidClaim() public {
-        uint256 badClaimId = engine.getTokenId(0xDEADBEEF, 0);
+        uint256 badClaimId = engine.encodeTokenId(0xDEADBEEF, 0);
 
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidClaim.selector, badClaimId));
 
@@ -1298,7 +1297,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(engine.balanceOf(ALICE, claimId), 1);
         assertTrue(!claimRecord.claimed);
 
-        (uint160 optionId, uint96 claimIdx) = engine.getDecodedIdComponents(claimId);
+        (uint160 optionId, uint96 claimIdx) = engine.decodeTokenId(claimId);
         assertEq(uint256(optionId) << 96, testOptionId);
         assertEq(claimIdx, 1);
         assertEq(claimRecord.amountWritten, amount);
@@ -1584,7 +1583,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function _assertClaimAmountExercised(uint256 claimId, uint112 amount) internal {
         IOptionSettlementEngine.Underlying memory underlying = engine.underlying(claimId);
-        IOptionSettlementEngine.Option memory option = engine.getOptionFromEncodedId(claimId);
+        IOptionSettlementEngine.Option memory option = engine.getOptionForTokenId(claimId);
         uint112 amountExercised = uint112(uint256(underlying.exercisePosition) / option.exerciseAmount);
         assertEq(amount, amountExercised);
     }
@@ -1621,7 +1620,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             earliestExerciseTimestamp: earliestExerciseTimestamp,
             expiryTimestamp: expiryTimestamp,
             settlementSeed: 0, // default zero for settlement seed
-            nextClaimId: 0 // default zero for next claim id
+            nextClaimNum: 0 // default zero for next claim id
         });
         optionId = engine.newOptionType(
             underlyingAsset, underlyingAmount, exerciseAsset, exerciseAmount, earliestExerciseTimestamp, expiryTimestamp
@@ -1741,8 +1740,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         pure
         returns (uint256)
     {
-        bytes20 optionHash = bytes20(keccak256(abi.encode(optionInfo)));
-        uint160 optionKey = uint160(optionHash);
+        uint160 optionKey = uint160(bytes20(keccak256(abi.encode(optionInfo))));
 
         return uint256(optionKey) << 96;
     }
@@ -1757,7 +1755,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(actual.earliestExerciseTimestamp, expected.earliestExerciseTimestamp);
         assertEq(actual.expiryTimestamp, expected.expiryTimestamp);
         assertEq(actual.settlementSeed, expected.settlementSeed);
-        assertEq(actual.nextClaimId, expected.nextClaimId);
+        assertEq(actual.nextClaimNum, expected.nextClaimNum);
     }
 
     event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);
@@ -1770,7 +1768,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint96 underlyingAmount,
         uint40 earliestExerciseTimestamp,
         uint40 expiryTimestamp,
-        uint96 nextClaimId
+        uint96 nextClaimNum
     );
 
     event OptionsExercised(uint256 indexed optionId, address indexed exercisee, uint112 amount);

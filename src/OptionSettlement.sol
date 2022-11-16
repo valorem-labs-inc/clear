@@ -294,10 +294,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // retrieve claim
             Claim storage existingClaim = _claim[claimId];
 
-            if (existingClaim.claimed) {
-                revert AlreadyClaimed(claimId);
-            }
-
             existingClaim.amountWritten += amount;
         }
         uint16 bucketIndex = _addOrUpdateClaimBucket(_optionIdU160b, amount);
@@ -387,11 +383,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
 
         Claim storage claimRecord = _claim[claimId];
-
-        if (claimRecord.claimed) {
-            revert AlreadyClaimed(claimId);
-        }
-
         Option storage optionRecord = _option[_optionId];
 
         if (optionRecord.expiryTimestamp > block.timestamp) {

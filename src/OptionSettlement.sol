@@ -9,6 +9,8 @@ import "solmate/utils/SafeTransferLib.sol";
 import "solmate/utils/FixedPointMathLib.sol";
 import "./TokenURIGenerator.sol";
 
+// TODO clarify excluded tokens
+
 /**
  * Valorem Options V1 is a DeFi money lego enabling writing covered call and covered put, physically settled, options.
  * All written options are fully collateralized against an ERC-20 underlying asset and exercised with an

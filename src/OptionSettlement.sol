@@ -184,12 +184,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Make sure that expiry is at least 24 hours from now
         if (expiryTimestamp < (block.timestamp + 1 days)) {
-            revert ExpiryTooSoon(optionId, expiryTimestamp); // TODO what is the point of including optionId that will never get created here?
+            revert ExpiryWindowTooShort(expiryTimestamp);
         }
 
         // Ensure the exercise window is at least 24 hours
         if (expiryTimestamp < (exerciseTimestamp + 1 days)) {
-            revert ExerciseWindowTooShort();
+            revert ExerciseWindowTooShort(exerciseTimestamp);
         }
 
         // The exercise and underlying assets can't be the same
@@ -294,10 +294,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // retrieve claim
             Claim storage existingClaim = _claim[claimId];
 
-            if (existingClaim.claimed) {
-                revert AlreadyClaimed(claimId);
-            }
-
             existingClaim.amountWritten += amount;
         }
         uint16 bucketIndex = _addOrUpdateClaimBucket(_optionIdU160b, amount);
@@ -387,11 +383,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
 
         Claim storage claimRecord = _claim[claimId];
-
-        if (claimRecord.claimed) {
-            revert AlreadyClaimed(claimId);
-        }
-
         Option storage optionRecord = _option[_optionId];
 
         if (optionRecord.expiryTimestamp > block.timestamp) {
@@ -435,7 +426,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // token ID is an option
         if (_tokenIdL96b == 0) {
-            bool expired = (optionRecord.expiryTimestamp > block.timestamp);
+            bool expired = (optionRecord.expiryTimestamp <= block.timestamp);
             underlyingPositions = Underlying({
                 underlyingAsset: optionRecord.underlyingAsset,
                 underlyingPosition: expired ? int256(0) : int256(uint256(optionRecord.underlyingAmount)),

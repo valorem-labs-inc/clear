@@ -49,8 +49,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     // Test option
     uint256 private testOptionId;
+    address private testUnderlyingAsset = WETH_A;
     uint40 private testExerciseTimestamp;
     uint40 private testExpiryTimestamp;
+    address private testExerciseAsset = DAI_A;
     uint96 private testUnderlyingAmount = 7 ether; // NOTE: uneven number to test for division rounding
     uint96 private testExerciseAmount = 3000 ether;
     uint256 private testDuration = 1 days;
@@ -68,10 +70,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
         testExerciseTimestamp = uint40(block.timestamp);
         testExpiryTimestamp = uint40(block.timestamp + testDuration);
         (testOptionId, testOption) = _createNewOptionType({
-            underlyingAsset: WETH_A,
+            underlyingAsset: testUnderlyingAsset,
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
-            exerciseAsset: DAI_A,
+            exerciseAsset: testExerciseAsset,
             underlyingAmount: testUnderlyingAmount,
             exerciseAmount: testExerciseAmount
         });
@@ -288,6 +290,22 @@ contract OptionSettlementTest is Test, NFTreceiver {
         underlyingPositions = engine.underlying(claimId);
         _assertPosition(underlyingPositions.underlyingPosition, 0);
         _assertPosition(underlyingPositions.exercisePosition, 2 * testExerciseAmount);
+    }
+
+    function testUnderlyingForFungibleOptionToken() public {
+        IOptionSettlementEngine.Underlying memory underlying = engine.underlying(testOptionId);
+        // before expiry, position is entirely the underlying amount
+        _assertPosition(underlying.underlyingPosition, testUnderlyingAmount);
+        _assertPosition(-1 * underlying.exercisePosition, testExerciseAmount);
+        assertEq(testExerciseAsset, underlying.exerciseAsset);
+        assertEq(testUnderlyingAsset, underlying.underlyingAsset);
+
+        vm.warp(testOption.expiryTimestamp);
+        underlying = engine.underlying(testOptionId);
+        _assertPosition(underlying.underlyingPosition, 0);
+        _assertPosition(underlying.exercisePosition, 0);
+        assertEq(testExerciseAsset, underlying.exerciseAsset);
+        assertEq(testUnderlyingAsset, underlying.underlyingAsset);
     }
 
     function testAddOptionsToExistingClaim() public {
@@ -839,57 +857,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
     // **********************************************************************
 
     function testRevertNewOptionTypeWhenOptionsTypeExists() public {
-        (uint256 optionId,) = _createNewOptionType({
-            underlyingAsset: DAI_A,
-            exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp,
-            exerciseAsset: WETH_A,
-            underlyingAmount: testUnderlyingAmount,
-            exerciseAmount: testExerciseAmount
-        });
-
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.OptionsTypeExists.selector, optionId));
-
-        engine.newOptionType(
-            DAI_A, testExerciseTimestamp, testExpiryTimestamp, WETH_A, testUnderlyingAmount, testExerciseAmount
-        );
-    }
-
-    function testRevertNewOptionTypeWhenExpiryTooSoon() public {
-        uint40 tooSoonExpiryTimestamp = uint40(block.timestamp + 1 days - 1 seconds);
-        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
-            underlyingAsset: DAI_A,
-            exerciseTimestamp: uint40(block.timestamp),
-            expiryTimestamp: tooSoonExpiryTimestamp,
-            exerciseAsset: WETH_A,
-            underlyingAmount: testUnderlyingAmount,
-            settlementSeed: 0, // default zero for settlement seed
-            exerciseAmount: testExerciseAmount,
-            nextClaimId: 0 // default zero for next claim id
-        });
-        uint256 tooSoonOptionId = _createOptionIdFromStruct(option);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOptionSettlementEngine.ExpiryTooSoon.selector, tooSoonOptionId, tooSoonExpiryTimestamp
-            )
-        );
-
-        _createNewOptionType({
-            underlyingAsset: DAI_A,
-            exerciseTimestamp: uint40(block.timestamp),
-            expiryTimestamp: tooSoonExpiryTimestamp,
-            exerciseAsset: WETH_A,
-            underlyingAmount: testUnderlyingAmount,
-            exerciseAmount: testExerciseAmount
-        });
-    }
-
-    // **********************************************************************
-    //                            FAIL TESTS
-    // **********************************************************************
-
-    function testNewOptionTypeOptionsTypeExists() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.OptionsTypeExists.selector, testOptionId));
         _createNewOptionType(
             WETH_A, // underlyingAsset
@@ -901,24 +868,25 @@ contract OptionSettlementTest is Test, NFTreceiver {
         );
     }
 
-    function testNewOptionTypeExerciseWindowTooShort() public {
-        (uint256 optionId,) = _getNewOptionType(
-            WETH_A, // underlyingAsset
-            testExerciseTimestamp, // exerciseTimestamp
-            testExpiryTimestamp - 1, // expiryTimestamp
-            DAI_A, // exerciseAsset
-            testUnderlyingAmount, // underlyingAmount
-            testExerciseAmount // exerciseAmount
-        );
+    function testRevertNewOptionTypeWhenExpiryWindowTooShort() public {
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ExpiryTooSoon.selector, optionId, testExpiryTimestamp - 1)
+            abi.encodeWithSelector(IOptionSettlementEngine.ExpiryWindowTooShort.selector, testExpiryTimestamp - 1)
         );
         engine.newOptionType(
             WETH_A, testExerciseTimestamp, testExpiryTimestamp - 1, DAI_A, testUnderlyingAmount, testExerciseAmount
         );
     }
 
-    function testRevertNewOptionTypeWhenAssetsAreTheSame() public {
+    function testRevertNewOptionTypeWhenExerciseWindowTooShort() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.ExerciseWindowTooShort.selector, uint40(block.timestamp + 1))
+        );
+        engine.newOptionType(
+            WETH_A, uint40(block.timestamp + 1), testExpiryTimestamp, DAI_A, testUnderlyingAmount, testExerciseAmount
+        );
+    }
+
+    function testRevertNewOptionTypeWhenInvalidAssets() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, DAI_A, DAI_A));
         _createNewOptionType(
             DAI_A, // underlyingAsset
@@ -959,14 +927,18 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function testRevertWriteWhenInvalidOption() public {
+        // Option ID not 0 in lower 96 b
         uint256 invalidOptionId = testOptionId + 1;
-
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId));
+        engine.write(invalidOptionId, 1);
 
+        // Option ID not initialized
+        invalidOptionId = testOptionId / 2;
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId));
         engine.write(invalidOptionId, 1);
     }
 
-    function testRevertWriteWhenClaimIdDoesNotEncodeOptionId() public {
+    function testRevertWriteWhenEncodedOptionIdInClaimIdDoesNotMatchProvidedOptionId() public {
         uint256 option1Claim1 = engine.getTokenId(0xDEADBEEF1, 0xCAFECAFE1);
         uint256 option2WithoutClaim = engine.getTokenId(0xDEADBEEF2, 0x0);
 
@@ -981,7 +953,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.write(option2WithoutClaim, 1, option1Claim1);
     }
 
-    function testRevertWriteWhenAmountWrittenIsZero() public {
+    function testRevertWriteWhenAmountWrittenCannotBeZero() public {
         uint112 invalidWriteAmount = 0;
 
         vm.expectRevert(IOptionSettlementEngine.AmountWrittenCannotBeZero.selector);
@@ -1014,7 +986,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.stopPrank();
     }
 
-    function testRevertWriteWhenWriterDoesNotOwnClaim() public {
+    function testRevertWriteWhenCallerDoesNotOwnClaimId() public {
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
         vm.stopPrank();
@@ -1025,7 +997,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.write(testOptionId, 1, claimId);
     }
 
-    function testRevertWriteWhenWritingToLotAlreadyClaimed() public {
+    function testRevertWriteWhenExpiredOption() public {
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
 
@@ -1041,7 +1013,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.stopPrank();
     }
 
-    function testRevertExerciseWhenBeforeExerciseTimestamp() public {
+    function testRevertExerciseWhenExerciseTooEarly() public {
         // Alice writes
         vm.startPrank(ALICE);
         engine.write(testOptionId, 1);
@@ -1059,7 +1031,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.stopPrank();
     }
 
-    function testRevertExerciseWhenInvalidOptionId() public {
+    function testRevertExerciseWhenInvalidOption() public {
         vm.startPrank(ALICE);
         engine.write(testOptionId, 1);
 
@@ -1070,7 +1042,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.exercise(invalidOptionId, 1);
     }
 
-    function testRevertExerciseWhenAtExpiry() public {
+    function testRevertExerciseWhenExpiredOption() public {
+        uint256 ts = block.timestamp;
+        // ====== Exercise at Expiry =======
         // Alice writes
         vm.startPrank(ALICE);
         engine.write(testOptionId, 1);
@@ -1087,9 +1061,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
         );
         engine.exercise(testOptionId, 1);
         vm.stopPrank();
-    }
 
-    function testRevertExerciseWhenAfterExpiry() public {
+        vm.warp(ts);
+        // ====== Exercise after Expiry =======
         // Alice writes
         vm.startPrank(ALICE);
         engine.write(testOptionId, 1);
@@ -1117,7 +1091,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.redeem(badClaimId);
     }
 
-    function testRevertExerciseBalanceTooLow() public {
+    function testRevertExerciseWhenCallerHoldsInsufficientOptions() public {
         vm.warp(testExerciseTimestamp + 1 seconds);
 
         // Should revert if you hold 0
@@ -1135,7 +1109,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.exercise(testOptionId, 2);
     }
 
-    function testRevertRedeemWhenBalanceTooLow() public {
+    function testRevertRedeemWhenCallerDoesNotOwnClaimId() public {
         // Alice writes and transfers to Bob, then Alice tries to redeem
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
@@ -1164,25 +1138,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.stopPrank();
     }
 
-    function testRevertRedeemAlreadyClaimed() public {
-        vm.startPrank(ALICE);
-        uint256 claimId = engine.write(testOptionId, 1);
-
-        // write a second option so balance will be > 0
-        engine.write(testOptionId, 1);
-
-        vm.warp(testExpiryTimestamp);
-
-        engine.redeem(claimId);
-
-        // Claim is burned after initial redemption. Null owns this claim now.
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
-
-        engine.redeem(claimId);
-        vm.stopPrank();
-    }
-
-    function testRevertRedeemClaimTooSoon() public {
+    function testRevertRedeemWhenClaimTooSoon() public {
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
 
@@ -1195,7 +1151,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.redeem(claimId);
     }
 
-    function testRevertUnderlyingWhenNoOptionIsInitialized() public {
+    function testRevertUnderlyingWhenTokenNotFound() public {
         uint256 badOptionId = 123;
 
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, badOptionId));
@@ -1203,7 +1159,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.underlying(badOptionId);
     }
 
-    function testUriFailsWithTokenIdEncodingNonexistantOptionType() public {
+    function testRevertUriWhenTokenNotFound() public {
         uint256 tokenId = 420;
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, tokenId));
         engine.uri(420);

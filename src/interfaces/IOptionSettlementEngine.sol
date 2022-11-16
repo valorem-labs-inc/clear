@@ -33,13 +33,15 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice The expiry timestamp is less than 24 hours from now.
-     * @param optionId Supplied option ID.
      * @param expiry Timestamp of expiry
      */
-    error ExpiryTooSoon(uint256 optionId, uint40 expiry);
+    error ExpiryWindowTooShort(uint40 expiry);
 
-    /// @notice The option exercise window is less than 24 hours long.
-    error ExerciseWindowTooShort();
+    /**
+     * @notice The option exercise window is less than 24 hours long.
+     * @param exercise The timestamp supplied for exercise.
+     */
+    error ExerciseWindowTooShort(uint40 exercise);
 
     /**
      * @notice The assets specified are invalid or duplicate.

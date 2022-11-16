@@ -958,15 +958,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         });
     }
 
-    function testRevertAssignExerciseWhenNotHoldingOptions() public {
-        // Exercise an option before anyone has written it
-        vm.warp(testOption.exerciseTimestamp + 1);
-        vm.expectRevert(stdError.divisionError);
-        // no claims in any buckets are written, therefor the list
-        // of unexercised buckets is zero
-        engine.exercise(testOptionId, 1);
-    }
-
     function testRevertWriteWhenInvalidOption() public {
         uint256 invalidOptionId = testOptionId + 1;
 

@@ -83,12 +83,6 @@ interface IOptionSettlementEngine {
     error ExerciseTooEarly(uint256 optionId, uint40 exercise);
 
     /**
-     * @notice This option has no claims written against it.
-     * @param optionId Supplied option ID.
-     */
-    error NoClaims(uint256 optionId);
-
-    /**
      * @notice This claim is not owned by the caller.
      * @param claimId Supplied claim ID.
      */

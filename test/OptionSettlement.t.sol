@@ -898,6 +898,11 @@ contract OptionSettlementTest is Test, NFTreceiver {
         });
     }
     
+
+    // **********************************************************************
+    //                            FAIL TESTS
+    // **********************************************************************
+
     function testNewOptionTypeOptionsTypeExists() public 
     {
         vm.expectRevert(
@@ -973,6 +978,15 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: testUnderlyingAmount,
             exerciseAmount: exerciseAmountExceedsTotalSupply
         });
+    }
+    
+    function testAssignExerciseFail() public {
+        // Exercise an option before anyone has written it
+        vm.warp(testOption.exerciseTimestamp + 1);
+        vm.expectRevert(stdError.divisionError);
+        // no claims in any buckets are written, therefor the list 
+        // of unexercised buckets is zero
+        engine.exercise(testOptionId, 1);
     }
 
     // write()

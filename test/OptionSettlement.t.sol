@@ -56,6 +56,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
     uint96 private testExerciseAmount = 3000 ether;
     uint256 private testDuration = 1 days;
 
+    IOptionSettlementEngine.Option private testOption;
+
     function setUp() public {
         // Fork mainnet
         vm.createSelectFork(vm.envString("RPC_URL"), 15_000_000); // specify block number to cache for future test runs
@@ -66,7 +68,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // Setup test option contract
         testExerciseTimestamp = uint40(block.timestamp);
         testExpiryTimestamp = uint40(block.timestamp + testDuration);
-        (testOptionId,) = _newOption({
+        (testOptionId, testOption) = _newOption({
             underlyingAsset: WETH_A,
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
@@ -927,6 +929,27 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseAmount: testExerciseAmount
         });
     }
+    
+    function testNewOptionTypeOptionsTypeExists() public 
+    {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOptionSettlementEngine.OptionsTypeExists.selector, 
+                testOptionId
+            )
+        );
+        _newOption(
+            WETH_A, // underlyingAsset
+            testExerciseTimestamp, // exerciseTimestamp
+            testExpiryTimestamp, // expiryTimestamp
+            DAI_A, // exerciseAsset
+            testUnderlyingAmount, // underlyingAmount
+            testExerciseAmount // exerciseAmount
+        );
+    }
+    // **********************************************************************
+    //                            FAIL TESTS
+    // **********************************************************************
 
     function testRevertNewOptionTypeWhenExerciseWindowTooShort() public {
         vm.expectRevert(IOptionSettlementEngine.ExerciseWindowTooShort.selector);

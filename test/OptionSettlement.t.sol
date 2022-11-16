@@ -958,15 +958,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         });
     }
 
-    function testRevertAssignExerciseWhenNotHoldingOptions() public {
-        // Exercise an option before anyone has written it
-        vm.warp(testOption.exerciseTimestamp + 1);
-        vm.expectRevert(stdError.divisionError);
-        // no claims in any buckets are written, therefor the list
-        // of unexercised buckets is zero
-        engine.exercise(testOptionId, 1);
-    }
-
     function testRevertWriteWhenInvalidOption() public {
         uint256 invalidOptionId = testOptionId + 1;
 
@@ -1124,6 +1115,24 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         vm.prank(ALICE);
         engine.redeem(badClaimId);
+    }
+
+    function testRevertExerciseBalanceTooLow() public {
+        vm.warp(testExerciseTimestamp + 1 seconds);
+
+        // Should revert if you hold 0
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.CallerHoldsInsufficientOptions.selector, testOptionId, 1)
+        );
+        engine.exercise(testOptionId, 1);
+
+        // Should revert if you hold some, but not enough
+        vm.startPrank(ALICE);
+        engine.write(testOptionId, 1);
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.CallerHoldsInsufficientOptions.selector, testOptionId, 2)
+        );
+        engine.exercise(testOptionId, 2);
     }
 
     function testRevertRedeemWhenBalanceTooLow() public {

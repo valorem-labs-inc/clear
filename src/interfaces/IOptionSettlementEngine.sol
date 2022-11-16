@@ -89,6 +89,14 @@ interface IOptionSettlementEngine {
     error CallerDoesNotOwnClaimId(uint256 claimId);
 
     /**
+     * @notice The caller does not have enough of the option to exercise the amount
+     * specified.
+     * @param optionId The supplied option id.
+     * @param amount The amount of the supplied option requested for exercise.
+     */
+    error CallerHoldsInsufficientOptions(uint256 optionId, uint112 amount);
+
+    /**
      * @notice This claimId has already been claimed.
      * @param claimId Supplied claim ID.
      */

@@ -885,20 +885,13 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseAmount: testExerciseAmount
         });
     }
-    
 
     // **********************************************************************
     //                            FAIL TESTS
     // **********************************************************************
 
-    function testNewOptionTypeOptionsTypeExists() public 
-    {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOptionSettlementEngine.OptionsTypeExists.selector, 
-                testOptionId
-            )
-        );
+    function testNewOptionTypeOptionsTypeExists() public {
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.OptionsTypeExists.selector, testOptionId));
         _createNewOptionType(
             WETH_A, // underlyingAsset
             testExerciseTimestamp, // exerciseTimestamp
@@ -919,13 +912,11 @@ contract OptionSettlementTest is Test, NFTreceiver {
             testExerciseAmount // exerciseAmount
         );
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IOptionSettlementEngine.ExpiryTooSoon.selector,
-                optionId,
-                testExpiryTimestamp - 1
-            )
+            abi.encodeWithSelector(IOptionSettlementEngine.ExpiryTooSoon.selector, optionId, testExpiryTimestamp - 1)
         );
-        engine.newOptionType(WETH_A, testExerciseTimestamp, testExpiryTimestamp - 1, DAI_A, testUnderlyingAmount, testExerciseAmount);
+        engine.newOptionType(
+            WETH_A, testExerciseTimestamp, testExpiryTimestamp - 1, DAI_A, testUnderlyingAmount, testExerciseAmount
+        );
     }
 
     function testRevertNewOptionTypeWhenAssetsAreTheSame() public {
@@ -972,7 +963,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // Exercise an option before anyone has written it
         vm.warp(testOption.exerciseTimestamp + 1);
         vm.expectRevert(stdError.divisionError);
-        // no claims in any buckets are written, therefor the list 
+        // no claims in any buckets are written, therefor the list
         // of unexercised buckets is zero
         engine.exercise(testOptionId, 1);
     }
@@ -1014,7 +1005,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.expectRevert(
             abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
         );
-        
+
         engine.write(testOptionId, 1);
     }
 
@@ -1594,14 +1585,11 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint96 exerciseAmount
     ) internal returns (uint256 optionId, IOptionSettlementEngine.Option memory option) {
         (, option) = _getNewOptionType(
-            underlyingAsset,
-            exerciseTimestamp,
-            expiryTimestamp,
-            exerciseAsset,
-            underlyingAmount,
-            exerciseAmount
+            underlyingAsset, exerciseTimestamp, expiryTimestamp, exerciseAsset, underlyingAmount, exerciseAmount
         );
-        optionId = engine.newOptionType(underlyingAsset, exerciseTimestamp, expiryTimestamp, exerciseAsset, underlyingAmount, exerciseAmount);
+        optionId = engine.newOptionType(
+            underlyingAsset, exerciseTimestamp, expiryTimestamp, exerciseAsset, underlyingAmount, exerciseAmount
+        );
     }
 
     function _getNewOptionType(

@@ -48,7 +48,7 @@ The **Protocol Admin** is the address to which protocol fees are swept, and can 
 
 **Option Writers** can create new option types and write option lots for any valid ERC-20 asset pair (excluding rebasing, fee-on-transfer, and ERC-777 tokens). Sufficient approval must be granted for the Settlement Engine to take custody of the requisite amount of the underlying asset. Once an option lot expires, the writer can redeem their Claim NFT to their share of the underlying and/or exercise assets.
 
-**Option Holders** can acquire options once written. This is accomplished via a simple ERC-1155 transaction to transfer the desired amount of option contracts. When exercising an option, they must hold enough of the exercise asset, and similarly to when writing an option, they must have granted sufficient approval for the Settlement Engine on the ERC20 exercise asset.
+**Option Holders** can acquire options that have been written. This is accomplished via a standard ERC-1155 transaction to transfer the desired amount of option contracts. When exercising an option, they must hold enough of the exercise asset, and similarly to when writing an option, they must have granted sufficient approval for the Settlement Engine on the ERC20 exercise asset.
 
 #### Assets
 Each asset pair for which an option is written is custodied by the Settlement Engine. When an option is written, TODO. When an option is exercised, TODO. When an option lot claim is redeemed, TODO. The core Settlement Engine is agnostic with regard to the buying or selling of options contracts. These are ERC-1155 semi-fungible tokens which can be transacted freely, from the writer to any party wishing to hold and potentially exercise the option before expiry. The Settlement Engine emits a standard ERC-1155 TransferSingle event when 1 or more options of a given type changes hands.
@@ -65,9 +65,9 @@ What can each actor do, when, with how much of each asset?
     - render the URI of any token
 - `OptionSettlementEngine`
   - `anyone` can
-    - check protocol fee (expressed in basis points)
-    - check protocol balance of any ERC20 asset
-    - check Protocol Admin ("feeTo") address
+    - view protocol fee (expressed in basis points)
+    - view Protocol Admin ("feeTo") address
+    - check fee balance of any ERC20 asset
     - check whether any token ID is an Option or an Option Lot Claim
     - check positions of the underlying and exercise assets of any token
     - get Option info for any token ID

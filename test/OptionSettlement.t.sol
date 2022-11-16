@@ -49,8 +49,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     // Test option
     uint256 private testOptionId;
+    address private testUnderlyingAsset = WETH_A;
     uint40 private testExerciseTimestamp;
     uint40 private testExpiryTimestamp;
+    address private testExerciseAsset = DAI_A;
     uint96 private testUnderlyingAmount = 7 ether; // NOTE: uneven number to test for division rounding
     uint96 private testExerciseAmount = 3000 ether;
     uint256 private testDuration = 1 days;
@@ -68,10 +70,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
         testExerciseTimestamp = uint40(block.timestamp);
         testExpiryTimestamp = uint40(block.timestamp + testDuration);
         (testOptionId, testOption) = _createNewOptionType({
-            underlyingAsset: WETH_A,
+            underlyingAsset: testUnderlyingAsset,
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
-            exerciseAsset: DAI_A,
+            exerciseAsset: testExerciseAsset,
             underlyingAmount: testUnderlyingAmount,
             exerciseAmount: testExerciseAmount
         });
@@ -288,6 +290,22 @@ contract OptionSettlementTest is Test, NFTreceiver {
         underlyingPositions = engine.underlying(claimId);
         _assertPosition(underlyingPositions.underlyingPosition, 0);
         _assertPosition(underlyingPositions.exercisePosition, 2 * testExerciseAmount);
+    }
+
+    function testUnderlyingForFungibleOptionToken() public {
+        IOptionSettlementEngine.Underlying memory underlying = engine.underlying(testOptionId);
+        // before expiry, position is entirely the underlying amount
+        _assertPosition(underlying.underlyingPosition, testUnderlyingAmount);
+        _assertPosition(-1 * underlying.exercisePosition, testExerciseAmount);
+        assertEq(testExerciseAsset, underlying.exerciseAsset);
+        assertEq(testUnderlyingAsset, underlying.underlyingAsset);
+
+        vm.warp(testOption.expiryTimestamp);
+        underlying = engine.underlying(testOptionId);
+        _assertPosition(underlying.underlyingPosition, 0);
+        _assertPosition(underlying.exercisePosition, 0);
+        assertEq(testExerciseAsset, underlying.exerciseAsset);
+        assertEq(testUnderlyingAsset, underlying.underlyingAsset);
     }
 
     function testAddOptionsToExistingClaim() public {

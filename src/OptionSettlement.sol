@@ -426,7 +426,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // token ID is an option
         if (_tokenIdL96b == 0) {
-            bool expired = (optionRecord.expiryTimestamp > block.timestamp);
+            bool expired = (optionRecord.expiryTimestamp <= block.timestamp);
             underlyingPositions = Underlying({
                 underlyingAsset: optionRecord.underlyingAsset,
                 underlyingPosition: expired ? int256(0) : int256(uint256(optionRecord.underlyingAmount)),

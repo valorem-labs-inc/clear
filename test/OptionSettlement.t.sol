@@ -1156,25 +1156,25 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.stopPrank();
     }
 
-    // TODO redeem() L353
-    // function testRevertRedeemAlreadyClaimed() public {
-    //     vm.startPrank(ALICE);
-    //     uint256 claimId = engine.write(testOptionId, 1);
+    function testRevertRedeemAlreadyClaimed() public {
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 1);
 
-    //     // write a second option so balance will be > 0
-    //     engine.write(testOptionId, 1);
+        // write a second option so balance will be > 0
+        engine.write(testOptionId, 1);
 
-    //     vm.warp(testExpiryTimestamp);
+        vm.warp(testExpiryTimestamp);
 
-    //     engine.redeem(claimId);
+        engine.redeem(claimId);
 
-    //     vm.expectRevert(
-    //         abi.encodeWithSelector(IOptionSettlementEngine.AlreadyClaimed.selector, claimId
-    //     ));
+        // Claim is burned after initial redemption. Null owns this claim now.
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId
+        ));
 
-    //     engine.redeem(claimId);
-    //     vm.stopPrank();
-    // }
+        engine.redeem(claimId);
+        vm.stopPrank();
+    }
 
     function testRevertRedeemClaimTooSoon() public {
         vm.startPrank(ALICE);

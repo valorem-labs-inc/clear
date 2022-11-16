@@ -601,7 +601,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             settlementSeed: 0,
             nextClaimNum: 0
         });
-        uint256 oTokenId =
+        uint256 optionId =
             engine.newOptionType(DAI_A, 1, USDC_A, 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
 
         // Update struct values to match stored option data structure
@@ -610,7 +610,23 @@ contract OptionSettlementTest is Test, NFTreceiver {
         option.settlementSeed = optionKey; // settlement seed is initially equal to option key
         option.nextClaimNum = 1; // next claim num has been incremented
 
-        assertEq(engine.getOptionForTokenId(oTokenId), option);
+        assertEq(engine.getOptionForTokenId(optionId), option);
+    }
+
+    function testGetClaimForTokenId() public {
+        uint256 optionId =
+            engine.newOptionType(DAI_A, 1, USDC_A, 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
+
+        vm.prank(ALICE);
+        uint256 claimId = engine.write(optionId, 7);
+
+        IOptionSettlementEngine.OptionLotClaim memory claim = engine.getClaimForTokenId(claimId);
+
+        emit log_named_uint("Amount written", claim.amountWritten);
+        // emit log_named_boolean("Claimed", claim.claimed);
+
+        assertEq(claim.amountWritten, 7);
+        assertEq(claim.claimed, false);
     }
 
     function testIsOptionInitialized() public {

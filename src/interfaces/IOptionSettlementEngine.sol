@@ -5,6 +5,8 @@ import "./IERC1155Metadata.sol";
 
 /// @title A settlement engine for options
 /// @author 0xAlcibiades
+/// @author Flip-Liquid
+/// @author neodaoist
 interface IOptionSettlementEngine {
     //
 
@@ -283,7 +285,7 @@ interface IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
-    // Option Info
+    //  Accessors
     //////////////////////////////////////////////////////////////*/
 
     /**
@@ -305,17 +307,6 @@ interface IOptionSettlementEngine {
     function claim(uint256 tokenId) external view returns (OptionLotClaim memory claimInfo);
 
     /**
-     * @notice Returns the total amount of options written and exercised for all
-     * option lot claims created on the supplied index.
-     * @param optionId The id of the option for the claim buckets.
-     * @param dayBucket The index of the claimBucket to return.
-     */
-    function claimBucket(uint256 optionId, uint16 dayBucket)
-        external
-        view
-        returns (OptionLotClaimBucket memory claimBucketInfo);
-
-    /**
      * @notice Information about the position underlying a token, useful for determining value. 
      * When supplied an Option Lot Claim id, this function returns the total amounts of underlying
      * and exercise assets currently associated with a given options lot.
@@ -331,8 +322,15 @@ interface IOptionSettlementEngine {
      */
     function tokenType(uint256 tokenId) external view returns (Type);
 
+    /**
+     * @notice Check to see if an option is already initialized
+     * @param optionKey The option key to check
+     * @return Whether or not the option is initialized
+     */
+    function isOptionInitialized(uint160 optionKey) external view returns (bool);
+
     /*//////////////////////////////////////////////////////////////
-    // Write Options
+    //  Write Options
     //////////////////////////////////////////////////////////////*/
 
     // /**
@@ -369,7 +367,7 @@ interface IOptionSettlementEngine {
     function write(uint256 optionId, uint112 amount, uint256 claimId) external returns (uint256);
 
     /*//////////////////////////////////////////////////////////////
-    // Exercise Options
+    //  Exercise Options
     //////////////////////////////////////////////////////////////*/
 
     /**
@@ -382,7 +380,7 @@ interface IOptionSettlementEngine {
     function exercise(uint256 optionId, uint112 amount) external;
 
     /*//////////////////////////////////////////////////////////////
-    // Redeem Option Lot Claims
+    //  Redeem Option Lot Claims
     //////////////////////////////////////////////////////////////*/
 
     /**
@@ -392,7 +390,7 @@ interface IOptionSettlementEngine {
     function redeem(uint256 claimId) external;
 
     /*//////////////////////////////////////////////////////////////
-    // Protocol Admin
+    //  Protocol Admin
     //////////////////////////////////////////////////////////////*/
 
     /**

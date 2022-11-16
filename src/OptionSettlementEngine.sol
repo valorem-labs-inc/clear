@@ -9,6 +9,10 @@ import "solmate/utils/SafeTransferLib.sol";
 import "solmate/utils/FixedPointMathLib.sol";
 import "./TokenURIGenerator.sol";
 
+// TODO decide on exerciseTimestamp earliestExerciseTimestamp
+// TODO fix 2 broken bucketing-related tests -- testAssignMultipleBuckets and testRandomAssignment
+// TODO fix broken accessor-related test -- testGetClaimForTokenId
+
 /**
  * Valorem Options V1 is a DeFi money lego enabling writing covered call and covered put, physically settled, options.
  * All written options are fully collateralized against an ERC-20 underlying asset and exercised with an
@@ -19,12 +23,16 @@ import "./TokenURIGenerator.sol";
  * a broad swath of traditional options.
  */
 
-/// @notice This settlement protocol does not support rebase tokens, or fee on transfer tokens
+/// @title A settlement engine for options
+/// @dev This settlement protocol does not support rebase tokens, or fee on transfer tokens
+/// @author 0xAlcibiades
+/// @author Flip-Liquid
+/// @author neodaoist
 contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //
 
     /*//////////////////////////////////////////////////////////////
-    // State variables - Public
+    //  State variables - Public
     //////////////////////////////////////////////////////////////*/
 
     /// @notice The protocol fee
@@ -37,13 +45,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     address public feeTo = 0x2dbd50A4Ef9B172698596217b7DB0163D3607b41;
 
     /*//////////////////////////////////////////////////////////////
-    // State variables - Internal
+    //  State variables - Internal
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Accessor for Option contract details
     mapping(uint160 => Option) internal _option;
 
-    /// @notice Accessor for claim ticket details
+    /// @notice Accessor for option lot claim ticket details
     mapping(uint256 => OptionLotClaim) internal _claim;
 
     /// @notice Accessor for buckets of claims grouped by day
@@ -70,7 +78,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     mapping(uint256 => OptionLotClaimIndex[]) internal _claimIdToClaimIndexArray;
 
     /*//////////////////////////////////////////////////////////////
-    // Functions - Option Info
+    //  Accessors
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IOptionSettlementEngine
@@ -82,16 +90,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @inheritdoc IOptionSettlementEngine
     function claim(uint256 tokenId) external view returns (OptionLotClaim memory claimInfo) {
         claimInfo = _claim[tokenId];
-    }
-
-    /// @inheritdoc IOptionSettlementEngine
-    function claimBucket(uint256 optionId, uint16 dayBucket)
-        external
-        view
-        returns (OptionLotClaimBucket memory claimBucketInfo)
-    {
-        (uint160 optionKey,) = decodeTokenId(optionId);
-        claimBucketInfo = _claimBucketByOption[optionKey][dayBucket];
     }
 
     /// @inheritdoc IOptionSettlementEngine
@@ -127,6 +125,15 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
     }
 
+    /// @inheritdoc IOptionSettlementEngine
+    function tokenType(uint256 tokenId) external pure returns (Type) {
+        (, uint96 claimNum) = decodeTokenId(tokenId);
+        if (claimNum == 0) {
+            return Type.Option;
+        }
+        return Type.OptionLotClaim;
+    }
+
     /**
      * @notice Check to see if an option is already initialized
      * @param optionKey The option key to check
@@ -136,14 +143,25 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return _option[optionKey].underlyingAsset != address(0x0);
     }
 
-    /// @inheritdoc IOptionSettlementEngine
-    function tokenType(uint256 tokenId) external pure returns (Type) {
-        (, uint96 claimNum) = decodeTokenId(tokenId);
-        if (claimNum == 0) {
-            return Type.Option;
-        }
-        return Type.OptionLotClaim;
+    // TODO remove
+    /**
+     * @notice Returns the total amount of options written and exercised for all
+     * option lot claims created on the supplied index.
+     * @param optionId The id of the option for the claim buckets.
+     * @param dayBucket The index of the claimBucket to return.
+     */
+    function claimBucket(uint256 optionId, uint16 dayBucket)
+        external
+        view
+        returns (OptionLotClaimBucket memory claimBucketInfo)
+    {
+        (uint160 optionKey,) = decodeTokenId(optionId);
+        claimBucketInfo = _claimBucketByOption[optionKey][dayBucket];
     }
+
+    /*//////////////////////////////////////////////////////////////
+    //  Token URI
+    //////////////////////////////////////////////////////////////*/
 
     /// @dev TODO
     function uri(uint256 tokenId) public view virtual override returns (string memory) {
@@ -173,7 +191,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
-    // Functions - Token ID Encoding
+    //  Token ID Encoding
     //////////////////////////////////////////////////////////////*/
 
     /**
@@ -226,8 +244,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return _option[optionKey];
     }
 
+    function getClaimForTokenId(uint256 tokenId) public view returns (OptionLotClaim memory) {
+        (, uint96 claimNum) = decodeTokenId(tokenId);
+        return _claim[claimNum];
+    }
+
     /*//////////////////////////////////////////////////////////////
-    // Functions - Write Options
+    //  Write Options
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IOptionSettlementEngine
@@ -405,7 +428,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
-    // Functions - Exercise Options
+    //  Exercise Options
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IOptionSettlementEngine
@@ -449,7 +472,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
-    // Functions - Redeem Option Lot Claims
+    //  Redeem Option Lot Claims
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Fair assignment is performed here. After option expiry, any claim holder
@@ -509,7 +532,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
-    // Functions - Protocol Admin
+    //  Protocol Admin
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IOptionSettlementEngine
@@ -548,9 +571,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
     }
 
-    // **********************************************************************
-    //                        INTERNAL HELPERS
-    // **********************************************************************
+    /*//////////////////////////////////////////////////////////////
+    //  Internal Helper Functions
+    //////////////////////////////////////////////////////////////*/
 
     /// @dev Performs fair exercise assignment by pseudorandomly selecting a claim
     /// bucket between the intial creation of the option type and "today". The buckets

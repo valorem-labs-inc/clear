@@ -80,7 +80,7 @@ event NewOptionType(
         address indexed underlyingAsset,
         uint96 exerciseAmount,
         uint96 underlyingAmount,
-        uint40 earliestExerciseTimestamp,
+        uint40 exerciseTimestamp,
         uint40 expiryTimestamp
     );
 ```
@@ -314,7 +314,7 @@ unique hash `keccak256(abi.encode(Option memory))` where `settlementSeed` is set
 ```solidity
     struct Option {
         address underlyingAsset;
-        uint40 earliestExerciseTimestamp;
+        uint40 exerciseTimestamp;
         uint40 expiryTimestamp;
         address exerciseAsset;
         uint96 underlyingAmount;

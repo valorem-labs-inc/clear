@@ -9,7 +9,6 @@ import "solmate/utils/SafeTransferLib.sol";
 import "solmate/utils/FixedPointMathLib.sol";
 import "./TokenURIGenerator.sol";
 
-// TODO decide on exerciseTimestamp earliestExerciseTimestamp
 // TODO fix 2 broken bucketing-related tests -- testFailAssignMultipleBuckets and testFailRandomAssignment
 // TODO fix broken accessor-related test -- testFailGetClaimForTokenId
 
@@ -180,7 +179,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             underlyingSymbol: ERC20(optionInfo.underlyingAsset).symbol(),
             exerciseAsset: optionInfo.exerciseAsset,
             exerciseSymbol: ERC20(optionInfo.exerciseAsset).symbol(),
-            earliestExerciseTimestamp: optionInfo.earliestExerciseTimestamp,
+            exerciseTimestamp: optionInfo.exerciseTimestamp,
             expiryTimestamp: optionInfo.expiryTimestamp,
             underlyingAmount: optionInfo.underlyingAmount,
             exerciseAmount: optionInfo.exerciseAmount,
@@ -259,7 +258,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint96 underlyingAmount,
         address exerciseAsset,
         uint96 exerciseAmount,
-        uint40 earliestExerciseTimestamp,
+        uint40 exerciseTimestamp,
         uint40 expiryTimestamp
     ) external returns (uint256 optionId) {
         // Check that a duplicate option type doesn't exist
@@ -271,7 +270,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                         underlyingAmount,
                         exerciseAsset,
                         exerciseAmount,
-                        earliestExerciseTimestamp,
+                        exerciseTimestamp,
                         expiryTimestamp,
                         uint160(0),
                         uint96(0)
@@ -292,8 +291,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
 
         // Ensure the exercise window is at least 24 hours
-        if (expiryTimestamp < (earliestExerciseTimestamp + 1 days)) {
-            revert ExerciseWindowTooShort(earliestExerciseTimestamp);
+        if (expiryTimestamp < (exerciseTimestamp + 1 days)) {
+            revert ExerciseWindowTooShort(exerciseTimestamp);
         }
 
         // The exercise and underlying assets can't be the same
@@ -315,7 +314,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             underlyingAmount: underlyingAmount,
             exerciseAsset: exerciseAsset,
             exerciseAmount: exerciseAmount,
-            earliestExerciseTimestamp: earliestExerciseTimestamp,
+            exerciseTimestamp: exerciseTimestamp,
             expiryTimestamp: expiryTimestamp,
             settlementSeed: optionKey,
             nextClaimNum: 1
@@ -327,7 +326,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             underlyingAsset,
             exerciseAmount,
             underlyingAmount,
-            earliestExerciseTimestamp,
+            exerciseTimestamp,
             expiryTimestamp,
             1
             );
@@ -442,8 +441,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert ExpiredOption(optionId, optionRecord.expiryTimestamp);
         }
         // Require that we have reached the exercise timestamp
-        if (optionRecord.earliestExerciseTimestamp >= block.timestamp) {
-            revert ExerciseTooEarly(optionId, optionRecord.earliestExerciseTimestamp);
+        if (optionRecord.exerciseTimestamp >= block.timestamp) {
+            revert ExerciseTooEarly(optionId, optionRecord.exerciseTimestamp);
         }
 
         if (this.balanceOf(msg.sender, optionId) < amount) {

@@ -74,7 +74,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: testExerciseAsset,
             exerciseAmount: testExerciseAmount,
-            earliestExerciseTimestamp: testExerciseTimestamp,
+            exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
 
@@ -253,7 +253,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: 100,
             exerciseAsset: DAI_A,
             exerciseAmount: testExerciseAmount,
-            earliestExerciseTimestamp: testExerciseTimestamp,
+            exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
             writer: ALICE,
             exerciser: BOB
@@ -351,7 +351,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: DAI_A,
             exerciseAmount: testExerciseAmount,
-            earliestExerciseTimestamp: testExerciseTimestamp,
+            exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
 
@@ -431,7 +431,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: testUnderlyingAmount + 1, // to mess w seed
             exerciseAsset: DAI_A,
             exerciseAmount: testExerciseAmount,
-            earliestExerciseTimestamp: testExerciseTimestamp,
+            exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
 
@@ -585,7 +585,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: 1,
             exerciseAsset: USDC_A,
             exerciseAmount: 100,
-            earliestExerciseTimestamp: uint40(block.timestamp),
+            exerciseTimestamp: uint40(block.timestamp),
             expiryTimestamp: uint40(block.timestamp + 30 days),
             settlementSeed: 0,
             nextClaimNum: 0
@@ -635,7 +635,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testEventNewOptionType() public {
         IOptionSettlementEngine.Option memory optionInfo = IOptionSettlementEngine.Option({
             underlyingAsset: DAI_A,
-            earliestExerciseTimestamp: testExerciseTimestamp,
+            exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
             exerciseAsset: WETH_A,
             underlyingAmount: testUnderlyingAmount,
@@ -755,7 +755,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: daiUnderlyingAmount,
             exerciseAsset: WETH_A,
             exerciseAmount: testExerciseAmount,
-            earliestExerciseTimestamp: testExerciseTimestamp,
+            exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
         engine.write(daiOptionId, 1);
@@ -766,7 +766,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: usdcUnderlyingAmount,
             exerciseAsset: DAI_A,
             exerciseAmount: testExerciseAmount,
-            earliestExerciseTimestamp: testExerciseTimestamp,
+            exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
         engine.write(usdcOptionId, 1);
@@ -804,7 +804,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: DAI_A,
             exerciseAmount: daiExerciseAmount,
-            earliestExerciseTimestamp: testExerciseTimestamp,
+            exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
         engine.write(daiExerciseOptionId, 1);
@@ -815,7 +815,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: WETH_A,
             exerciseAmount: wethExerciseAmount,
-            earliestExerciseTimestamp: testExerciseTimestamp,
+            exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
         engine.write(wethExerciseOptionId, 1);
@@ -826,7 +826,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: USDC_A,
             exerciseAmount: usdcExerciseAmount,
-            earliestExerciseTimestamp: testExerciseTimestamp,
+            exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
         engine.write(usdcExerciseOptionId, 1);
@@ -879,7 +879,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: DAI_A,
             exerciseAmount: testExerciseAmount,
-            earliestExerciseTimestamp: testExerciseTimestamp,
+            exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
     }
@@ -891,7 +891,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: WETH_A,
             exerciseAmount: testExerciseAmount,
-            earliestExerciseTimestamp: uint40(block.timestamp),
+            exerciseTimestamp: uint40(block.timestamp),
             expiryTimestamp: tooSoonExpiryTimestamp,
             settlementSeed: 0, // default zero for settlement seed
             nextClaimNum: 0 // default zero for next claim id
@@ -906,7 +906,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: DAI_A,
             exerciseAmount: testExerciseAmount,
-            earliestExerciseTimestamp: testExerciseTimestamp,
+            exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp - 1
         });
     }
@@ -920,7 +920,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: DAI_A,
             exerciseAmount: testExerciseAmount,
-            earliestExerciseTimestamp: uint40(block.timestamp + 1),
+            exerciseTimestamp: uint40(block.timestamp + 1),
             expiryTimestamp: testExpiryTimestamp
         });
     }
@@ -932,7 +932,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: DAI_A,
             exerciseAmount: testExerciseAmount,
-            earliestExerciseTimestamp: testExerciseTimestamp,
+            exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
     }
@@ -947,7 +947,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: underlyingAmountExceedsTotalSupply,
             exerciseAsset: WETH_A,
             exerciseAmount: testExerciseAmount,
-            earliestExerciseTimestamp: testExerciseTimestamp,
+            exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
 
@@ -960,7 +960,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: WETH_A,
             exerciseAmount: exerciseAmountExceedsTotalSupply,
-            earliestExerciseTimestamp: testExerciseTimestamp,
+            exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
     }
@@ -1016,7 +1016,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: DAI_A,
             exerciseAmount: testExerciseTimestamp + 1,
-            earliestExerciseTimestamp: testExerciseTimestamp,
+            exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp + 1
         });
 
@@ -1060,7 +1060,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
         vm.stopPrank();
 
-        // Bob immediately exercises before earliestExerciseTimestamp
+        // Bob immediately exercises before exerciseTimestamp
         vm.startPrank(BOB);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -1212,14 +1212,14 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testFuzzNewOptionType(
         uint96 underlyingAmount,
         uint96 exerciseAmount,
-        uint40 earliestExerciseTimestamp,
+        uint40 exerciseTimestamp,
         uint40 expiryTimestamp
     ) public {
         vm.assume(expiryTimestamp >= block.timestamp + 86400);
-        vm.assume(earliestExerciseTimestamp >= block.timestamp);
-        vm.assume(earliestExerciseTimestamp <= expiryTimestamp - 86400);
+        vm.assume(exerciseTimestamp >= block.timestamp);
+        vm.assume(exerciseTimestamp <= expiryTimestamp - 86400);
         vm.assume(expiryTimestamp <= type(uint64).max);
-        vm.assume(earliestExerciseTimestamp <= type(uint64).max);
+        vm.assume(exerciseTimestamp <= type(uint64).max);
         vm.assume(underlyingAmount <= WETH.totalSupply());
         vm.assume(exerciseAmount <= DAI.totalSupply());
 
@@ -1228,7 +1228,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: underlyingAmount,
             exerciseAsset: DAI_A,
             exerciseAmount: exerciseAmount,
-            earliestExerciseTimestamp: earliestExerciseTimestamp,
+            exerciseTimestamp: exerciseTimestamp,
             expiryTimestamp: expiryTimestamp
         });
 
@@ -1242,7 +1242,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(optionId, expectedOptionId);
         assertEq(optionRecord.underlyingAsset, WETH_A);
         assertEq(optionRecord.exerciseAsset, DAI_A);
-        assertEq(optionRecord.earliestExerciseTimestamp, earliestExerciseTimestamp);
+        assertEq(optionRecord.exerciseTimestamp, exerciseTimestamp);
         assertEq(optionRecord.expiryTimestamp, expiryTimestamp);
         assertEq(optionRecord.underlyingAmount, underlyingAmount);
         assertEq(optionRecord.exerciseAmount, exerciseAmount);
@@ -1378,7 +1378,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: DAI_A,
             exerciseAmount: testExerciseAmount,
-            earliestExerciseTimestamp: testExerciseTimestamp,
+            exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: uint40(block.timestamp + 30 days)
         });
 
@@ -1388,7 +1388,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: DAI_A,
             exerciseAmount: testExerciseAmount,
-            earliestExerciseTimestamp: testExerciseTimestamp,
+            exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: uint40(block.timestamp + 90 days)
         });
 
@@ -1508,8 +1508,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
             }
         }
 
-        if (option.earliestExerciseTimestamp >= uint40(block.timestamp)) {
-            emit log_named_uint("exercise timestamp not hit", option.earliestExerciseTimestamp);
+        if (option.exerciseTimestamp >= uint40(block.timestamp)) {
+            emit log_named_uint("exercise timestamp not hit", option.exerciseTimestamp);
             return (written, 0, newClaim);
         }
 
@@ -1567,7 +1567,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint96 underlyingAmount,
         address exerciseAsset,
         uint96 exerciseAmount,
-        uint40 earliestExerciseTimestamp,
+        uint40 exerciseTimestamp,
         uint40 expiryTimestamp,
         address writer,
         address exerciser
@@ -1577,7 +1577,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: underlyingAmount,
             exerciseAsset: exerciseAsset,
             exerciseAmount: exerciseAmount,
-            earliestExerciseTimestamp: earliestExerciseTimestamp,
+            exerciseTimestamp: exerciseTimestamp,
             expiryTimestamp: expiryTimestamp
         });
         claimId = _writeAndExerciseOption(optionId, writer, exerciser);
@@ -1589,7 +1589,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint96 underlyingAmount,
         address exerciseAsset,
         uint96 exerciseAmount,
-        uint40 earliestExerciseTimestamp,
+        uint40 exerciseTimestamp,
         uint40 expiryTimestamp
     ) internal returns (uint256 optionId, IOptionSettlementEngine.Option memory option) {
         (, option) = _getNewOptionType({
@@ -1597,7 +1597,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: underlyingAmount,
             exerciseAsset: exerciseAsset,
             exerciseAmount: exerciseAmount,
-            earliestExerciseTimestamp: earliestExerciseTimestamp,
+            exerciseTimestamp: exerciseTimestamp,
             expiryTimestamp: expiryTimestamp
         });
         optionId = engine.newOptionType({
@@ -1605,7 +1605,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: underlyingAmount,
             exerciseAsset: exerciseAsset,
             exerciseAmount: exerciseAmount,
-            earliestExerciseTimestamp: earliestExerciseTimestamp,
+            exerciseTimestamp: exerciseTimestamp,
             expiryTimestamp: expiryTimestamp
         });
     }
@@ -1615,7 +1615,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint96 underlyingAmount,
         address exerciseAsset,
         uint96 exerciseAmount,
-        uint40 earliestExerciseTimestamp,
+        uint40 exerciseTimestamp,
         uint40 expiryTimestamp
     ) internal pure returns (uint256 optionId, IOptionSettlementEngine.Option memory option) {
         option = IOptionSettlementEngine.Option({
@@ -1623,7 +1623,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             underlyingAmount: underlyingAmount,
             exerciseAsset: exerciseAsset,
             exerciseAmount: exerciseAmount,
-            earliestExerciseTimestamp: earliestExerciseTimestamp,
+            exerciseTimestamp: exerciseTimestamp,
             expiryTimestamp: expiryTimestamp,
             settlementSeed: 0, // default zero for settlement seed
             nextClaimNum: 0 // default zero for next claim id
@@ -1733,7 +1733,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(actual.underlyingAmount, expected.underlyingAmount);
         assertEq(actual.exerciseAsset, expected.exerciseAsset);
         assertEq(actual.exerciseAmount, expected.exerciseAmount);
-        assertEq(actual.earliestExerciseTimestamp, expected.earliestExerciseTimestamp);
+        assertEq(actual.exerciseTimestamp, expected.exerciseTimestamp);
         assertEq(actual.expiryTimestamp, expected.expiryTimestamp);
         assertEq(actual.settlementSeed, expected.settlementSeed);
         assertEq(actual.nextClaimNum, expected.nextClaimNum);
@@ -1747,7 +1747,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         address indexed underlyingAsset,
         uint96 exerciseAmount,
         uint96 underlyingAmount,
-        uint40 earliestExerciseTimestamp,
+        uint40 exerciseTimestamp,
         uint40 expiryTimestamp,
         uint96 nextClaimNum
     );

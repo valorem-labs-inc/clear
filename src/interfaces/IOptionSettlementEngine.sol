@@ -30,7 +30,7 @@ interface IOptionSettlementEngine {
      * @param underlyingAsset The contract address of the underlying asset.
      * @param exerciseAmount The amount of the exercise asset to be exercised.
      * @param underlyingAmount The amount of the underlying asset in the option.
-     * @param earliestExerciseTimestamp The timestamp for exercising the option.
+     * @param exerciseTimestamp The timestamp for exercising the option.
      * @param expiryTimestamp The expiry timestamp of the option.
      * @param nextClaimNum The next claim ID.
      */
@@ -40,7 +40,7 @@ interface IOptionSettlementEngine {
         address indexed underlyingAsset,
         uint96 exerciseAmount,
         uint96 underlyingAmount,
-        uint40 earliestExerciseTimestamp,
+        uint40 exerciseTimestamp,
         uint40 expiryTimestamp,
         uint96 nextClaimNum
     );
@@ -233,8 +233,8 @@ interface IOptionSettlementEngine {
         address exerciseAsset;
         /// @param exerciseAmount The amount of the exercise asset required to exercise this option
         uint96 exerciseAmount;
-        /// @param earliestExerciseTimestamp The timestamp after which this option may be exercised
-        uint40 earliestExerciseTimestamp;
+        /// @param exerciseTimestamp The timestamp after which this option may be exercised
+        uint40 exerciseTimestamp;
         /// @param expiryTimestamp The timestamp before which this option must be exercised
         uint40 expiryTimestamp;
         /// @param settlementSeed Random seed created at the time of option type creation
@@ -300,8 +300,6 @@ interface IOptionSettlementEngine {
      */
     function option(uint256 tokenId) external view returns (Option memory optionInfo);
 
-    // TODO review and clarify
-
     /**
      * @notice Returns OptionLotClaim struct details about a given tokenId if that token is a
      * claim NFT.
@@ -348,7 +346,7 @@ interface IOptionSettlementEngine {
         uint96 underlyingAmount,
         address exerciseAsset,
         uint96 exerciseAmount,
-        uint40 earliestExerciseTimestamp,
+        uint40 exerciseTimestamp,
         uint40 expiryTimestamp
     ) external returns (uint256 optionId);
 

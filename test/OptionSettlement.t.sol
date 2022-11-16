@@ -874,7 +874,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function testRevertNewOptionTypeWhenOptionsTypeExists() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.OptionsTypeExists.selector, testOptionId));
-        _createNewOptionType({            
+        _createNewOptionType({
             underlyingAsset: WETH_A,
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: DAI_A,
@@ -1390,7 +1390,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseAmount: testExerciseAmount,
             earliestExerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: uint40(block.timestamp + 90 days)
-
         });
 
         for (i = 0; i < 90; i++) {

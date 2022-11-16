@@ -4,19 +4,23 @@
 
 This repository contains a binary smart contract system which encompasses the Valorem Options V1 Core. The Core contracts provide an option settlement engine upon which more complex systems can be built.
 
-The Core is designed to be gas efficient, minimal, and provide a secure settlement system. The Core consists of a settlement engine which enables users to write options, exercise options, and redeem claims on assets in a given option lot, while handling fair assignment of exercises to claims written.
+The Core is designed to be safe, secure, minimal, and gas efficient, providing a fair settlement system. The Core consists of a settlement engine which enables users to write options, exercise options, and redeem claims on assets in a given option lot, while handling fair assignment of exercises to claims written.
 
 ## Building the Project
 1. Clone the git repository
 2. Copy `.env.template` to `.env` and replace "XYZ" with your `RPC_URL` (e.g., https://mainnet.infura.io/v3/apikey or https://eth-mainnet.g.alchemy.com/v2/apikey)
 3. Run `forge test` (this will install dependencies, build the project's smart contracts, and run the tests on a local fork of mainnet)
 
+## Security Information
+- Audit info TODO
+- Bug bounty info TODO
+- Security contact info TODO
+
 ## Protocol Specification
 - [Introduction](#introduction-to-the-protocol)
 - [Trust Model](#trust-model)
+- [Documentation](TODO)
 - [Cucumber Features](./test/features)
-- [Solidity Docs](TODO)
-- Protocol Invariants _(coming soon)_
 - Glossary _(coming soon)_
 
 ### Introduction to the Protocol
@@ -84,8 +88,3 @@ What can each actor do, when, with how much of each asset?
     - exercise (up to their amount held) Option fungible tokens, on or after the earliest exercise timestamp, and before the expiry timestamp
   - `Protocol Admin` can
     - update the Protocol Admin ("feeTo") address
-
-## Security Information
-- Audit info TODO
-- Bug bounty info TODO
-- Security contact info TODO

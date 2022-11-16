@@ -839,57 +839,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
     // **********************************************************************
 
     function testRevertNewOptionTypeWhenOptionsTypeExists() public {
-        (uint256 optionId,) = _createNewOptionType({
-            underlyingAsset: DAI_A,
-            exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp,
-            exerciseAsset: WETH_A,
-            underlyingAmount: testUnderlyingAmount,
-            exerciseAmount: testExerciseAmount
-        });
-
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.OptionsTypeExists.selector, optionId));
-
-        engine.newOptionType(
-            DAI_A, testExerciseTimestamp, testExpiryTimestamp, WETH_A, testUnderlyingAmount, testExerciseAmount
-        );
-    }
-
-    function testRevertNewOptionTypeWhenExpiryTooSoon() public {
-        uint40 tooSoonExpiryTimestamp = uint40(block.timestamp + 1 days - 1 seconds);
-        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
-            underlyingAsset: DAI_A,
-            exerciseTimestamp: uint40(block.timestamp),
-            expiryTimestamp: tooSoonExpiryTimestamp,
-            exerciseAsset: WETH_A,
-            underlyingAmount: testUnderlyingAmount,
-            settlementSeed: 0, // default zero for settlement seed
-            exerciseAmount: testExerciseAmount,
-            nextClaimId: 0 // default zero for next claim id
-        });
-        uint256 tooSoonOptionId = _createOptionIdFromStruct(option);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOptionSettlementEngine.ExpiryTooSoon.selector, tooSoonOptionId, tooSoonExpiryTimestamp
-            )
-        );
-
-        _createNewOptionType({
-            underlyingAsset: DAI_A,
-            exerciseTimestamp: uint40(block.timestamp),
-            expiryTimestamp: tooSoonExpiryTimestamp,
-            exerciseAsset: WETH_A,
-            underlyingAmount: testUnderlyingAmount,
-            exerciseAmount: testExerciseAmount
-        });
-    }
-
-    // **********************************************************************
-    //                            FAIL TESTS
-    // **********************************************************************
-
-    function testNewOptionTypeOptionsTypeExists() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.OptionsTypeExists.selector, testOptionId));
         _createNewOptionType(
             WETH_A, // underlyingAsset
@@ -901,24 +850,25 @@ contract OptionSettlementTest is Test, NFTreceiver {
         );
     }
 
-    function testNewOptionTypeExerciseWindowTooShort() public {
-        (uint256 optionId,) = _getNewOptionType(
-            WETH_A, // underlyingAsset
-            testExerciseTimestamp, // exerciseTimestamp
-            testExpiryTimestamp - 1, // expiryTimestamp
-            DAI_A, // exerciseAsset
-            testUnderlyingAmount, // underlyingAmount
-            testExerciseAmount // exerciseAmount
-        );
+    function testRevertNewOptionTypeWhenExpiryWindowTooShort() public {
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ExpiryTooSoon.selector, optionId, testExpiryTimestamp - 1)
+            abi.encodeWithSelector(IOptionSettlementEngine.ExpiryWindowTooShort.selector, testExpiryTimestamp - 1)
         );
         engine.newOptionType(
             WETH_A, testExerciseTimestamp, testExpiryTimestamp - 1, DAI_A, testUnderlyingAmount, testExerciseAmount
         );
     }
 
-    function testRevertNewOptionTypeWhenAssetsAreTheSame() public {
+    function testRevertNewOptionTypeWhenExerciseWindowTooShort() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.ExerciseWindowTooShort.selector, uint40(block.timestamp + 1))
+        );
+        engine.newOptionType(
+            WETH_A, uint40(block.timestamp + 1), testExpiryTimestamp, DAI_A, testUnderlyingAmount, testExerciseAmount
+        );
+    }
+
+    function testRevertNewOptionTypeWhenInvalidAssets() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, DAI_A, DAI_A));
         _createNewOptionType(
             DAI_A, // underlyingAsset

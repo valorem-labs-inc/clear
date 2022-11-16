@@ -184,12 +184,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Make sure that expiry is at least 24 hours from now
         if (expiryTimestamp < (block.timestamp + 1 days)) {
-            revert ExpiryTooSoon(optionId, expiryTimestamp); // TODO what is the point of including optionId that will never get created here?
+            revert ExpiryWindowTooShort(expiryTimestamp);
         }
 
         // Ensure the exercise window is at least 24 hours
         if (expiryTimestamp < (exerciseTimestamp + 1 days)) {
-            revert ExerciseWindowTooShort();
+            revert ExerciseWindowTooShort(exerciseTimestamp);
         }
 
         // The exercise and underlying assets can't be the same

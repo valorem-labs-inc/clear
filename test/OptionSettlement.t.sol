@@ -103,18 +103,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
     //                            PASS TESTS
     // **********************************************************************
 
-    // TODO fix
-    // function testNewOptionTypeDisregardsNextClaimIdAndCreationTimestamp() public {
-    //     IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option(
-    //         WETH_A, testExerciseTimestamp, testExpiryTimestamp, DAI_A, testUnderlyingAmount, 42, testExerciseAmount, 420
-    //     );
-    //     uint256 optionId = engine.newOptionType(WETH_A, testExerciseTimestamp, testExpiryTimestamp, DAI_A, testUnderlyingAmount, testExerciseAmount);
-    //     option = engine.option(optionId);
-
-    //     assertEq(option.nextClaimId, 1);
-    //     assertEq(option.settlementSeed, uint160(optionId >> 96));
-    // }
-
     function testExerciseBeforeExpiry() public {
         // Alice writes
         vm.startPrank(ALICE);
@@ -979,8 +967,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseAmount: exerciseAmountExceedsTotalSupply
         });
     }
-    
-    function testAssignExerciseFail() public {
+
+    function testRevertAssignExerciseWhenNotHoldingOptions() public {
         // Exercise an option before anyone has written it
         vm.warp(testOption.exerciseTimestamp + 1);
         vm.expectRevert(stdError.divisionError);
@@ -988,26 +976,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // of unexercised buckets is zero
         engine.exercise(testOptionId, 1);
     }
-
-    // write()
-    // L211
-    // L277
-    // L230
-    // L263
-
-    // exercise()
-    // L297
-    // L303
-    // L307
-
-    // redeem()
-    // L341
-    // L347
-    // L353
-
-    // underlying()
-    // L392
-    // L399–400
 
     function testRevertWriteWhenInvalidOption() public {
         uint256 invalidOptionId = testOptionId + 1;
@@ -1040,8 +1008,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.write(testOptionId, invalidWriteAmount);
     }
 
-    // TODO write() L227
-
     function testRevertWriteExpiredOption() public {
         vm.warp(testExpiryTimestamp);
 
@@ -1052,17 +1018,19 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.write(testOptionId, 1);
     }
 
-    function testFailExerciseBeforeExcercise() public {
+    function testRevertExerciseBeforeExcercise() public {
         _createNewOptionType(
             WETH_A, // underlyingAsset
             testExerciseTimestamp + 1, // exerciseTimestamp
             testExpiryTimestamp + 1, // expiryTimestamp
-            WETH_A, // exerciseAsset
+            DAI_A, // exerciseAsset
             testUnderlyingAmount, // underlyingAmount
             testExerciseAmount // exerciseAmount
         );
-
+        vm.startPrank(ALICE);
         engine.write(testOptionId, 1);
+
+        vm.stopPrank();
     }
 
     function testRevertWriteWhenWriterDoesNotOwnClaim() public {
@@ -1076,29 +1044,21 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.write(testOptionId, 1, claimId);
     }
 
-    // TODO write() L263
-    // function testRevertWriteWhenWritingToLotAlreadyClaimed() public {
-    //     vm.startPrank(ALICE);
-    //     uint256 claimId = engine.write(testOptionId, 1);
+    function testRevertWriteWhenWritingToLotAlreadyClaimed() public {
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 1);
 
-    //     vm.warp(testExerciseTimestamp + 1 seconds);
+        vm.warp(testExpiryTimestamp + 1 seconds);
 
-    //     engine.redeem(claimId);
+        engine.redeem(claimId);
 
-    //     vm.expectRevert(
-    //         abi.encodeWithSelector(IOptionSettlementEngine.AlreadyClaimed.selector, claimId)
-    //     );
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
+        );
 
-    //     engine.write(testOptionId, 1, claimId);
-    //     vm.stopPrank();
-    // }
-
-    // TODO exercise()
-    // function testRevertExerciseFailAssignExercise() public {
-    //     // Exercise an option before anyone has written it
-    //     vm.expectRevert(IOptionSettlementEngine.NoClaims.selector);
-    //     engine.exercise(testOptionId, 1);
-    // }
+        engine.write(testOptionId, 1, claimId);
+        vm.stopPrank();
+    }
 
     function testRevertExerciseWhenBeforeExerciseTimestamp() public {
         // Alice writes

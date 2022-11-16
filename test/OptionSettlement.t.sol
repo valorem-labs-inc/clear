@@ -1167,9 +1167,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.redeem(claimId);
 
         // Claim is burned after initial redemption. Null owns this claim now.
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId
-        ));
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
 
         engine.redeem(claimId);
         vm.stopPrank();

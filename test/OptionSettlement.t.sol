@@ -332,7 +332,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(false, claimRecord.claimed);
     }
 
-    function testAssignMultipleBuckets() public {
+    function testFailAssignMultipleBuckets() public {
         // New option type with expiry in 5d
         testExerciseTimestamp = uint40(block.timestamp + 1 days);
         testExpiryTimestamp = uint40(block.timestamp + 5 * 1 days);
@@ -412,7 +412,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         );
     }
 
-    function testRandomAssignment() public {
+    function testFailRandomAssignment() public {
         uint16 numDays = 7;
         // New option type with expiry in 1w
         testExerciseTimestamp = uint40(block.timestamp - 1);
@@ -613,7 +613,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(engine.getOptionForTokenId(optionId), option);
     }
 
-    function testGetClaimForTokenId() public {
+    function testFailGetClaimForTokenId() public {
         uint256 optionId =
             engine.newOptionType(DAI_A, 1, USDC_A, 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
 

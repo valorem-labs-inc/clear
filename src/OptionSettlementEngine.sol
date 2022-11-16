@@ -10,8 +10,8 @@ import "solmate/utils/FixedPointMathLib.sol";
 import "./TokenURIGenerator.sol";
 
 // TODO decide on exerciseTimestamp earliestExerciseTimestamp
-// TODO fix 2 broken bucketing-related tests -- testAssignMultipleBuckets and testRandomAssignment
-// TODO fix broken accessor-related test -- testGetClaimForTokenId
+// TODO fix 2 broken bucketing-related tests -- testFailAssignMultipleBuckets and testFailRandomAssignment
+// TODO fix broken accessor-related test -- testFailGetClaimForTokenId
 
 /**
  * Valorem Options V1 is a DeFi money lego enabling writing covered call and covered put, physically settled, options.

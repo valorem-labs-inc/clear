@@ -237,12 +237,14 @@ interface IOptionSettlementEngine {
         uint96 nextClaimNum;
     }
 
+    // TODO Review and clarify NatSpec on these next 3 claim-related structs
+    // Previous comment -- The amount written along with the option info can be used to calculate the underlying assets
+
     /// @dev This struct contains the data about a claim ERC-1155 NFT associated with an option lot.
     struct OptionLotClaim {
-        // These are 1:1 contracts with the underlying Option struct
-        // The number of contracts written in this claim
+        /// @param amountWritten The number of contracts written in this option lot claim
         uint112 amountWritten;
-        // The two amounts above along with the option info, can be used to calculate the underlying assets
+        /// @param claimed Whether or not this amount of an option lot has been claimed
         bool claimed;
     }
 
@@ -250,9 +252,9 @@ interface IOptionSettlementEngine {
     /// bucketed days. This struct is used to keep track of how many options in a single lot are
     /// written on each day, in order to correctly perform fair assignment.
     struct OptionLotClaimIndex {
-        // The amount of options written on a given day
+        /// @param amountWritten The amount of options written on a given day
         uint112 amountWritten;
-        // The index of the bucket on which the options are written
+        /// @param bucketIndex The index of the bucket on which the options are written
         uint16 bucketIndex;
     }
 
@@ -260,23 +262,23 @@ interface IOptionSettlementEngine {
     /// claims bucketed by day. Used in fair assignement to calculate the ratio of
     /// underlying to exercise assets to be transferred to claimants.
     struct OptionLotClaimBucket {
-        // The number of options written in this bucket
+        /// @param amountWritten The number of options written in this bucket
         uint112 amountWritten;
-        // The number of options exercised in this bucket
+        /// @param amountExercised The number of options exercised in this bucket
         uint112 amountExercised;
-        // Which day this bucket falls on, in offset from epoch
+        /// @param daysAfterEpoch Which day this bucket falls on, in offset from epoch
         uint16 daysAfterEpoch;
     }
 
     /// @dev Struct used in returning data regarding positions underlying a claim or option
     struct Underlying {
-        // address of the underlying asset erc20
+        /// @param underlyingAsset address of the underlying asset erc20
         address underlyingAsset;
-        // position on the underlying asset
+        /// @param underlyingPosition position on the underlying asset
         int256 underlyingPosition;
-        // address of the exercise asset erc20
+        /// @param exerciseAsset address of the exercise asset erc20
         address exerciseAsset;
-        // position on the exercise asset
+        /// @param exercisePosition position on the exercise asset
         int256 exercisePosition;
     }
 
@@ -292,6 +294,8 @@ interface IOptionSettlementEngine {
      */
     function option(uint256 tokenId) external view returns (Option memory optionInfo);
 
+    // TODO review and clarify
+    
     /**
      * @notice Returns OptionLotClaim struct details about a given tokenId if that token is a
      * claim NFT.
@@ -312,8 +316,9 @@ interface IOptionSettlementEngine {
         returns (OptionLotClaimBucket memory claimBucketInfo);
 
     /**
-     * @notice Information about the position underlying a token, useful for determining
-     * value.
+     * @notice Information about the position underlying a token, useful for determining value. 
+     * When supplied an Option Lot Claim id, this function returns the total amounts of underlying
+     * and exercise assets currently associated with a given options lot.
      * @param tokenId The token id for which to retrieve the Underlying position.
      * @return underlyingPositions The Underlying struct for the supplied tokenId.
      */

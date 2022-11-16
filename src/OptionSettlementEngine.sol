@@ -104,7 +104,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // token ID is an option
         if (claimNum == 0) {
-            bool expired = (optionRecord.expiryTimestamp > block.timestamp);
+            bool expired = (optionRecord.expiryTimestamp <= block.timestamp);
             underlyingPositions = Underlying({
                 underlyingAsset: optionRecord.underlyingAsset,
                 underlyingPosition: expired ? int256(0) : int256(uint256(optionRecord.underlyingAmount)),
@@ -288,12 +288,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Make sure that expiry is at least 24 hours from now
         if (expiryTimestamp < (block.timestamp + 1 days)) {
-            revert ExpiryTooSoon(optionId, expiryTimestamp);
+            revert ExpiryWindowTooShort(expiryTimestamp);
         }
 
         // Ensure the exercise window is at least 24 hours
         if (expiryTimestamp < (earliestExerciseTimestamp + 1 days)) {
-            revert ExerciseWindowTooShort();
+            revert ExerciseWindowTooShort(earliestExerciseTimestamp);
         }
 
         // The exercise and underlying assets can't be the same
@@ -343,10 +343,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function write(uint256 optionId, uint112 amount, uint256 claimId) public returns (uint256) {
-        (uint160 optionKey, uint96 claimNum) = decodeTokenId(optionId);
+        (uint160 optionKey, uint96 decodedClaimNum) = decodeTokenId(optionId);
 
         // optionId must be zero in lower 96b for provided option Id
-        if (claimNum != 0) {
+        if (decodedClaimNum != 0) {
             revert InvalidOption(optionId);
         }
 
@@ -398,10 +398,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // retrieve claim
             OptionLotClaim storage existingClaim = _claim[claimId];
 
-            if (existingClaim.claimed) {
-                revert AlreadyClaimed(claimId);
-            }
-
             existingClaim.amountWritten += amount;
         }
         uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
@@ -448,6 +444,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // Require that we have reached the exercise timestamp
         if (optionRecord.earliestExerciseTimestamp >= block.timestamp) {
             revert ExerciseTooEarly(optionId, optionRecord.earliestExerciseTimestamp);
+        }
+
+        if (this.balanceOf(msg.sender, optionId) < amount) {
+            revert CallerHoldsInsufficientOptions(optionId, amount);
         }
 
         uint256 rxAmount = optionRecord.exerciseAmount * amount;
@@ -558,7 +558,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             for (uint256 i = 0; i < numTokens; i++) {
                 // Get the token and balance to sweep
                 token = tokens[i];
-
                 fee = feeBalance[token];
                 // Leave 1 wei here as a gas optimization
                 if (fee > 1) {

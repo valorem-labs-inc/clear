@@ -85,11 +85,11 @@ What can each actor do, when, with how much of each asset?
     - sweep accrued fees for any ERC20 asset to the Protocol Admin ("feeTo") address
     - create an Option Type which does not exist yet
     - write a new option lot for a given Option Type
-  - `ERC1155 Option fungible token holders` (i.e., Option Writers) can
-    - transfer (up to their amount held) Option fungible tokens to another address
+  - `ERC1155 Option Lot Claim NFT holders` (i.e., Option Writers) can
     - write new options to a given Option Lot Claim which they hold, before the expiry timestamp
     - redeem a Claim NFT which they hold for their share of the underlying and/or exercise assets, on or after the expiry timestamp
-  - `ERC1155 Option Lot Claim NFT holders` (i.e., Option Holders) can
+  - `ERC1155 Option fungible token holders` (i.e., Option Holders) can
+    - transfer (up to their amount held) Option fungible tokens to another address
     - exercise (up to their amount held) Option fungible tokens, on or after the earliest exercise timestamp, and before the expiry timestamp
   - `Protocol Admin` can
     - update the Protocol Admin ("feeTo") address

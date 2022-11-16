@@ -11,6 +11,7 @@ import "./TokenURIGenerator.sol";
 
 // TODO fix 2 broken bucketing-related tests -- testFailAssignMultipleBuckets and testFailRandomAssignment
 // TODO fix broken accessor-related test -- testFailGetClaimForTokenId
+// TODO clarify excluded tokens
 
 /**
  * Valorem Options V1 is a DeFi money lego enabling writing covered call and covered put, physically settled, options.

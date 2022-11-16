@@ -1,8 +1,13 @@
 # Valorem Options V1 Core
 
-[Valorem](https://valorem.xyz/docs/valorem-options-litepaper/) is a DeFi money lego, enabling writing covered call and covered put, physically settled, American, European, or Exotic options.
+![ci](https://github.com/valorem-labs-inc/valorem-core/actions/workflows/CI.yml/badge.svg)
+[![codecov](https://codecov.io/gh/valorem-labs-inc/valorem-core/branch/master/graph/badge.svg?token=M52NC4Q3SW)](https://codecov.io/gh/valorem-labs-inc/valorem-core)
 
-This repository contains a binary smart contract system which encompasses the Valorem Options V1 Core. The Core contracts provide an option settlement engine upon which more complex systems can be built.
+[Valorem](https://valorem.xyz/) is a DeFi money lego, enabling writing covered call and covered put, physically settled, American, European, or Exotic options.
+
+This repository contains a binary smart contract system comprised of many libraries,
+which together make the Valorem Options V1 Core. The Core contracts provide an option
+settlement engine upon which more complex systems can be built.
 
 The Core is designed to be safe, secure, minimal, and gas efficient, providing a fair settlement system. The Core consists of a settlement engine which enables users to write options, exercise options, and redeem claims on assets in a given option lot, while handling fair assignment of exercises to claims written.
 

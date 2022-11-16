@@ -156,7 +156,7 @@ interface IOptionSettlementEngine {
      * @param claimId The claim ID for the option.
      * @param amount The amount of options written.
      */
-    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 claimId, uint112 amount);
+    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
 
     /**
      * @notice Emitted when protocol fees are accrued for a given asset.
@@ -333,13 +333,28 @@ interface IOptionSettlementEngine {
      */
     function sweepFees(address[] memory tokens) external;
 
-    /**
-     * @notice Create a new options type from optionInfo if it doesn't already exist
-     * @dev The supplied creation timestamp and next claim Id fields will be disregarded.
-     * @param optionInfo The optionInfo from which a new type will be created
-     * @return optionId The optionId for the option.
-     */
-    function newOptionType(Option memory optionInfo) external returns (uint256 optionId);
+    // /**
+    //  * @notice Create a new options type from optionInfo if it doesn't already exist
+    //  * @dev The supplied creation timestamp and next claim Id fields will be disregarded.
+    //  * @param optionInfo The optionInfo from which a new type will be created
+    //  * @return optionId The optionId for the option.
+    //  */
+    function newOptionType(
+        address underlyingAsset,
+        uint40 exerciseTimestamp,
+        uint40 expiryTimestamp,
+        address exerciseAsset,
+        uint96 underlyingAmount,
+        uint96 exerciseAmount
+    ) external returns (uint256 optionId);
+    // function newOptionType(
+    //     address underlyingAsset,
+    //     uint256 underlyingAmount,
+    //     address exerciseAsset,
+    //     uint256 exerciseAmount,
+    //     uint256 exerciseTimestamp,
+    //     uint256 expiryTimestamp
+    // ) external returns (uint256 optionId);
 
     /**
      * @notice Writes a specified amount of the specified option, returning claim NFT id.

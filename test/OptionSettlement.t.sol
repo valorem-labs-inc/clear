@@ -36,7 +36,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     // Admin
     address public constant FEE_TO = 0x2dbd50A4Ef9B172698596217b7DB0163D3607b41;
-    // TODO this was existing, what is the correct address? -- 0x36273803306a3C22bc848f8Db761e974697ece0d
 
     // Users
     address public constant ALICE = address(0xA);
@@ -1610,14 +1609,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseAmount,
             0 // default zero for next claim id
         );
-        optionId = _getOptionId(option);
-    }
-
-    function _getOptionId(IOptionSettlementEngine.Option memory option) internal pure returns (uint256) {
-        bytes20 optionHash = bytes20(keccak256(abi.encode(option)));
-        uint160 optionKey = uint160(optionHash);
-        uint256 optionId = uint256(optionKey) << 96;
-        return optionId;
+        optionId = _createOptionIdFromStruct(option);
     }
 
     function _writeAndExerciseOption(uint256 optionId, address writer, address exerciser)
@@ -1659,31 +1651,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function _getDaysFromBucket(uint256 ts, uint16 daysFrom) internal pure returns (uint16) {
         return uint16((ts + daysFrom * 1 days) / 1 days);
-    }
-
-    function _redeemAndAssertClaimAmounts(
-        address claimant,
-        uint256 claimId,
-        IOptionSettlementEngine.Option memory option,
-        uint256 amountExercised,
-        uint256 amountUnexercised
-    ) internal {
-        vm.startPrank(claimant);
-        uint256 exerciseAssetBalance = ERC20(option.exerciseAsset).balanceOf(claimant);
-        uint256 underlyingAssetBalance = ERC20(option.underlyingAsset).balanceOf(claimant);
-
-        engine.redeem(claimId);
-
-        assertEq(
-            ERC20(option.exerciseAsset).balanceOf(claimant),
-            exerciseAssetBalance + amountExercised * option.exerciseAmount
-        );
-
-        assertEq(
-            ERC20(option.underlyingAsset).balanceOf(claimant),
-            underlyingAssetBalance + amountUnexercised * option.underlyingAmount
-        );
-        vm.stopPrank();
     }
 
     function _emitBuckets(uint256 optionId, IOptionSettlementEngine.Option memory optionInfo) internal {

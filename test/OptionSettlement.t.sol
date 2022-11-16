@@ -1126,6 +1126,24 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.redeem(badClaimId);
     }
 
+    function testRevertExerciseBalanceTooLow() public {
+        vm.warp(testExerciseTimestamp + 1 seconds);
+
+        // Should revert if you hold 0
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.CallerHoldsInsufficientOptions.selector, testOptionId, 1)
+        );
+        engine.exercise(testOptionId, 1);
+
+        // Should revert if you hold some, but not enough
+        vm.startPrank(ALICE);
+        engine.write(testOptionId, 1);
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.CallerHoldsInsufficientOptions.selector, testOptionId, 2)
+        );
+        engine.exercise(testOptionId, 2);
+    }
+
     function testRevertRedeemWhenBalanceTooLow() public {
         // Alice writes and transfers to Bob, then Alice tries to redeem
         vm.startPrank(ALICE);

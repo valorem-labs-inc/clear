@@ -342,6 +342,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert ExerciseTooEarly(optionId, optionRecord.exerciseTimestamp);
         }
 
+        if (this.balanceOf(msg.sender, optionId) < amount) {
+            revert CallerHoldsInsufficientOptions(optionId, amount);
+        }
+
         uint256 rxAmount = optionRecord.exerciseAmount * amount;
         uint256 txAmount = optionRecord.underlyingAmount * amount;
         uint256 fee = ((rxAmount / 10000) * feeBps);

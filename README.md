@@ -17,15 +17,15 @@ The Core is designed to be safe, secure, minimal, and gas efficient, providing a
 3. Run `forge test` (this will install dependencies, build the project's smart contracts, and run the tests on a local fork of mainnet)
 
 ## Security Information
-- Audit info TODO
-- Bug bounty info TODO
-- Security contact info TODO
+- Audit info _(coming soon)_
+- Bug bounty info _(coming soon)_
+- Security contact info _(coming soon)_
 
 ## Protocol Specification
 - [Introduction](#introduction-to-the-protocol)
 - [Trust Model](#trust-model)
-- [Documentation](TODO)
 - [Cucumber Features](./test/features)
+- Documentation _(coming soon)_
 - Glossary _(coming soon)_
 
 ### Introduction to the Protocol
@@ -39,10 +39,10 @@ The structure of an options contract is as follows:
 - **Underlying amount:** the amount of the underlying asset contained within an option contract of this type
 - **Exercise asset:** the ERC-20 address of the asset needed for exercise
 - **Exercise amount:** the amount of the exercise asset required to exercise this option
-- **Earliest exercise timestamp:** the timestamp after which this option may be exercised
-- **Expiry timestamp:** the timestamp before which this option must be exercised
+- **Earliest exercise timestamp:** the timestamp after which this option can be exercised
+- **Expiry timestamp:** the timestamp before which this option can be exercised
 
-The Valorem core protocol is unopinionated on the type of option (call vs. put), where, when, or for how much an option is bought/sold, and whether or not the option is profitable when exercised. Because all contracts are fully collateralized, options written on the Settlement Engine are TODO.
+The Valorem core protocol is unopinionated on the type of option (call vs. put), where, when, or for how much an option is bought/sold, and whether or not the option is profitable when exercised. Because all options written with Valorem are fully collateralized, physical settlement at exercise or redeem time is instant and gas-efficient.
 
 Read the [Valorem litepaper](https://valorem.xyz/docs/valorem-options-litepaper/) for more insight into the business use cases that Valorem enables.
 
@@ -60,7 +60,9 @@ The **Protocol Admin** is the address to which protocol fees are swept, and can 
 **Option Holders** can acquire options that have been written. This is accomplished via a standard ERC-1155 transaction to transfer the desired amount of option contracts. When exercising an option, they must hold enough of the exercise asset, and similarly to when writing an option, they must have granted sufficient approval for the Settlement Engine on the ERC20 exercise asset.
 
 #### Assets
-Each asset pair for which an option is written is custodied by the Settlement Engine. When an option is written, TODO. When an option is exercised, TODO. When an option lot claim is redeemed, TODO. The core Settlement Engine is agnostic with regard to the buying or selling of options contracts. These are ERC-1155 semi-fungible tokens which can be transacted freely, from the writer to any party wishing to hold and potentially exercise the option before expiry. The Settlement Engine emits a standard ERC-1155 TransferSingle event when 1 or more options of a given type changes hands.
+Each asset pair for which an option is written is custodied by the Settlement Engine. When an option is written, the Engine transfers in the requisite amount of the underlying asset. When an option is exercised, the Engine transfers out the requisite amount of the underlying asset and transfers in the exerise asset. When an option lot claim is redeemed, the Engine transfers out that claimant's share of the exercise asset and possible unexercised underlying asset.
+
+The core Settlement Engine is agnostic with regard to the buying or selling of options contracts. These are ERC-1155 semi-fungible tokens which can be transacted freely, from the writer to any party wishing to hold and potentially exercise the option before expiry. The Settlement Engine emits a standard ERC-1155 TransferSingle event when 1 or more options of a given type changes hands. Users and developers can query the Engine to determine whether a given token ID represents an Option fungible token or an Option Lot Claim NFT.
 
 #### Actions
 What can each actor do, when, with how much of each asset?
@@ -81,7 +83,7 @@ What can each actor do, when, with how much of each asset?
     - check positions of the underlying and exercise assets of any token
     - get Option info for any token ID
     - get Option Lot Claim info for any token ID
-    - check amount of a given TODO
+    - check info about a given Option Lot Claim Bucket
     - sweep accrued fees for any ERC20 asset to the Protocol Admin ("feeTo") address
     - create an Option Type which does not exist yet
     - write a new option lot for a given Option Type

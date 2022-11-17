@@ -602,7 +602,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(engine.getOptionForTokenId(optionId), option);
     }
 
-    function testFailGetClaimForTokenId() public {
+    function testGetClaimForTokenId() public {
         uint256 optionId =
             engine.newOptionType(DAI_A, 1, USDC_A, 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
 

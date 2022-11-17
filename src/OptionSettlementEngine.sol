@@ -9,10 +9,6 @@ import "solmate/utils/SafeTransferLib.sol";
 import "solmate/utils/FixedPointMathLib.sol";
 import "./TokenURIGenerator.sol";
 
-// TODO fix 2 broken bucketing-related tests -- testFailAssignMultipleBuckets and testFailRandomAssignment
-// TODO fix broken accessor-related test -- testFailGetClaimForTokenId
-// TODO clarify excluded tokens
-
 /**
  * Valorem Options V1 is a DeFi money lego enabling writing covered call and covered put, physically settled, options.
  * All written options are fully collateralized against an ERC-20 underlying asset and exercised with an
@@ -29,8 +25,6 @@ import "./TokenURIGenerator.sol";
 /// @author Flip-Liquid
 /// @author neodaoist
 contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
-    //
-
     /*//////////////////////////////////////////////////////////////
     //  State variables - Public
     //////////////////////////////////////////////////////////////*/
@@ -245,8 +239,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     function getClaimForTokenId(uint256 tokenId) public view returns (OptionLotClaim memory) {
-        (, uint96 claimNum) = decodeTokenId(tokenId);
-        return _claim[claimNum];
+        return _claim[tokenId];
     }
 
     /*//////////////////////////////////////////////////////////////

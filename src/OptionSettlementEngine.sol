@@ -157,7 +157,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //  Token URI
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev TODO
     function uri(uint256 tokenId) public view virtual override returns (string memory) {
         Option memory optionInfo;
         (uint160 optionKey, uint96 claimNum) = decodeTokenId(tokenId);

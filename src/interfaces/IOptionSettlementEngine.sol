@@ -243,9 +243,6 @@ interface IOptionSettlementEngine {
         uint96 nextClaimNum;
     }
 
-    // TODO Review and clarify NatSpec on these next 3 claim-related structs
-    // Previous comment -- The amount written along with the option info can be used to calculate the underlying assets
-
     /// @dev This struct contains the data about a lot of options written for a particular option type.
     /// When writing an amount of options of a particular type, the writer will be issued an ERC 1155 NFT
     /// that represents a claim to the underlying and exercise assets of the options lot, to be claimed after

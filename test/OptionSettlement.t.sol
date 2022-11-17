@@ -1583,7 +1583,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         claimId = _writeAndExerciseOption(optionId, writer, exerciser);
     }
 
-    // TODO ensure this function is written as desired
     function _createNewOptionType(
         address underlyingAsset,
         uint96 underlyingAmount,

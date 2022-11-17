@@ -262,8 +262,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
             writer: ALICE,
             exerciser: BOB
         });
-
-        // TODO what do we assert here
     }
 
     function testUnderlyingWhenNotExercised() public {
@@ -609,7 +607,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(engine.getOptionForTokenId(optionId), option);
     }
 
-    function testFailGetClaimForTokenId() public {
+    function testGetClaimForTokenId() public {
         uint256 optionId =
             engine.newOptionType(DAI_A, 1, USDC_A, 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
 
@@ -653,7 +651,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         uint256 expectedOptionId = _createOptionIdFromStruct(optionInfo);
 
-        vm.expectEmit(false, true, true, true); // TODO fix
+        vm.expectEmit(false, true, true, true);
         emit NewOptionType(
             expectedOptionId,
             WETH_A,
@@ -867,7 +865,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         expectedFees[2] = ((usdcExerciseAmount / 10_000) * engine.feeBps());
 
         for (uint256 i = 0; i < tokens.length; i++) {
-            vm.expectEmit(true, true, true, false); // TODO debug why USDC sweeping 1 wei less, but not DAI or WETH
+            vm.expectEmit(true, true, true, false);
             emit FeeSwept(tokens[i], engine.feeTo(), expectedFees[i]); // sweeps 1 wei less as gas optimization
         }
 
@@ -1590,7 +1588,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         claimId = _writeAndExerciseOption(optionId, writer, exerciser);
     }
 
-    // TODO ensure this function is written as desired
     function _createNewOptionType(
         address underlyingAsset,
         uint96 underlyingAmount,

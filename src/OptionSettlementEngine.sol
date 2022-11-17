@@ -143,22 +143,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return _option[optionKey].underlyingAsset != address(0x0);
     }
 
-    // TODO remove
-    /**
-     * @notice Returns the total amount of options written and exercised for all
-     * option lot claims created on the supplied index.
-     * @param optionId The id of the option for the claim buckets.
-     * @param dayBucket The index of the claimBucket to return.
-     */
-    function claimBucket(uint256 optionId, uint16 dayBucket)
-        external
-        view
-        returns (OptionLotClaimBucket memory claimBucketInfo)
-    {
-        (uint160 optionKey,) = decodeTokenId(optionId);
-        claimBucketInfo = _claimBucketByOption[optionKey][dayBucket];
-    }
-
     /*//////////////////////////////////////////////////////////////
     //  Token URI
     //////////////////////////////////////////////////////////////*/

@@ -42,7 +42,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     mapping(address => uint256) public feeBalance;
 
     /// @notice The address fees accrue to
-    address public feeTo = 0x2dbd50A4Ef9B172698596217b7DB0163D3607b41;
+    address public feeTo;
 
     /*//////////////////////////////////////////////////////////////
     //  State variables - Internal
@@ -76,6 +76,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @notice Accessor for mapping a claim id to its ClaimIndices
     mapping(uint256 => OptionLotClaimIndex[]) internal _claimIdToClaimIndexArray;
+
+    /*//////////////////////////////////////////////////////////////
+    //  Constructor
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice OptionSettlementEngine constructor
+    /// @param _feeTo The address fees accrue to
+    constructor(address _feeTo) {
+        feeTo = _feeTo;
+    }
 
     /*//////////////////////////////////////////////////////////////
     //  Accessors

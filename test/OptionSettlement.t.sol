@@ -64,7 +64,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.createSelectFork(vm.envString("RPC_URL"), 15_000_000); // specify block number to cache for future test runs
 
         // Deploy OptionSettlementEngine
-        engine = new OptionSettlementEngine();
+        engine = new OptionSettlementEngine(FEE_TO);
 
         // Setup test option contract
         testExerciseTimestamp = uint40(block.timestamp);
@@ -98,6 +98,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Approve test contract approval for all on settlement engine ERC1155 token balances
         engine.setApprovalForAll(address(this), true);
+    }
+
+    function testInitial() public {
+        assertEq(engine.feeTo(), FEE_TO);
     }
 
     // **********************************************************************

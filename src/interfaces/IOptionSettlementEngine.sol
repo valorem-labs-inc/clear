@@ -260,9 +260,9 @@ interface IOptionSettlementEngine {
     /// This struct is used to keep track of how many options in a single lot are
     /// written on each day, in order to correctly perform fair assignment.
     struct OptionLotClaimIndex {
-        /// @param amountWritten The amount of options written on a given day
+        /// @param amountWritten The amount of options written on a given day/bucket
         uint112 amountWritten;
-        /// @param bucketIndex The index of the bucket on which the options are written
+        /// @param bucketIndex The index of the OptionsDayBucket in which the options are written
         uint16 bucketIndex;
     }
 

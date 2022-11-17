@@ -4,6 +4,7 @@
     "compiler-version": ["error",">=0.8.0"], 
     "no-inline-assembly": ["off",">=0.8.0"],
     "avoid-low-level-calls": ["off",">=0.8.0"],
-    "not-rely-on-time": ["off",">=0.8.0"]
+    "not-rely-on-time": ["off",">=0.8.0"],
+    "func-visibility": ["warn",{"ignoreConstructors":true}]
   }
 }

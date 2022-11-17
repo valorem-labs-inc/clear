@@ -341,7 +341,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(false, claimRecord.claimed);
     }
 
-    function testFailAssignMultipleBuckets() public {
+    function testAssignMultipleBuckets() public {
         // New option type with expiry in 5d
         testExerciseTimestamp = uint40(block.timestamp + 1 days);
         testExpiryTimestamp = uint40(block.timestamp + 5 * 1 days);
@@ -396,9 +396,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // randomly seeded based on option type seed. asserts will fail if seed
         // algo changes.
         // first lot is completely un exercised
+        emit log_named_int("claimId1 exercise", engine.underlying(claimId1).exercisePosition);
+        emit log_named_int("claimId1 underlying", engine.underlying(claimId1).underlyingPosition);
+
         assertEq(engine.underlying(claimId1).exercisePosition, 0);
-        _assertAssignedInBucket(optionId, 0, 0);
-        _assertAssignedInBucket(optionId, 1, 70);
 
         // Jump ahead to option expiry
         vm.warp(1 + option.expiryTimestamp);
@@ -421,12 +422,13 @@ contract OptionSettlementTest is Test, NFTreceiver {
         );
     }
 
-    function testFailRandomAssignment() public {
+    function testRandomAssignment() public {
         uint16 numDays = 7;
+        uint256[] memory claimIds = new uint256[](numDays);
         // New option type with expiry in 1w
         testExerciseTimestamp = uint40(block.timestamp - 1);
         testExpiryTimestamp = uint40(block.timestamp + numDays * 1 days + 1);
-        (uint256 optionId, IOptionSettlementEngine.Option memory optionInfo) = _createNewOptionType({
+        (uint256 optionId,) = _createNewOptionType({
             underlyingAsset: WETH_A,
             underlyingAmount: testUnderlyingAmount + 1, // to mess w seed
             exerciseAsset: DAI_A,
@@ -436,48 +438,46 @@ contract OptionSettlementTest is Test, NFTreceiver {
         });
 
         vm.startPrank(ALICE);
-        uint256 claimId = engine.write(optionId, 1);
         for (uint256 i = 1; i < numDays; i++) {
+            // write a single option
+            uint256 claimId = engine.write(optionId, 1);
+            claimIds[i] = claimId;
             vm.warp(block.timestamp + 1 days);
-            // write a single option, adding it to the same lot
-            engine.write(optionId, 1, claimId);
         }
         engine.safeTransferFrom(ALICE, BOB, optionId, numDays, "");
         vm.stopPrank();
-
-        _emitBuckets(optionId, optionInfo);
 
         vm.startPrank(BOB);
 
         // assign a single option on day 2
         engine.exercise(optionId, 1);
-        _assertAssignedInBucket(optionId, 0, 0);
-        _assertAssignedInBucket(optionId, 1, 0);
-        _assertAssignedInBucket(optionId, 2, 1);
-        _assertAssignedInBucket(optionId, 3, 0);
-        _assertAssignedInBucket(optionId, 4, 0);
-        _assertAssignedInBucket(optionId, 5, 0);
-        _assertAssignedInBucket(optionId, 6, 0);
+        _assertClaimAmountExercised(claimIds[0], 0);
+        _assertClaimAmountExercised(claimIds[1], 0);
+        _assertClaimAmountExercised(claimIds[2], 1);
+        _assertClaimAmountExercised(claimIds[3], 0);
+        _assertClaimAmountExercised(claimIds[4], 0);
+        _assertClaimAmountExercised(claimIds[5], 0);
+        _assertClaimAmountExercised(claimIds[6], 0);
 
         // assigns a single option on day 4
         engine.exercise(optionId, 1);
-        _assertAssignedInBucket(optionId, 0, 0);
-        _assertAssignedInBucket(optionId, 1, 0);
-        _assertAssignedInBucket(optionId, 2, 1);
-        _assertAssignedInBucket(optionId, 3, 0);
-        _assertAssignedInBucket(optionId, 4, 1);
-        _assertAssignedInBucket(optionId, 5, 0);
-        _assertAssignedInBucket(optionId, 6, 0);
+        _assertClaimAmountExercised(claimIds[0], 0);
+        _assertClaimAmountExercised(claimIds[1], 0);
+        _assertClaimAmountExercised(claimIds[2], 1);
+        _assertClaimAmountExercised(claimIds[3], 0);
+        _assertClaimAmountExercised(claimIds[4], 1);
+        _assertClaimAmountExercised(claimIds[5], 0);
+        _assertClaimAmountExercised(claimIds[6], 0);
 
         // assigns a single option on day 1
         engine.exercise(optionId, 1);
-        _assertAssignedInBucket(optionId, 0, 0);
-        _assertAssignedInBucket(optionId, 1, 1);
-        _assertAssignedInBucket(optionId, 2, 1);
-        _assertAssignedInBucket(optionId, 3, 0);
-        _assertAssignedInBucket(optionId, 4, 1);
-        _assertAssignedInBucket(optionId, 5, 0);
-        _assertAssignedInBucket(optionId, 6, 0);
+        _assertClaimAmountExercised(claimIds[0], 0);
+        _assertClaimAmountExercised(claimIds[1], 1);
+        _assertClaimAmountExercised(claimIds[2], 1);
+        _assertClaimAmountExercised(claimIds[3], 0);
+        _assertClaimAmountExercised(claimIds[4], 1);
+        _assertClaimAmountExercised(claimIds[5], 0);
+        _assertClaimAmountExercised(claimIds[6], 0);
     }
 
     // **********************************************************************
@@ -1670,40 +1670,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function _getDaysFromBucket(uint256 ts, uint16 daysFrom) internal pure returns (uint16) {
         return uint16((ts + daysFrom * 1 days) / 1 days);
-    }
-
-    function _emitBuckets(uint256 optionId, IOptionSettlementEngine.Option memory optionInfo) internal {
-        uint16 daysRange = uint16(optionInfo.expiryTimestamp / 1 days);
-
-        for (uint16 i = 0; i < daysRange; i++) {
-            IOptionSettlementEngine.OptionLotClaimBucket memory bucket;
-            try engine.claimBucket(optionId, i) returns (IOptionSettlementEngine.OptionLotClaimBucket memory _bucket) {
-                bucket = _bucket;
-            } catch {
-                return;
-            }
-            emit log_named_uint("optionId:", optionId);
-            emit log_named_uint("index:", i);
-            _emitBucket(bucket);
-        }
-    }
-
-    function _emitBucket(IOptionSettlementEngine.OptionLotClaimBucket memory bucket) internal {
-        emit log_named_uint("bucket amount exercised", bucket.amountExercised);
-        emit log_named_uint("bucket amount written", bucket.amountWritten);
-        emit log_named_uint("bucket daysAfterEpoch", bucket.daysAfterEpoch);
-    }
-
-    function _assertAssignedInBucket(uint256 optionId, uint16 bucketIndex, uint112 assignedAmount) internal {
-        IOptionSettlementEngine.OptionLotClaimBucket memory bucket;
-        try engine.claimBucket(optionId, bucketIndex) returns (
-            IOptionSettlementEngine.OptionLotClaimBucket memory _bucket
-        ) {
-            bucket = _bucket;
-        } catch {
-            return;
-        }
-        assertEq(bucket.amountExercised, assignedAmount);
     }
 
     /// @dev probability in bips

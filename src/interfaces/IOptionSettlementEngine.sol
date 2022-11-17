@@ -269,7 +269,7 @@ interface IOptionSettlementEngine {
     /// @dev Represents the total amount of options written and exercised for a group of
     /// claims bucketed by day. Used in fair assignement to calculate the ratio of
     /// underlying to exercise assets to be transferred to claimants.
-    struct OptionsBucket {
+    struct OptionsDayBucket {
         /// @param amountWritten The number of options written in this bucket
         uint112 amountWritten;
         /// @param amountExercised The number of options exercised in this bucket

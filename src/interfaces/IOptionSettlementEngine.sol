@@ -246,16 +246,21 @@ interface IOptionSettlementEngine {
     // TODO Review and clarify NatSpec on these next 3 claim-related structs
     // Previous comment -- The amount written along with the option info can be used to calculate the underlying assets
 
-    /// @dev This struct contains the data about a claim ERC-1155 NFT associated with an option lot.
+    /// @dev This struct contains the data about a lot of options written for a particular option type.
+    /// When writing an amount of options of a particular type, the writer will be issued an ERC 1155 NFT
+    /// that represents a claim to the underlying and exercise assets of the options lot, to be claimed after
+    /// expiry of the option. The amount of each (underlying asset and exercise asset) paid to the claimant upon 
+    /// redeeming their claim NFT depends on the option type, the amount of options written in their options lot 
+    /// (represented in this struct) and what portion of their lot was exercised before expiry.
     struct OptionLotClaim {
-        /// @param amountWritten The number of contracts written in this option lot claim
+        /// @param amountWritten The number of options written in this option lot claim
         uint112 amountWritten;
-        /// @param claimed Whether or not this amount of an option lot has been claimed
+        /// @param claimed Whether or not this option lot has been claimed by the writer
         bool claimed;
     }
 
-    /// @dev Claims are options lots which are able to have options added to them on different
-    /// bucketed days. This struct is used to keep track of how many options in a single lot are
+    /// @dev Options lots are able to have options added to them on after the initial writing.
+    /// This struct is used to keep track of how many options in a single lot are
     /// written on each day, in order to correctly perform fair assignment.
     struct OptionLotClaimIndex {
         /// @param amountWritten The amount of options written on a given day

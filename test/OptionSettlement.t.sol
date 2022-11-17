@@ -399,26 +399,29 @@ contract OptionSettlementTest is Test, NFTreceiver {
         emit log_named_int("claimId1 exercise", engine.underlying(claimId1).exercisePosition);
         emit log_named_int("claimId1 underlying", engine.underlying(claimId1).underlyingPosition);
 
-        assertEq(engine.underlying(claimId1).exercisePosition, 0);
+        _assertClaimAmountExercised(claimId1, 69);
+        _assertClaimAmountExercised(claimId2, 1);
 
         // Jump ahead to option expiry
         vm.warp(1 + option.expiryTimestamp);
         vm.startPrank(ALICE);
         uint256 aliceBalanceExerciseAsset = ERC20(option.exerciseAsset).balanceOf(ALICE);
         uint256 aliceBalanceUnderlyingAsset = ERC20(option.underlyingAsset).balanceOf(ALICE);
-        // Alice's first claim should be completely unexercised
+        // Alice's first claim should be completely exercised
         engine.redeem(claimId1);
-        assertEq(aliceBalanceExerciseAsset, ERC20(option.exerciseAsset).balanceOf(ALICE));
+        assertEq(ERC20(option.exerciseAsset).balanceOf(ALICE), aliceBalanceExerciseAsset + 69 * option.exerciseAmount);
+        assertEq(aliceBalanceUnderlyingAsset, ERC20(option.underlyingAsset).balanceOf(ALICE));
 
+        aliceBalanceExerciseAsset = ERC20(option.exerciseAsset).balanceOf(ALICE);
         aliceBalanceUnderlyingAsset = ERC20(option.underlyingAsset).balanceOf(ALICE);
 
         // BOB exercised 70 options
         // ALICE should retrieve 70 * exerciseAmount of the exercise asset
         // ALICE should retrieve (100-70) * underlyingAmount of the underlying asset
         engine.redeem(claimId2);
-        assertEq(ERC20(option.exerciseAsset).balanceOf(ALICE), aliceBalanceExerciseAsset + 70 * option.exerciseAmount);
+        assertEq(ERC20(option.exerciseAsset).balanceOf(ALICE), aliceBalanceExerciseAsset + 1 * option.exerciseAmount);
         assertEq(
-            ERC20(option.underlyingAsset).balanceOf(ALICE), aliceBalanceUnderlyingAsset + 30 * option.underlyingAmount
+            ERC20(option.underlyingAsset).balanceOf(ALICE), aliceBalanceUnderlyingAsset + 99 * option.underlyingAmount
         );
     }
 

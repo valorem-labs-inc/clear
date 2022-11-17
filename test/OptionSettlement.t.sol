@@ -1695,9 +1695,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function _assertAssignedInBucket(uint256 optionId, uint16 bucketIndex, uint112 assignedAmount) internal {
         IOptionSettlementEngine.OptionsBucket memory bucket;
-        try engine.claimBucket(optionId, bucketIndex) returns (
-            IOptionSettlementEngine.OptionsBucket memory _bucket
-        ) {
+        try engine.claimBucket(optionId, bucketIndex) returns (IOptionSettlementEngine.OptionsBucket memory _bucket) {
             bucket = _bucket;
         } catch {
             return;

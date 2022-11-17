@@ -246,8 +246,8 @@ interface IOptionSettlementEngine {
     /// @dev This struct contains the data about a lot of options written for a particular option type.
     /// When writing an amount of options of a particular type, the writer will be issued an ERC 1155 NFT
     /// that represents a claim to the underlying and exercise assets of the options lot, to be claimed after
-    /// expiry of the option. The amount of each (underlying asset and exercise asset) paid to the claimant upon 
-    /// redeeming their claim NFT depends on the option type, the amount of options written in their options lot 
+    /// expiry of the option. The amount of each (underlying asset and exercise asset) paid to the claimant upon
+    /// redeeming their claim NFT depends on the option type, the amount of options written in their options lot
     /// (represented in this struct) and what portion of their lot was exercised before expiry.
     struct OptionLotClaim {
         /// @param amountWritten The number of options written in this option lot claim

@@ -438,7 +438,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         });
 
         vm.startPrank(ALICE);
-        for (uint256 i = 1; i < numDays; i++) {
+        for (uint256 i = 0; i < numDays; i++) {
             // write a single option
             uint256 claimId = engine.write(optionId, 1);
             claimIds[i] = claimId;
@@ -453,8 +453,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.exercise(optionId, 1);
         _assertClaimAmountExercised(claimIds[0], 0);
         _assertClaimAmountExercised(claimIds[1], 0);
-        _assertClaimAmountExercised(claimIds[2], 1);
-        _assertClaimAmountExercised(claimIds[3], 0);
+        _assertClaimAmountExercised(claimIds[2], 0);
+        _assertClaimAmountExercised(claimIds[3], 1);
         _assertClaimAmountExercised(claimIds[4], 0);
         _assertClaimAmountExercised(claimIds[5], 0);
         _assertClaimAmountExercised(claimIds[6], 0);
@@ -463,8 +463,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.exercise(optionId, 1);
         _assertClaimAmountExercised(claimIds[0], 0);
         _assertClaimAmountExercised(claimIds[1], 0);
-        _assertClaimAmountExercised(claimIds[2], 1);
-        _assertClaimAmountExercised(claimIds[3], 0);
+        _assertClaimAmountExercised(claimIds[2], 0);
+        _assertClaimAmountExercised(claimIds[3], 1);
         _assertClaimAmountExercised(claimIds[4], 1);
         _assertClaimAmountExercised(claimIds[5], 0);
         _assertClaimAmountExercised(claimIds[6], 0);
@@ -473,8 +473,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.exercise(optionId, 1);
         _assertClaimAmountExercised(claimIds[0], 0);
         _assertClaimAmountExercised(claimIds[1], 1);
-        _assertClaimAmountExercised(claimIds[2], 1);
-        _assertClaimAmountExercised(claimIds[3], 0);
+        _assertClaimAmountExercised(claimIds[2], 0);
+        _assertClaimAmountExercised(claimIds[3], 1);
         _assertClaimAmountExercised(claimIds[4], 1);
         _assertClaimAmountExercised(claimIds[5], 0);
         _assertClaimAmountExercised(claimIds[6], 0);

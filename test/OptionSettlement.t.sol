@@ -1676,8 +1676,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint16 daysRange = uint16(optionInfo.expiryTimestamp / 1 days);
 
         for (uint16 i = 0; i < daysRange; i++) {
-            IOptionSettlementEngine.OptionLotClaimBucket memory bucket;
-            try engine.claimBucket(optionId, i) returns (IOptionSettlementEngine.OptionLotClaimBucket memory _bucket) {
+            IOptionSettlementEngine.OptionsBucket memory bucket;
+            try engine.claimBucket(optionId, i) returns (IOptionSettlementEngine.OptionsBucket memory _bucket) {
                 bucket = _bucket;
             } catch {
                 return;
@@ -1688,16 +1688,16 @@ contract OptionSettlementTest is Test, NFTreceiver {
         }
     }
 
-    function _emitBucket(IOptionSettlementEngine.OptionLotClaimBucket memory bucket) internal {
+    function _emitBucket(IOptionSettlementEngine.OptionsBucket memory bucket) internal {
         emit log_named_uint("bucket amount exercised", bucket.amountExercised);
         emit log_named_uint("bucket amount written", bucket.amountWritten);
         emit log_named_uint("bucket daysAfterEpoch", bucket.daysAfterEpoch);
     }
 
     function _assertAssignedInBucket(uint256 optionId, uint16 bucketIndex, uint112 assignedAmount) internal {
-        IOptionSettlementEngine.OptionLotClaimBucket memory bucket;
+        IOptionSettlementEngine.OptionsBucket memory bucket;
         try engine.claimBucket(optionId, bucketIndex) returns (
-            IOptionSettlementEngine.OptionLotClaimBucket memory _bucket
+            IOptionSettlementEngine.OptionsBucket memory _bucket
         ) {
             bucket = _bucket;
         } catch {

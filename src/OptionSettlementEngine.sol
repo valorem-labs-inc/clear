@@ -54,7 +54,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// on the day in question. write() will add unexercised options into the bucket
     /// corresponding to the # of days after the option type's creation.
     /// exercise() will randomly assign exercise to a bucket <= the current day.
-    mapping(uint160 => OptionLotClaimBucket[]) internal _claimBucketByOption;
+    mapping(uint160 => OptionsBucket[]) internal _claimBucketByOption;
 
     /// @notice Maintains a mapping from option id to a list of unexercised bucket (indices)
     /// @dev Used during the assignment process to find claim buckets with unexercised
@@ -147,7 +147,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function claimBucket(uint256 optionId, uint16 dayBucket)
         external
         view
-        returns (OptionLotClaimBucket memory claimBucketInfo)
+        returns (OptionsBucket memory claimBucketInfo)
     {
         (uint160 optionKey,) = decodeTokenId(optionId);
         claimBucketInfo = _claimBucketByOption[optionKey][dayBucket];
@@ -575,14 +575,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function _assignExercise(uint160 optionId, Option storage optionRecord, uint112 amount) internal {
         // A bucket of the overall amounts written and exercised for all claims
         // on a given day
-        OptionLotClaimBucket[] storage claimBucketArray = _claimBucketByOption[optionId];
+        OptionsBucket[] storage claimBucketArray = _claimBucketByOption[optionId];
         uint16[] storage unexercisedBucketIndices = _unexercisedBucketsByOption[optionId];
         uint16 unexercisedBucketsMod = uint16(unexercisedBucketIndices.length);
         uint16 unexercisedBucketsIndex = uint16(optionRecord.settlementSeed % unexercisedBucketsMod);
         while (amount > 0) {
             // get the claim bucket to assign
             uint16 bucketIndex = unexercisedBucketIndices[unexercisedBucketsIndex];
-            OptionLotClaimBucket storage claimBucketInfo = claimBucketArray[bucketIndex];
+            OptionsBucket storage claimBucketInfo = claimBucketArray[bucketIndex];
 
             uint112 amountAvailable = claimBucketInfo.amountWritten - claimBucketInfo.amountExercised;
             uint112 amountPresentlyExercised;
@@ -615,7 +615,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return uint16(block.timestamp / 1 days);
     }
 
-    function _getAmountExercised(OptionLotClaimIndex storage claimIndex, OptionLotClaimBucket storage claimBucketInfo)
+    function _getAmountExercised(OptionLotClaimIndex storage claimIndex, OptionsBucket storage claimBucketInfo)
         internal
         view
         returns (uint256 _exercised, uint256 _unexercised)
@@ -643,7 +643,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         OptionLotClaimIndex[] storage claimIndexArray = _claimIdToClaimIndexArray[claimId];
         for (uint256 i = 0; i < claimIndexArray.length; i++) {
             OptionLotClaimIndex storage claimIndex = claimIndexArray[i];
-            OptionLotClaimBucket storage claimBucketInfo = _claimBucketByOption[optionId][claimIndex.bucketIndex];
+            OptionsBucket storage claimBucketInfo = _claimBucketByOption[optionId][claimIndex.bucketIndex];
             (uint256 amountExercised, uint256 amountUnexercised) = _getAmountExercised(claimIndex, claimBucketInfo);
             exerciseAmount += optionRecord.exerciseAmount * amountExercised;
             underlyingAmount += optionRecord.underlyingAmount * amountUnexercised;
@@ -651,14 +651,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     function _addOrUpdateClaimBucket(uint160 optionId, uint112 amount) internal returns (uint16) {
-        OptionLotClaimBucket[] storage claimBucketsInfo = _claimBucketByOption[optionId];
+        OptionsBucket[] storage claimBucketsInfo = _claimBucketByOption[optionId];
         uint16[] storage unexercised = _unexercisedBucketsByOption[optionId];
-        OptionLotClaimBucket storage currentBucket;
+        OptionsBucket storage currentBucket;
         uint16 daysAfterEpoch = _getDaysBucket();
         uint16 bucketIndex = uint16(claimBucketsInfo.length);
         if (claimBucketsInfo.length == 0) {
             // add a new bucket none exist
-            claimBucketsInfo.push(OptionLotClaimBucket(amount, 0, daysAfterEpoch));
+            claimBucketsInfo.push(OptionsBucket(amount, 0, daysAfterEpoch));
             // update _unexercisedBucketsByOption and corresponding index mapping
             _updateUnexercisedBucketIndices(optionId, bucketIndex, unexercised);
             return bucketIndex;
@@ -666,7 +666,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         currentBucket = claimBucketsInfo[bucketIndex - 1];
         if (currentBucket.daysAfterEpoch < daysAfterEpoch) {
-            claimBucketsInfo.push(OptionLotClaimBucket(amount, 0, daysAfterEpoch));
+            claimBucketsInfo.push(OptionsBucket(amount, 0, daysAfterEpoch));
             _updateUnexercisedBucketIndices(optionId, bucketIndex, unexercised);
         } else {
             // Update claim bucket for today

@@ -4,9 +4,10 @@ pragma solidity 0.8.11;
 import "base64/Base64.sol";
 import "solmate/tokens/ERC20.sol";
 import "solmate/tokens/ERC1155.sol";
-import "./interfaces/IOptionSettlementEngine.sol";
 import "solmate/utils/SafeTransferLib.sol";
 import "solmate/utils/FixedPointMathLib.sol";
+
+import "./interfaces/IOptionSettlementEngine.sol";
 import "./TokenURIGenerator.sol";
 
 /**
@@ -138,11 +139,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return Type.OptionLotClaim;
     }
 
-    /**
-     * @notice Check to see if an option is already initialized
-     * @param optionKey The option key to check
-     * @return Whether or not the option is initialized
-     */
+    /// @inheritdoc IOptionSettlementEngine
     function isOptionInitialized(uint160 optionKey) public view returns (bool) {
         return _option[optionKey].underlyingAsset != address(0x0);
     }
@@ -458,15 +455,15 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
-    //  Redeem Option Lot Claims
+    //  Redeem Claims
     //////////////////////////////////////////////////////////////*/
 
+    /// @inheritdoc IOptionSettlementEngine
     /// @dev Fair assignment is performed here. After option expiry, any claim holder
     /// seeking to redeem their claim for the underlying and exercise assets will claim
     /// amounts proportional to the per-day amounts written on their options lot (i.e.
-    /// the OptionLotClaimIndex data structions) weighted by the ratio of exercised to unexercised
-    /// options on each of those days.
-    /// @inheritdoc IOptionSettlementEngine
+    /// the OptionLotClaimIndex data structions) weighted by the ratio of exercised to
+    /// unexercised options on each of those days.
     function redeem(uint256 claimId) external {
         (uint160 optionKey, uint96 claimNum) = decodeTokenId(claimId);
 

@@ -11,7 +11,7 @@ interface IOptionSettlementEngine {
     //
 
     /*//////////////////////////////////////////////////////////////
-    // Events
+    //  Events
     //////////////////////////////////////////////////////////////*/
 
     /**
@@ -101,7 +101,7 @@ interface IOptionSettlementEngine {
     event ExerciseAssigned(uint256 indexed claimId, uint256 indexed optionId, uint112 amountAssigned);
 
     /*//////////////////////////////////////////////////////////////
-    // Errors
+    //  Errors
     //////////////////////////////////////////////////////////////*/
 
     /**
@@ -213,7 +213,7 @@ interface IOptionSettlementEngine {
     error AmountWrittenCannotBeZero();
 
     /*//////////////////////////////////////////////////////////////
-    // Data structures
+    //  Data structures
     //////////////////////////////////////////////////////////////*/
 
     /// @dev This enumeration is used to determine the type of an ERC1155 subtoken in the engine.
@@ -384,7 +384,7 @@ interface IOptionSettlementEngine {
     function exercise(uint256 optionId, uint112 amount) external;
 
     /*//////////////////////////////////////////////////////////////
-    //  Redeem Option Lot Claims
+    //  Redeem Claims
     //////////////////////////////////////////////////////////////*/
 
     /**

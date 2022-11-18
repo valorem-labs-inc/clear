@@ -622,7 +622,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         option.settlementSeed = optionKey; // settlement seed is initially equal to option key
         option.nextClaimNum = 1; // next claim num has been incremented
 
-        assertEq(engine.getOptionForTokenId(optionId), option);
+        assertEq(engine.option(optionId), option);
     }
 
     function testGetClaimForTokenId() public {
@@ -632,10 +632,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.prank(ALICE);
         uint256 claimId = engine.write(optionId, 7);
 
-        IOptionSettlementEngine.OptionLotClaim memory claim = engine.getClaimForTokenId(claimId);
-
-        emit log_named_uint("Amount written", claim.amountWritten);
-        // emit log_named_boolean("Claimed", claim.claimed);
+        IOptionSettlementEngine.OptionLotClaim memory claim = engine.claim(claimId);
 
         assertEq(claim.amountWritten, 7);
         assertEq(claim.claimed, false);
@@ -1580,7 +1577,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function _assertClaimAmountExercised(uint256 claimId, uint112 amount) internal {
         IOptionSettlementEngine.Underlying memory underlying = engine.underlying(claimId);
-        IOptionSettlementEngine.Option memory option = engine.getOptionForTokenId(claimId);
+        IOptionSettlementEngine.Option memory option = engine.option(claimId);
         uint112 amountExercised = uint112(uint256(underlying.exercisePosition) / option.exerciseAmount);
         assertEq(amount, amountExercised);
     }

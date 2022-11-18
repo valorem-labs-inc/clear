@@ -251,17 +251,35 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function testExerciseWithDifferentDecimals() public {
-        // write an option where one of the assets isn't 18 decimals
-        _writeAndExerciseNewOption({
+        // Write an option where one of the assets isn't 18 decimals
+        (uint256 newOptionId,) = _createNewOptionType({
             underlyingAsset: USDC_A,
             underlyingAmount: 100,
             exerciseAsset: DAI_A,
             exerciseAmount: testExerciseAmount,
             exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp,
-            writer: ALICE,
-            exerciser: BOB
+            expiryTimestamp: testExpiryTimestamp
         });
+
+        // Alice writes
+        vm.startPrank(ALICE);
+        engine.write(newOptionId, 1);
+        engine.safeTransferFrom(ALICE, BOB, newOptionId, 1, "");
+        vm.stopPrank();
+
+        // Bob owns 1 of these options
+        assertEq(engine.balanceOf(BOB, newOptionId), 1);
+
+        // Fast-forward to just before expiry
+        vm.warp(testExpiryTimestamp - 1 seconds);
+
+        // Bob exercises
+        vm.startPrank(BOB);
+        engine.exercise(newOptionId, 1);
+        vm.stopPrank();
+
+        // Now Bob owns 0 of these options
+        assertEq(engine.balanceOf(BOB, newOptionId), 0);
     }
 
     function testUnderlyingWhenNotExercised() public {

@@ -81,9 +81,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @notice OptionSettlementEngine constructor
     /// @param _feeTo The address fees accrue to
-    constructor(address _feeTo) {
+    constructor(address _feeTo, address _tokenURIGenerator) {
         feeTo = _feeTo;
-        tokenURIGenerator = new TokenURIGenerator();
+        tokenURIGenerator = ITokenURIGenerator(_tokenURIGenerator);
     }
 
     /*//////////////////////////////////////////////////////////////

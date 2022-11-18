@@ -59,13 +59,15 @@ contract OptionSettlementTest is Test, NFTreceiver {
     uint256 private testDuration = 1 days;
 
     IOptionSettlementEngine.Option private testOption;
+    ITokenURIGenerator private generator;
 
     function setUp() public {
         // Fork mainnet
         vm.createSelectFork(vm.envString("RPC_URL"), 15_000_000); // specify block number to cache for future test runs
 
         // Deploy OptionSettlementEngine
-        engine = new OptionSettlementEngine(FEE_TO);
+        generator = new TokenURIGenerator();
+        engine = new OptionSettlementEngine(FEE_TO, address(generator));
 
         // Setup test option contract
         testExerciseTimestamp = uint40(block.timestamp);

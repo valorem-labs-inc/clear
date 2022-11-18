@@ -658,18 +658,18 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testEventNewOptionType() public {
         IOptionSettlementEngine.Option memory optionInfo = IOptionSettlementEngine.Option({
             underlyingAsset: DAI_A,
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAsset: WETH_A,
+            exerciseAmount: testExerciseAmount,
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
-            exerciseAsset: WETH_A,
-            underlyingAmount: testUnderlyingAmount,
             settlementSeed: 0,
-            exerciseAmount: testExerciseAmount,
-            nextClaimNum: 1
+            nextClaimNum: 0
         });
 
         uint256 expectedOptionId = _createOptionIdFromStruct(optionInfo);
 
-        vm.expectEmit(false, true, true, true);
+        vm.expectEmit(true, true, true, true);
         emit NewOptionType(
             expectedOptionId,
             WETH_A,

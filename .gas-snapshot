@@ -17,7 +17,7 @@ OptionSettlementTest:testFuzzExercise(uint112,uint112) (runs: 256, μ: 402548, ~
 OptionSettlementTest:testFuzzNewOptionType(uint96,uint96,uint40,uint40) (runs: 256, μ: 124682, ~: 124682)
 OptionSettlementTest:testFuzzRedeem(uint112,uint112) (runs: 256, μ: 393324, ~: 397146)
 OptionSettlementTest:testFuzzWrite(uint112) (runs: 256, μ: 318433, ~: 318433)
-OptionSettlementTest:testFuzzWriteExerciseRedeem(uint32) (runs: 256, μ: 11496773, ~: 11689637)
+OptionSettlementTest:testFuzzWriteExerciseRedeem(uint32) (runs: 256, μ: 11511849, ~: 11689637)
 OptionSettlementTest:testGetClaimForTokenId() (gas: 377614)
 OptionSettlementTest:testGetOptionForTokenId() (gas: 124586)
 OptionSettlementTest:testInitial() (gas: 7857)

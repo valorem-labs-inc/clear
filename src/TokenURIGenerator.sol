@@ -6,28 +6,31 @@ import "solmate/tokens/ERC20.sol";
 
 import "./interfaces/IOptionSettlementEngine.sol";
 
+/// @title Library to dynamically generate Valorem token URIs
 contract TokenURIGenerator {
+    /// @notice This struct contains params to generate the token URI
     struct TokenURIParams {
-        // The underlying asset to be received
+        /// @param underlyingAsset The underlying asset to be received
         address underlyingAsset;
-        // The symbol of the underlying asset
+        /// @param underlyingSymbol The symbol of the underlying asset
         string underlyingSymbol;
-        // The address of the asset needed for exercise
+        /// @param exerciseAsset The address of the asset needed for exercise
         address exerciseAsset;
-        // The symbol of the underlying asset
+        /// @param exerciseSymbol The symbol of the underlying asset
         string exerciseSymbol;
-        // The timestamp after which this option may be exercised
+        /// @param exerciseTimestamp The timestamp after which this option may be exercised
         uint40 exerciseTimestamp;
-        // The timestamp before which this option must be exercised
+        /// @param expiryTimestamp The timestamp before which this option must be exercised
         uint40 expiryTimestamp;
-        // The amount of the underlying asset contained within an option contract of this type
+        /// @param underlyingAmount The amount of the underlying asset contained within an option contract of this type
         uint96 underlyingAmount;
-        // The amount of the exercise asset required to exercise this option
+        /// @param exerciseAmount The amount of the exercise asset required to exercise this option
         uint96 exerciseAmount;
-        // Option or Claim
+        /// @param tokenType Option or Claim
         IOptionSettlementEngine.Type tokenType;
     }
 
+    /// @dev Construct the token URI
     function constructTokenURI(TokenURIParams memory params) public view returns (string memory) {
         string memory svg = generateNFT(params);
 
@@ -51,6 +54,7 @@ contract TokenURIGenerator {
         /* solhint-enable quotes */
     }
 
+    /// @dev Generate the name field
     function generateName(TokenURIParams memory params) public pure returns (string memory) {
         (uint256 month, uint256 day, uint256 year) = _getDateUnits(params.expiryTimestamp);
 
@@ -73,6 +77,7 @@ contract TokenURIGenerator {
         );
     }
 
+    /// @dev Generate the description field
     function generateDescription(TokenURIParams memory params) public pure returns (string memory) {
         return string(
             abi.encodePacked(
@@ -89,6 +94,7 @@ contract TokenURIGenerator {
         );
     }
 
+    /// @dev Generate the image field
     function generateNFT(TokenURIParams memory params) public view returns (string memory) {
         uint8 underlyingDecimals = ERC20(params.underlyingAsset).decimals();
         uint8 exerciseDecimals = ERC20(params.exerciseAsset).decimals();
@@ -205,7 +211,7 @@ contract TokenURIGenerator {
         );
     }
 
-    // UTILITIES
+    /// @notice Utilities
     struct DecimalStringParams {
         // significant figures of decimal
         uint256 sigfigs;

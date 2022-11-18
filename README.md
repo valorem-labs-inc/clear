@@ -25,7 +25,7 @@ The structure of an option is as follows:
 - **Underlying amount:** the amount of the underlying asset contained within an option of this type.
 - **Exercise asset:** the ERC-20 address of the asset needed for exercise.
 - **Exercise amount:** the amount of the exercise asset required to exercise this option.
-- **Earliest exercise timestamp:** the timestamp after which this option can be exercised and physically settled.
+- **Exercise timestamp:** the timestamp after which this option can be exercised and physically settled.
 - **Expiry timestamp:** the timestamp before which this option can be exercised.
 
 The Core is unopinionated on the type of option (call vs. put), where, when, or for how much an option is bought/sold, and whether or not the option is profitable when exercised. Because all options written with Valorem are fully collateralized, physical settlement at exercise or redeem time is instant and gas-efficient.

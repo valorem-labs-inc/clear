@@ -2,7 +2,8 @@
 pragma solidity 0.8.11;
 
 import "forge-std/Test.sol";
-import "./interfaces/IERC20.sol";
+import {IERC20} from "forge-std/interfaces/IERC20.sol";
+
 import "../src/OptionSettlementEngine.sol";
 
 /// @notice Receiver hook utility for NFT 'safe' transfers

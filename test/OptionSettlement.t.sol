@@ -759,18 +759,22 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.redeem(claimId);
     }
 
-    function testEventSweepFeesWhenFeesAccruedForWrite() public {
+    function testSweepFeesWhenFeesAccruedForWrite() public {
         address[] memory tokens = new address[](3);
         tokens[0] = WETH_A;
         tokens[1] = DAI_A;
         tokens[2] = USDC_A;
 
         uint96 daiUnderlyingAmount = 9 * 10 ** 18;
-        uint96 usdcUnderlyingAmount = 7 * 10 ** 9; // not 18 decimals
+        uint96 usdcUnderlyingAmount = 7 * 10 ** 6; // not 18 decimals
+
+        uint8 optionsWrittenWethUnderlying = 3;
+        uint8 optionsWrittenDaiUnderlying = 4;
+        uint8 optionsWrittenUsdcUnderlying = 5;
 
         // Write option that will generate WETH fees
         vm.startPrank(ALICE);
-        engine.write(testOptionId, 1);
+        engine.write(testOptionId, optionsWrittenWethUnderlying);
 
         // Write option that will generate DAI fees
         (uint256 daiOptionId,) = _createNewOptionType({
@@ -781,7 +785,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
-        engine.write(daiOptionId, 1);
+        engine.write(daiOptionId, optionsWrittenDaiUnderlying);
 
         // Write option that will generate USDC fees
         (uint256 usdcOptionId,) = _createNewOptionType({
@@ -792,14 +796,19 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
-        engine.write(usdcOptionId, 1);
+        engine.write(usdcOptionId, optionsWrittenUsdcUnderlying);
         vm.stopPrank();
 
         // Then assert expected fee amounts
         uint256[] memory expectedFees = new uint256[](3);
-        expectedFees[0] = ((testUnderlyingAmount / 10_000) * engine.feeBps());
-        expectedFees[1] = ((daiUnderlyingAmount / 10_000) * engine.feeBps());
-        expectedFees[2] = ((usdcUnderlyingAmount / 10_000) * engine.feeBps());
+        expectedFees[0] = (((testUnderlyingAmount * optionsWrittenWethUnderlying) / 10_000) * engine.feeBps());
+        expectedFees[1] = (((daiUnderlyingAmount * optionsWrittenDaiUnderlying) / 10_000) * engine.feeBps());
+        expectedFees[2] = (((usdcUnderlyingAmount * optionsWrittenUsdcUnderlying) / 10_000) * engine.feeBps());
+
+        // Pre feeTo balance check
+        assertEq(WETH.balanceOf(FEE_TO), 0);
+        assertEq(DAI.balanceOf(FEE_TO), 0);
+        assertEq(USDC.balanceOf(FEE_TO), 0);
 
         for (uint256 i = 0; i < tokens.length; i++) {
             vm.expectEmit(true, true, true, true);
@@ -808,9 +817,41 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // When fees are swept
         engine.sweepFees(tokens);
+
+        // Post feeTo balance check, first sweep
+        uint256 feeToBalanceWeth = WETH.balanceOf(FEE_TO);
+        uint256 feeToBalanceDai = DAI.balanceOf(FEE_TO);
+        uint256 feeToBalanceUsdc = USDC.balanceOf(FEE_TO);
+        assertEq(feeToBalanceWeth, expectedFees[0] - 1);
+        assertEq(feeToBalanceDai, expectedFees[1] - 1);
+        assertEq(feeToBalanceUsdc, expectedFees[2] - 1);
+
+        // Write and sweep again, but assert this time we sweep the true fee amount,
+        // not 1 wei less, bc we've already done the gas optimization
+        optionsWrittenWethUnderlying = 6;
+        optionsWrittenDaiUnderlying = 3;
+        optionsWrittenUsdcUnderlying = 2;
+        vm.startPrank(ALICE);
+        engine.write(testOptionId, optionsWrittenWethUnderlying);
+        engine.write(daiOptionId, optionsWrittenDaiUnderlying);
+        engine.write(usdcOptionId, optionsWrittenUsdcUnderlying);
+        vm.stopPrank();
+        expectedFees[0] = (((testUnderlyingAmount * optionsWrittenWethUnderlying) / 10_000) * engine.feeBps());
+        expectedFees[1] = (((daiUnderlyingAmount * optionsWrittenDaiUnderlying) / 10_000) * engine.feeBps());
+        expectedFees[2] = (((usdcUnderlyingAmount * optionsWrittenUsdcUnderlying) / 10_000) * engine.feeBps());
+        for (uint256 i = 0; i < tokens.length; i++) {
+            vm.expectEmit(true, true, true, true);
+            emit FeeSwept(tokens[i], engine.feeTo(), expectedFees[i]); // true amount
+        }
+        engine.sweepFees(tokens);
+
+        // Post feeTo balance check, second sweep
+        assertEq(WETH.balanceOf(FEE_TO), feeToBalanceWeth + expectedFees[0]);
+        assertEq(DAI.balanceOf(FEE_TO), feeToBalanceDai + expectedFees[1]);
+        assertEq(USDC.balanceOf(FEE_TO), feeToBalanceUsdc + expectedFees[2]);
     }
 
-    function testEventSweepFeesWhenFeesAccruedForExercise() public {
+    function testSweepFeesWhenFeesAccruedForExercise() public {
         address[] memory tokens = new address[](3);
         tokens[0] = DAI_A;
         tokens[1] = WETH_A;
@@ -818,7 +859,11 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         uint96 daiExerciseAmount = 9 * 10 ** 18;
         uint96 wethExerciseAmount = 3 * 10 ** 18;
-        uint96 usdcExerciseAmount = 7 * 10 ** 9; // not 18 decimals
+        uint96 usdcExerciseAmount = 7 * 10 ** 6; // not 18 decimals
+
+        uint8 optionsWrittenDaiExercise = 3;
+        uint8 optionsWrittenWethExercise = 4;
+        uint8 optionsWrittenUsdcExercise = 5;
 
         // Write option for WETH-DAI pair
         vm.startPrank(ALICE);
@@ -830,7 +875,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
-        engine.write(daiExerciseOptionId, 1);
+        engine.write(daiExerciseOptionId, optionsWrittenDaiExercise);
 
         // Write option for DAI-WETH pair
         (uint256 wethExerciseOptionId,) = _createNewOptionType({
@@ -841,7 +886,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
-        engine.write(wethExerciseOptionId, 1);
+        engine.write(wethExerciseOptionId, optionsWrittenWethExercise);
 
         // Write option for DAI-USDC pair
         (uint256 usdcExerciseOptionId,) = _createNewOptionType({
@@ -852,12 +897,23 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
-        engine.write(usdcExerciseOptionId, 1);
+        engine.write(usdcExerciseOptionId, optionsWrittenUsdcExercise);
+
+        // Write option for USDC-DAI pair, so that USDC feeBalance will be 1 wei after writing
+        (uint256 usdcUnderlyingOptionId,) = _createNewOptionType({
+            underlyingAsset: USDC_A,
+            underlyingAmount: usdcExerciseAmount,
+            exerciseAsset: DAI_A,
+            exerciseAmount: daiExerciseAmount,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp
+        });
+        engine.write(usdcUnderlyingOptionId, 1);
 
         // Transfer all option contracts to Bob
-        engine.safeTransferFrom(ALICE, BOB, daiExerciseOptionId, 1, "");
-        engine.safeTransferFrom(ALICE, BOB, wethExerciseOptionId, 1, "");
-        engine.safeTransferFrom(ALICE, BOB, usdcExerciseOptionId, 1, "");
+        engine.safeTransferFrom(ALICE, BOB, daiExerciseOptionId, optionsWrittenDaiExercise, "");
+        engine.safeTransferFrom(ALICE, BOB, wethExerciseOptionId, optionsWrittenWethExercise, "");
+        engine.safeTransferFrom(ALICE, BOB, usdcExerciseOptionId, optionsWrittenUsdcExercise, "");
         vm.stopPrank();
 
         vm.warp(testExpiryTimestamp - 1 seconds);
@@ -865,30 +921,43 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // Clear away fees generated by writing options
         engine.sweepFees(tokens);
 
+        // Get feeTo balances after sweeping fees from write
+        uint256[] memory initialFeeToBalances = new uint256[](3);
+        initialFeeToBalances[0] = DAI.balanceOf(FEE_TO);
+        initialFeeToBalances[1] = WETH.balanceOf(FEE_TO);
+        initialFeeToBalances[2] = USDC.balanceOf(FEE_TO);
+
         // Exercise option that will generate WETH fees
         vm.startPrank(BOB);
-        engine.exercise(daiExerciseOptionId, 1);
+        engine.exercise(daiExerciseOptionId, optionsWrittenDaiExercise);
 
-        // Exercise option that will generate DAI fees
-        engine.exercise(wethExerciseOptionId, 1);
+        // // Exercise option that will generate DAI fees
+        engine.exercise(wethExerciseOptionId, optionsWrittenWethExercise);
 
         // Exercise option that will generate USDC fees
-        engine.exercise(usdcExerciseOptionId, 1);
+        engine.exercise(usdcExerciseOptionId, optionsWrittenUsdcExercise);
         vm.stopPrank();
 
-        // Then assert expected fee amounts
+        // Then assert expected fee amounts, but because this isn't the first fee
+        // taken for any of these assets, and the 1 wei-left-behind gas optimization
+        // has already happened, therefore actual fee swept amount = true fee amount.
         uint256[] memory expectedFees = new uint256[](3);
-        expectedFees[0] = ((daiExerciseAmount / 10_000) * engine.feeBps());
-        expectedFees[1] = ((wethExerciseAmount / 10_000) * engine.feeBps());
-        expectedFees[2] = ((usdcExerciseAmount / 10_000) * engine.feeBps());
+        expectedFees[0] = (((daiExerciseAmount * optionsWrittenDaiExercise) / 10_000) * engine.feeBps());
+        expectedFees[1] = (((wethExerciseAmount * optionsWrittenWethExercise) / 10_000) * engine.feeBps());
+        expectedFees[2] = (((usdcExerciseAmount * optionsWrittenUsdcExercise) / 10_000) * engine.feeBps());
 
         for (uint256 i = 0; i < tokens.length; i++) {
-            vm.expectEmit(true, true, true, false);
-            emit FeeSwept(tokens[i], engine.feeTo(), expectedFees[i]); // sweeps 1 wei less as gas optimization
+            vm.expectEmit(true, true, true, true);
+            emit FeeSwept(tokens[i], engine.feeTo(), expectedFees[i]);
         }
 
         // When fees are swept
         engine.sweepFees(tokens);
+
+        // Check feeTo balances after sweeping fees from exercise
+        assertEq(DAI.balanceOf(FEE_TO), initialFeeToBalances[0] + expectedFees[0]);
+        assertEq(WETH.balanceOf(FEE_TO), initialFeeToBalances[1] + expectedFees[1]);
+        assertEq(USDC.balanceOf(FEE_TO), initialFeeToBalances[2] + expectedFees[2]);
     }
 
     // **********************************************************************

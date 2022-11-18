@@ -543,7 +543,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function testRevertSetTokenURIGeneratorWhenZeroAddress() public {
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidTokenURIGeneratorAddress.selector, address(0)));
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.InvalidTokenURIGeneratorAddress.selector, address(0))
+        );
         vm.prank(FEE_TO);
         engine.setTokenURIGenerator(address(0));
     }

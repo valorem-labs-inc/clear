@@ -29,6 +29,7 @@ interface ITokenURIGenerator {
         /// @param tokenType Option or Claim
         IOptionSettlementEngine.Type tokenType;
     }
+
     function constructTokenURI(TokenURIParams memory params) external view returns (string memory);
 
     function generateName(TokenURIParams memory params) external pure returns (string memory);

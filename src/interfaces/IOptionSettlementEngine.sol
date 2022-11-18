@@ -117,9 +117,15 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Invalid fee to address.
-     * @param feeTo the feeTo address.
+     * @param feeTo The feeTo address.
      */
     error InvalidFeeToAddress(address feeTo);
+
+    /**
+     * @notice Invalid TokenURIGenerator address.
+     * @param tokenURIGenerator The tokenURIGenerator address.
+     */
+    error InvalidTokenURIGeneratorAddress(address tokenURIGenerator);
 
     /**
      * @notice This options chain already exists and thus cannot be created.
@@ -472,4 +478,10 @@ interface IOptionSettlementEngine {
      * @param tokens The tokens for which fees will be swept to the feeTo address.
      */
     function sweepFees(address[] memory tokens) external;
+
+    /**
+     * @notice Updates the contract address for generating the token URI for claim NFTs.
+     * @param newTokenURIGenerator The address of the new ITokenURIGenerator contract.
+     */
+    function setTokenURIGenerator(address newTokenURIGenerator) external;
 }

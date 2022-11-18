@@ -5,31 +5,13 @@ import "base64/Base64.sol";
 import "solmate/tokens/ERC20.sol";
 
 import "./interfaces/IOptionSettlementEngine.sol";
+import "./interfaces/ITokenURIGenerator.sol";
 
 /// @title Library to dynamically generate Valorem token URIs
-contract TokenURIGenerator {
-    /// @notice This struct contains params to generate the token URI
-    struct TokenURIParams {
-        /// @param underlyingAsset The underlying asset to be received
-        address underlyingAsset;
-        /// @param underlyingSymbol The symbol of the underlying asset
-        string underlyingSymbol;
-        /// @param exerciseAsset The address of the asset needed for exercise
-        address exerciseAsset;
-        /// @param exerciseSymbol The symbol of the underlying asset
-        string exerciseSymbol;
-        /// @param exerciseTimestamp The timestamp after which this option may be exercised
-        uint40 exerciseTimestamp;
-        /// @param expiryTimestamp The timestamp before which this option must be exercised
-        uint40 expiryTimestamp;
-        /// @param underlyingAmount The amount of the underlying asset contained within an option contract of this type
-        uint96 underlyingAmount;
-        /// @param exerciseAmount The amount of the exercise asset required to exercise this option
-        uint96 exerciseAmount;
-        /// @param tokenType Option or Claim
-        IOptionSettlementEngine.Type tokenType;
-    }
-
+/// @author 0xAlcibiades
+/// @author Flip-Liquid
+/// @author neodaoist
+contract TokenURIGenerator is ITokenURIGenerator {
     /// @dev Construct the token URI
     function constructTokenURI(TokenURIParams memory params) public view returns (string memory) {
         string memory svg = generateNFT(params);

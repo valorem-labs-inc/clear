@@ -39,6 +39,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @notice The address fees accrue to
     address public feeTo;
 
+    /// @notice The contract for token uri generation
+    ITokenURIGenerator public tokenUriGenerator;
+
     /*//////////////////////////////////////////////////////////////
     //  State variables - Internal
     //////////////////////////////////////////////////////////////*/
@@ -80,6 +83,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @param _feeTo The address fees accrue to
     constructor(address _feeTo) {
         feeTo = _feeTo;
+        tokenUriGenerator = new TokenURIGenerator();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -159,7 +163,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         Type _type = claimNum == 0 ? Type.Option : Type.OptionLotClaim;
 
-        TokenURIGenerator.TokenURIParams memory params = TokenURIGenerator.TokenURIParams({
+        TokenURIGenerator.TokenURIParams memory params = tokenURIGenerator.TokenURIParams({
             underlyingAsset: optionInfo.underlyingAsset,
             underlyingSymbol: ERC20(optionInfo.underlyingAsset).symbol(),
             exerciseAsset: optionInfo.exerciseAsset,
@@ -513,6 +517,18 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 }
             }
         }
+    }
+
+    /// @inheritdoc IOptionSettlementEngine
+    function setTokenURIGenerator(address newTokenURIGenerator) public {
+        if (msg.sender != feeTo) {
+            revert AccessControlViolation(msg.sender, feeTo);
+        }
+        if (tokenUriGenerator == address(0)) {
+            revert InvalidTokenURIGeneratorAddress(0);
+        }
+
+        tokenUriGenerator = ITokenURIGenerator(newTokenURIGenerator);
     }
 
     /*//////////////////////////////////////////////////////////////

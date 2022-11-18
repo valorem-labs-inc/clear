@@ -21,7 +21,7 @@ import "./TokenURIGenerator.sol";
  */
 
 /// @title A settlement engine for options
-/// @dev This settlement protocol does not support rebase tokens, or fee on transfer tokens
+/// @dev This settlement protocol does not support rebasing, fee-on-transfer, or ERC-777 tokens
 /// @author 0xAlcibiades
 /// @author Flip-Liquid
 /// @author neodaoist
@@ -178,36 +178,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //  Token ID Encoding
     //////////////////////////////////////////////////////////////*/
 
-    /**
-     * @notice Encode the supplied option id and claim id
-     * @dev Option and claim token ids are encoded as follows:
-     *
-     *   MSb
-     *   0000 0000   0000 0000   0000 0000   0000 0000 ┐
-     *   0000 0000   0000 0000   0000 0000   0000 0000 │
-     *   0000 0000   0000 0000   0000 0000   0000 0000 │ 160b option key, created from hash of Option struct
-     *   0000 0000   0000 0000   0000 0000   0000 0000 │
-     *   0000 0000   0000 0000   0000 0000   0000 0000 │
-     *   0000 0000   0000 0000   0000 0000   0000 0000 ┘
-     *   0000 0000   0000 0000   0000 0000   0000 0000 ┐
-     *   0000 0000   0000 0000   0000 0000   0000 0000 │ 96b auto-incrementing option lot claim number
-     *   0000 0000   0000 0000   0000 0000   0000 0000 ┘
-     *                                             LSb
-     * @param optionKey The optionKey to encode
-     * @param claimNum The claimNum to encode
-     * @return tokenId The encoded token id
-     */
+    /// @inheritdoc IOptionSettlementEngine
     function encodeTokenId(uint160 optionKey, uint96 claimNum) public pure returns (uint256 tokenId) {
         tokenId |= (uint256(optionKey) << 96);
         tokenId |= uint256(claimNum);
     }
 
-    /**
-     * @notice Decode the supplied token id
-     * @dev See encodeTokenId() for encoding scheme
-     * @param tokenId The token id to decode
-     * @return optionKey claimNum The decoded components of the id as described above, padded as required
-     */
+    /// @inheritdoc IOptionSettlementEngine
     function decodeTokenId(uint256 tokenId) public pure returns (uint160 optionKey, uint96 claimNum) {
         // move key to LSB to fit into uint160
         optionKey = uint160(tokenId >> 96);
@@ -601,10 +578,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             uint160(uint256(keccak256(abi.encode(optionRecord.settlementSeed, unexercisedBucketsIndex))));
     }
 
+    /// @dev Help find a given days bucket by calculating days after epoch
     function _getDaysBucket() internal view returns (uint16) {
         return uint16(block.timestamp / 1 days);
     }
 
+    /// @dev Get the amount of exercised and unexercised options for a given claim + day bucket combo
     function _getAmountExercised(OptionLotClaimIndex storage claimIndex, OptionsDayBucket storage claimBucketInfo)
         internal
         view
@@ -616,7 +595,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             claimBucketInfo.amountExercised, claimIndex.amountWritten, claimBucketInfo.amountWritten
         );
 
-        // The ration of unexercised to written options in the bucket multiplied by the
+        // The ratio of unexercised to written options in the bucket multiplied by the
         // number of options actually written in the claim.
         _unexercised = FixedPointMathLib.mulDivDown(
             claimBucketInfo.amountWritten - claimBucketInfo.amountExercised,
@@ -625,6 +604,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         );
     }
 
+    /// @dev Get the exercise and underlying amounts for a claim
     function _getPositionsForClaim(uint160 optionId, uint256 claimId, Option storage optionRecord)
         internal
         view
@@ -640,6 +620,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
     }
 
+    /// @dev Help with internal options bucket accounting
     function _addOrUpdateClaimBucket(uint160 optionId, uint112 amount) internal returns (uint16) {
         OptionsDayBucket[] storage claimBucketsInfo = _claimBucketByOption[optionId];
         uint16[] storage unexercised = _unexercisedBucketsByOption[optionId];
@@ -673,6 +654,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return bucketIndex;
     }
 
+    /// @dev Help with internal claim bucket accounting
     function _updateUnexercisedBucketIndices(
         uint160 optionId,
         uint16 bucketIndex,
@@ -682,6 +664,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         _doesBucketIndexHaveUnexercisedOptions[optionId][bucketIndex] = true;
     }
 
+    /// @dev Help with internal claim bucket accounting
     function _addOrUpdateClaimIndex(uint256 claimId, uint16 bucketIndex, uint112 amount) internal {
         OptionLotClaimIndex storage lastIndex;
         OptionLotClaimIndex[] storage claimIndexArray = _claimIdToClaimIndexArray[claimId];

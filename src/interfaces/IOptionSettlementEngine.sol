@@ -8,8 +8,6 @@ import "./IERC1155Metadata.sol";
 /// @author Flip-Liquid
 /// @author neodaoist
 interface IOptionSettlementEngine {
-    //
-
     /*//////////////////////////////////////////////////////////////
     //  Events
     //////////////////////////////////////////////////////////////*/
@@ -30,8 +28,8 @@ interface IOptionSettlementEngine {
      * @param underlyingAsset The contract address of the underlying asset.
      * @param exerciseAmount The amount of the exercise asset to be exercised.
      * @param underlyingAmount The amount of the underlying asset in the option.
-     * @param exerciseTimestamp The timestamp for exercising the option.
-     * @param expiryTimestamp The expiry timestamp of the option.
+     * @param exerciseTimestamp The timestamp after which this option can be exercised.
+     * @param expiryTimestamp The timestamp before which this option can be exercised.
      * @param nextClaimNum The next claim ID.
      */
     event NewOptionType(
@@ -233,9 +231,9 @@ interface IOptionSettlementEngine {
         address exerciseAsset;
         /// @param exerciseAmount The amount of the exercise asset required to exercise this option
         uint96 exerciseAmount;
-        /// @param exerciseTimestamp The timestamp after which this option may be exercised
+        /// @param exerciseTimestamp The timestamp after which this option can be exercised
         uint40 exerciseTimestamp;
-        /// @param expiryTimestamp The timestamp before which this option must be exercised
+        /// @param expiryTimestamp The timestamp before which this option can be exercised
         uint40 expiryTimestamp;
         /// @param settlementSeed Random seed created at the time of option type creation
         uint160 settlementSeed;
@@ -243,12 +241,14 @@ interface IOptionSettlementEngine {
         uint96 nextClaimNum;
     }
 
-    /// @dev This struct contains the data about a lot of options written for a particular option type.
-    /// When writing an amount of options of a particular type, the writer will be issued an ERC 1155 NFT
-    /// that represents a claim to the underlying and exercise assets of the options lot, to be claimed after
-    /// expiry of the option. The amount of each (underlying asset and exercise asset) paid to the claimant upon
-    /// redeeming their claim NFT depends on the option type, the amount of options written in their options lot
-    /// (represented in this struct) and what portion of their lot was exercised before expiry.
+    /**
+     * @dev This struct contains the data about a lot of options written for a particular option type.
+     * When writing an amount of options of a particular type, the writer will be issued an ERC 1155 NFT
+     * that represents a claim to the underlying and exercise assets of the options lot, to be claimed after
+     * expiry of the option. The amount of each (underlying asset and exercise asset) paid to the claimant upon
+     * redeeming their claim NFT depends on the option type, the amount of options written in their options lot
+     * (represented in this struct) and what portion of their lot was exercised before expiry.
+     */
     struct OptionLotClaim {
         /// @param amountWritten The number of options written in this option lot claim
         uint112 amountWritten;
@@ -256,9 +256,11 @@ interface IOptionSettlementEngine {
         bool claimed;
     }
 
-    /// @dev Options lots are able to have options added to them on after the initial writing.
-    /// This struct is used to keep track of how many options in a single lot are
-    /// written on each day, in order to correctly perform fair assignment.
+    /**
+     * @dev Options lots are able to have options added to them on after the initial
+     * writing. This struct is used to keep track of how many options in a single lot
+     * are written on each day, in order to correctly perform fair assignment.
+     */
     struct OptionLotClaimIndex {
         /// @param amountWritten The amount of options written on a given day/bucket
         uint112 amountWritten;
@@ -266,9 +268,11 @@ interface IOptionSettlementEngine {
         uint16 bucketIndex;
     }
 
-    /// @dev Represents the total amount of options written and exercised for a group of
-    /// claims bucketed by day. Used in fair assignement to calculate the ratio of
-    /// underlying to exercise assets to be transferred to claimants.
+    /**
+     * @dev Represents the total amount of options written and exercised for a group of
+     * claims bucketed by day. Used in fair assignement to calculate the ratio of
+     * underlying to exercise assets to be transferred to claimants.
+     */
     struct OptionsDayBucket {
         /// @param amountWritten The number of options written in this bucket
         uint112 amountWritten;
@@ -278,7 +282,9 @@ interface IOptionSettlementEngine {
         uint16 daysAfterEpoch;
     }
 
-    /// @dev Struct used in returning data regarding positions underlying a claim or option
+    /**
+     * @dev Struct used in returning data regarding positions underlying a claim or option.
+     */
     struct Underlying {
         /// @param underlyingAsset address of the underlying asset erc20
         address underlyingAsset;
@@ -334,15 +340,52 @@ interface IOptionSettlementEngine {
     function isOptionInitialized(uint160 optionKey) external view returns (bool);
 
     /*//////////////////////////////////////////////////////////////
+    //  Token ID Encoding
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Encode the supplied option id and claim id
+     * @dev Option and claim token ids are encoded as follows:
+     *
+     *   MSb
+     *   0000 0000   0000 0000   0000 0000   0000 0000 ┐
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │ 160b option key, created from hash of Option struct
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │
+     *   0000 0000   0000 0000   0000 0000   0000 0000 ┘
+     *   0000 0000   0000 0000   0000 0000   0000 0000 ┐
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │ 96b auto-incrementing option lot claim number
+     *   0000 0000   0000 0000   0000 0000   0000 0000 ┘
+     *                                             LSb
+     * @param optionKey The optionKey to encode
+     * @param claimNum The claimNum to encode
+     * @return tokenId The encoded token id
+     */
+    function encodeTokenId(uint160 optionKey, uint96 claimNum) external pure returns (uint256 tokenId);
+
+    /**
+     * @notice Decode the supplied token id
+     * @dev See encodeTokenId() for encoding scheme
+     * @param tokenId The token id to decode
+     * @return optionKey claimNum The decoded components of the id as described above, padded as required
+     */
+    function decodeTokenId(uint256 tokenId) external pure returns (uint160 optionKey, uint96 claimNum);
+
+    /*//////////////////////////////////////////////////////////////
     //  Write Options
     //////////////////////////////////////////////////////////////*/
 
-    // /**
-    //  * @notice Create a new options type from optionInfo if it doesn't already exist
-    //  * @dev The supplied creation timestamp and next claim Id fields will be disregarded.
-    //  * @param optionInfo The optionInfo from which a new type will be created
-    //  * @return optionId The optionId for the option.
-    //  */
+    /**
+     * @notice Create a new option type if it doesn't already exist
+     * @param underlyingAsset The contract address of the underlying asset.
+     * @param underlyingAmount The amount of the underlying asset in the option.
+     * @param exerciseAsset The contract address of the exercise asset.
+     * @param exerciseAmount The amount of the exercise asset to be exercised.
+     * @param exerciseTimestamp The timestamp after which this option can be exercised.
+     * @param expiryTimestamp The timestamp before which this option can be exercised.
+     * @return optionId The optionId for the option.
+     */
     function newOptionType(
         address underlyingAsset,
         uint96 underlyingAmount,

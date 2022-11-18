@@ -40,7 +40,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     address public feeTo;
 
     /// @notice The contract for token uri generation
-    ITokenURIGenerator public tokenUriGenerator;
+    ITokenURIGenerator public tokenURIGenerator;
 
     /*//////////////////////////////////////////////////////////////
     //  State variables - Internal
@@ -83,7 +83,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @param _feeTo The address fees accrue to
     constructor(address _feeTo) {
         feeTo = _feeTo;
-        tokenUriGenerator = new TokenURIGenerator();
+        tokenURIGenerator = new TokenURIGenerator();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -524,11 +524,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         if (msg.sender != feeTo) {
             revert AccessControlViolation(msg.sender, feeTo);
         }
-        if (tokenUriGenerator == address(0)) {
+        if (tokenURIGenerator == address(0)) {
             revert InvalidTokenURIGeneratorAddress(0);
         }
 
-        tokenUriGenerator = ITokenURIGenerator(newTokenURIGenerator);
+        tokenURIGenerator = ITokenURIGenerator(newTokenURIGenerator);
     }
 
     /*//////////////////////////////////////////////////////////////

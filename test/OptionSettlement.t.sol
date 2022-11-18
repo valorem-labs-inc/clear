@@ -174,11 +174,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
         );
         strings.slice memory token;
         strings.slice memory optionUri = strings.toSlice(engine.uri(optionId));
-        strings.slice memory encodedDescription = strings.split(optionUri, strings.toSlice("data:application/json;base64,"), token);
+        strings.slice memory encodedDescription =
+            strings.split(optionUri, strings.toSlice("data:application/json;base64,"), token);
         bytes memory decoded = decode(strings.toString(encodedDescription));
-
     }
-
 
     function testTokenURIForClaim() public {
         (uint256 optionId, IOptionSettlementEngine.Option memory option) = _createNewOptionType(
@@ -1743,12 +1742,12 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(actual.settlementSeed, expected.settlementSeed);
         assertEq(actual.nextClaimNum, expected.nextClaimNum);
     }
-   
+
     // FROM https://github.com/Brechtpd/base64/blob/main/base64.sol
-    bytes  internal constant TABLE_DECODE = hex"0000000000000000000000000000000000000000000000000000000000000000"
-                                            hex"00000000000000000000003e0000003f3435363738393a3b3c3d000000000000"
-                                            hex"00000102030405060708090a0b0c0d0e0f101112131415161718190000000000"
-                                            hex"001a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132330000000000";
+    bytes internal constant TABLE_DECODE = hex"0000000000000000000000000000000000000000000000000000000000000000"
+        hex"00000000000000000000003e0000003f3435363738393a3b3c3d000000000000"
+        hex"00000102030405060708090a0b0c0d0e0f101112131415161718190000000000"
+        hex"001a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132330000000000";
 
     function decode(string memory _data) internal pure returns (bytes memory) {
         bytes memory data = bytes(_data);
@@ -1770,9 +1769,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             let lastBytes := mload(add(data, mload(data)))
             if eq(and(lastBytes, 0xFF), 0x3d) {
                 decodedLen := sub(decodedLen, 1)
-                if eq(and(lastBytes, 0xFFFF), 0x3d3d) {
-                    decodedLen := sub(decodedLen, 1)
-                }
+                if eq(and(lastBytes, 0xFFFF), 0x3d3d) { decodedLen := sub(decodedLen, 1) }
             }
 
             // set the actual output length
@@ -1789,22 +1786,23 @@ contract OptionSettlementTest is Test, NFTreceiver {
             let resultPtr := add(result, 32)
 
             // run over the input, 4 characters at a time
-            for {} lt(dataPtr, endPtr) {}
-            {
-               // read 4 characters
-               dataPtr := add(dataPtr, 4)
-               let input := mload(dataPtr)
+            for {} lt(dataPtr, endPtr) {} {
+                // read 4 characters
+                dataPtr := add(dataPtr, 4)
+                let input := mload(dataPtr)
 
-               // write 3 bytes
-               let output := add(
-                   add(
-                       shl(18, and(mload(add(tablePtr, and(shr(24, input), 0xFF))), 0xFF)),
-                       shl(12, and(mload(add(tablePtr, and(shr(16, input), 0xFF))), 0xFF))),
-                   add(
-                       shl( 6, and(mload(add(tablePtr, and(shr( 8, input), 0xFF))), 0xFF)),
-                               and(mload(add(tablePtr, and(        input , 0xFF))), 0xFF)
+                // write 3 bytes
+                let output :=
+                    add(
+                        add(
+                            shl(18, and(mload(add(tablePtr, and(shr(24, input), 0xFF))), 0xFF)),
+                            shl(12, and(mload(add(tablePtr, and(shr(16, input), 0xFF))), 0xFF))
+                        ),
+                        add(
+                            shl(6, and(mload(add(tablePtr, and(shr(8, input), 0xFF))), 0xFF)),
+                            and(mload(add(tablePtr, and(input, 0xFF))), 0xFF)
+                        )
                     )
-                )
                 mstore(resultPtr, shl(232, output))
                 resultPtr := add(resultPtr, 3)
             }

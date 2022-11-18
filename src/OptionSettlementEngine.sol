@@ -145,7 +145,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function isOptionInitialized(uint160 optionKey) public view returns (bool) {
-        return _option[optionKey].underlyingAsset != address(0x0);
+        return _option[optionKey].underlyingAsset != address(0);
     }
 
     /*//////////////////////////////////////////////////////////////

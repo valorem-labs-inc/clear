@@ -163,7 +163,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         Type _type = claimNum == 0 ? Type.Option : Type.OptionLotClaim;
 
-        TokenURIGenerator.TokenURIParams memory params = tokenURIGenerator.TokenURIParams({
+        ITokenURIGenerator.TokenURIParams memory params = ITokenURIGenerator.TokenURIParams({
             underlyingAsset: optionInfo.underlyingAsset,
             underlyingSymbol: ERC20(optionInfo.underlyingAsset).symbol(),
             exerciseAsset: optionInfo.exerciseAsset,
@@ -175,7 +175,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             tokenType: _type
         });
 
-        return TokenURIGenerator.constructTokenURI(params);
+        return tokenURIGenerator.constructTokenURI(params);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -524,8 +524,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         if (msg.sender != feeTo) {
             revert AccessControlViolation(msg.sender, feeTo);
         }
-        if (tokenURIGenerator == address(0)) {
-            revert InvalidTokenURIGeneratorAddress(0);
+        if (newTokenURIGenerator == address(0)) {
+            revert InvalidTokenURIGeneratorAddress(address(0));
         }
 
         tokenURIGenerator = ITokenURIGenerator(newTokenURIGenerator);

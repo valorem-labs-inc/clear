@@ -194,21 +194,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         claimNum = uint96(tokenId & claimNumMask);
     }
 
-    /**
-     * @notice Return the option for the supplied token id
-     * @dev See encodeTokenId() for encoding scheme
-     * @param tokenId The token id of the Option
-     * @return The stored Option
-     */
-    function getOptionForTokenId(uint256 tokenId) public view returns (Option memory) {
-        (uint160 optionKey,) = decodeTokenId(tokenId);
-        return _option[optionKey];
-    }
-
-    function getClaimForTokenId(uint256 tokenId) public view returns (OptionLotClaim memory) {
-        return _claim[tokenId];
-    }
-
     /*//////////////////////////////////////////////////////////////
     //  Write Options
     //////////////////////////////////////////////////////////////*/

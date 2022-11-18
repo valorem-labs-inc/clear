@@ -1,3 +1,2 @@
 forge-std/=lib/forge-std/src/
-chainlink/=lib/chainlink/contracts/src/
 solmate/=lib/solmate/src/

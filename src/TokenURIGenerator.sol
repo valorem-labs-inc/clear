@@ -12,7 +12,7 @@ import "./interfaces/ITokenURIGenerator.sol";
 /// @author Flip-Liquid
 /// @author neodaoist
 contract TokenURIGenerator is ITokenURIGenerator {
-    /// @dev Construct the token URI
+    /// @inheritdoc ITokenURIGenerator
     function constructTokenURI(TokenURIParams memory params) public view returns (string memory) {
         string memory svg = generateNFT(params);
 
@@ -36,7 +36,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
         /* solhint-enable quotes */
     }
 
-    /// @dev Generate the name field
+    /// @inheritdoc ITokenURIGenerator
     function generateName(TokenURIParams memory params) public pure returns (string memory) {
         (uint256 month, uint256 day, uint256 year) = _getDateUnits(params.expiryTimestamp);
 
@@ -59,7 +59,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
         );
     }
 
-    /// @dev Generate the description field
+    /// @inheritdoc ITokenURIGenerator
     function generateDescription(TokenURIParams memory params) public pure returns (string memory) {
         return string(
             abi.encodePacked(
@@ -76,7 +76,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
         );
     }
 
-    /// @dev Generate the image field
+    /// @inheritdoc ITokenURIGenerator
     function generateNFT(TokenURIParams memory params) public view returns (string memory) {
         uint8 underlyingDecimals = ERC20(params.underlyingAsset).decimals();
         uint8 exerciseDecimals = ERC20(params.exerciseAsset).decimals();

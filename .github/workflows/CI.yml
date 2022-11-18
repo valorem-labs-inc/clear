@@ -39,14 +39,19 @@ jobs:
         env:
           RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
-      - name: Coverage
-        run: |
-          forge coverage --report lcov
-        id: coverage
+      - name: Run coverage
+        run: forge coverage --report summary --report lcov
         env:
           RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
+      - name: Filter coverage directories
+        run: |
+          sudo apt update && sudo apt install -y lcov
+          lcov --remove lcov.info 'src/interfaces/*' 'test/*' 'script/*' --output-file lcov.info --rc lcov_branch_coverage=1
+
       - uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   static-analysis:
     name: Slither static analysis

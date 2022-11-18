@@ -6,7 +6,7 @@ import "solmate/tokens/ERC20.sol";
 
 import "./interfaces/IOptionSettlementEngine.sol";
 
-library TokenURIGenerator {
+contract TokenURIGenerator {
     struct TokenURIParams {
         // The underlying asset to be received
         address underlyingAsset;

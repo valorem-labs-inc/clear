@@ -5,32 +5,14 @@ import "base64/Base64.sol";
 import "solmate/tokens/ERC20.sol";
 
 import "./interfaces/IOptionSettlementEngine.sol";
+import "./interfaces/ITokenURIGenerator.sol";
 
 /// @title Library to dynamically generate Valorem token URIs
-library TokenURIGenerator {
-    /// @notice This struct contains params to generate the token URI
-    struct TokenURIParams {
-        /// @param underlyingAsset The underlying asset to be received
-        address underlyingAsset;
-        /// @param underlyingSymbol The symbol of the underlying asset
-        string underlyingSymbol;
-        /// @param exerciseAsset The address of the asset needed for exercise
-        address exerciseAsset;
-        /// @param exerciseSymbol The symbol of the underlying asset
-        string exerciseSymbol;
-        /// @param exerciseTimestamp The timestamp after which this option may be exercised
-        uint40 exerciseTimestamp;
-        /// @param expiryTimestamp The timestamp before which this option must be exercised
-        uint40 expiryTimestamp;
-        /// @param underlyingAmount The amount of the underlying asset contained within an option contract of this type
-        uint96 underlyingAmount;
-        /// @param exerciseAmount The amount of the exercise asset required to exercise this option
-        uint96 exerciseAmount;
-        /// @param tokenType Option or Claim
-        IOptionSettlementEngine.Type tokenType;
-    }
-
-    /// @dev Construct the token URI
+/// @author 0xAlcibiades
+/// @author Flip-Liquid
+/// @author neodaoist
+contract TokenURIGenerator is ITokenURIGenerator {
+    /// @inheritdoc ITokenURIGenerator
     function constructTokenURI(TokenURIParams memory params) public view returns (string memory) {
         string memory svg = generateNFT(params);
 
@@ -54,7 +36,7 @@ library TokenURIGenerator {
         /* solhint-enable quotes */
     }
 
-    /// @dev Generate the name field
+    /// @inheritdoc ITokenURIGenerator
     function generateName(TokenURIParams memory params) public pure returns (string memory) {
         (uint256 month, uint256 day, uint256 year) = _getDateUnits(params.expiryTimestamp);
 
@@ -77,7 +59,7 @@ library TokenURIGenerator {
         );
     }
 
-    /// @dev Generate the description field
+    /// @inheritdoc ITokenURIGenerator
     function generateDescription(TokenURIParams memory params) public pure returns (string memory) {
         return string(
             abi.encodePacked(
@@ -94,7 +76,7 @@ library TokenURIGenerator {
         );
     }
 
-    /// @dev Generate the image field
+    /// @inheritdoc ITokenURIGenerator
     function generateNFT(TokenURIParams memory params) public view returns (string memory) {
         uint8 underlyingDecimals = ERC20(params.underlyingAsset).decimals();
         uint8 exerciseDecimals = ERC20(params.exerciseAsset).decimals();

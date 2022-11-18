@@ -59,13 +59,15 @@ contract OptionSettlementTest is Test, NFTreceiver {
     uint256 private testDuration = 1 days;
 
     IOptionSettlementEngine.Option private testOption;
+    ITokenURIGenerator private generator;
 
     function setUp() public {
         // Fork mainnet
         vm.createSelectFork(vm.envString("RPC_URL"), 15_000_000); // specify block number to cache for future test runs
 
         // Deploy OptionSettlementEngine
-        engine = new OptionSettlementEngine(FEE_TO);
+        generator = new TokenURIGenerator();
+        engine = new OptionSettlementEngine(FEE_TO, address(generator));
 
         // Setup test option contract
         testExerciseTimestamp = uint40(block.timestamp);
@@ -520,16 +522,34 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function testRevertSetFeeToWhenNotCurrentFeeTo() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
-
         vm.prank(ALICE);
         engine.setFeeTo(address(0xCAFE));
     }
 
     function testRevertSetFeeToWhenZeroAddress() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidFeeToAddress.selector, address(0)));
-
         vm.prank(FEE_TO);
         engine.setFeeTo(address(0));
+    }
+
+    function testSetTokenURIGenerator() public {
+        vm.prank(FEE_TO);
+        engine.setTokenURIGenerator(address(0xCAFE));
+        assertEq(address(engine.tokenURIGenerator()), address(0xCAFE));
+    }
+
+    function testRevertSetTokenURIGeneratorWhenNotCurrentFeeTo() public {
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
+        vm.prank(ALICE);
+        engine.setTokenURIGenerator(address(0xCAFE));
+    }
+
+    function testRevertSetTokenURIGeneratorWhenZeroAddress() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.InvalidTokenURIGeneratorAddress.selector, address(0))
+        );
+        vm.prank(FEE_TO);
+        engine.setTokenURIGenerator(address(0));
     }
 
     // **********************************************************************

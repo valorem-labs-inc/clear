@@ -39,6 +39,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @notice The address fees accrue to
     address public feeTo;
 
+    /// @notice The contract for token uri generation
+    ITokenURIGenerator public tokenURIGenerator;
+
     /*//////////////////////////////////////////////////////////////
     //  State variables - Internal
     //////////////////////////////////////////////////////////////*/
@@ -78,8 +81,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @notice OptionSettlementEngine constructor
     /// @param _feeTo The address fees accrue to
-    constructor(address _feeTo) {
+    constructor(address _feeTo, address _tokenURIGenerator) {
         feeTo = _feeTo;
+        tokenURIGenerator = ITokenURIGenerator(_tokenURIGenerator);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -159,7 +163,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         Type _type = claimNum == 0 ? Type.Option : Type.OptionLotClaim;
 
-        TokenURIGenerator.TokenURIParams memory params = TokenURIGenerator.TokenURIParams({
+        ITokenURIGenerator.TokenURIParams memory params = ITokenURIGenerator.TokenURIParams({
             underlyingAsset: optionInfo.underlyingAsset,
             underlyingSymbol: ERC20(optionInfo.underlyingAsset).symbol(),
             exerciseAsset: optionInfo.exerciseAsset,
@@ -171,7 +175,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             tokenType: _type
         });
 
-        return TokenURIGenerator.constructTokenURI(params);
+        return tokenURIGenerator.constructTokenURI(params);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -513,6 +517,18 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 }
             }
         }
+    }
+
+    /// @inheritdoc IOptionSettlementEngine
+    function setTokenURIGenerator(address newTokenURIGenerator) public {
+        if (msg.sender != feeTo) {
+            revert AccessControlViolation(msg.sender, feeTo);
+        }
+        if (newTokenURIGenerator == address(0)) {
+            revert InvalidTokenURIGeneratorAddress(address(0));
+        }
+
+        tokenURIGenerator = ITokenURIGenerator(newTokenURIGenerator);
     }
 
     /*//////////////////////////////////////////////////////////////

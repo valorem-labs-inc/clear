@@ -172,11 +172,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             testExerciseTimestamp, // exerciseTimestamp
             testExpiryTimestamp // expiryTimestamp
         );
-        strings.slice memory token;
-        strings.slice memory optionUri = strings.toSlice(engine.uri(optionId));
-        strings.slice memory encodedDescription =
-            strings.split(optionUri, strings.toSlice("data:application/json;base64,"), token);
-        bytes memory decoded = decode(strings.toString(encodedDescription));
+        string memory optionUri = engine.uri(optionId);
     }
 
     function testTokenURIForClaim() public {
@@ -195,6 +191,16 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 claimId = engine.write(optionId, 100);
         string memory claimUri = engine.uri(claimId);
         vm.stopPrank;
+    }
+
+    function _assertUriContains(string memory optionUri, string memory needle) internal {
+        strings.slice memory uri = strings.toSlice(optionUri);
+        strings.slice memory token;
+        strings.slice memory encodedDescription =
+            strings.split(uri, strings.toSlice("data:application/json;base64,"), token);
+        string memory decoded = string(decode(strings.toString(encodedDescription)));
+        strings.slice memory decodedSlice = strings.toSlice(decoded);
+        //assert
     }
 
     function testExerciseMultipleWriteSameChain() public {

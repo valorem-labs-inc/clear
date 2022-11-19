@@ -199,12 +199,6 @@ interface IOptionSettlementEngine {
     error CallerHoldsInsufficientOptions(uint256 optionId, uint112 amount);
 
     /**
-     * @notice This claimId has already been claimed.
-     * @param claimId Supplied claim ID.
-     */
-    error AlreadyClaimed(uint256 claimId);
-
-    /**
      * @notice You can't claim before expiry.
      * @param claimId Supplied claim ID.
      * @param expiry timestamp at which the options chain expires

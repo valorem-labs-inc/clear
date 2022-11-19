@@ -444,11 +444,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
 
         OptionLotClaim storage claimRecord = _claim[claimId];
-
-        if (claimRecord.claimed) {
-            revert AlreadyClaimed(claimId);
-        }
-
         Option storage optionRecord = _option[optionKey];
 
         if (optionRecord.expiryTimestamp > block.timestamp) {

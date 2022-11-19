@@ -1082,8 +1082,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.write(invalidOptionId, 1);
 
         // Option ID not initialized
-        invalidOptionId = testOptionId / 2;
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId));
+        invalidOptionId = engine.encodeTokenId(0x1, 0x0);
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId >> 96));
         engine.write(invalidOptionId, 1);
     }
 

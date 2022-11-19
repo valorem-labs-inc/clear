@@ -280,14 +280,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function write(uint256 optionId, uint112 amount) external returns (uint256 claimId) {
-        /// supplying claimId as 0 to the overloaded write signifies that a new
-        /// claim NFT should be minted for the options lot, rather than being added
-        /// as an existing claim.
-        return write(optionId, amount, 0);
-    }
 
-    /// @inheritdoc IOptionSettlementEngine
-    function write(uint256 optionId, uint112 amount, uint256 claimId) public returns (uint256) {
+
+
+        //// Shared
+
+
+
         (uint160 optionKey, uint96 decodedClaimNum) = decodeTokenId(optionId);
 
         // optionId must be zero in lower 96b for provided option Id
@@ -323,28 +322,26 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         emit FeeAccrued(underlyingAsset, msg.sender, fee);
         emit OptionsWritten(optionId, msg.sender, claimId, amount);
 
-        uint256 mintClaimNft = 0;
 
-        if (claimId == 0) {
-            // create new claim
-            // Increment the next token ID
-            uint96 claimNum = optionRecord.nextClaimNum++;
-            claimId = encodeTokenId(optionKey, claimNum);
-            // Store info about the claim
-            _claim[claimId] = OptionLotClaim({amountWritten: amount, claimed: false});
-            mintClaimNft = 1;
-        } else {
-            // check ownership of claim
-            uint256 balance = balanceOf[msg.sender][claimId];
-            if (balance != 1) {
-                revert CallerDoesNotOwnClaimId(claimId);
-            }
 
-            // retrieve claim
-            OptionLotClaim storage existingClaim = _claim[claimId];
+        //// Conditional
 
-            existingClaim.amountWritten += amount;
-        }
+
+
+        // create new claim
+        // Increment the next token ID
+        uint256 mintClaimNft = 1;
+        uint96 claimNum = optionRecord.nextClaimNum++;
+        claimId = encodeTokenId(optionKey, claimNum);
+        // Store info about the claim
+        _claim[claimId] = OptionLotClaim({amountWritten: amount, claimed: false});
+
+
+
+        //// Shared
+
+
+
         uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
         _addOrUpdateClaimIndex(claimId, bucketIndex, amount);
 
@@ -357,10 +354,89 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         amounts[0] = amount;
         amounts[1] = mintClaimNft;
 
-        bytes memory data = new bytes(0);
+        // bytes memory data = new bytes(0);
 
         // Send tokens to writer
-        _batchMint(msg.sender, tokens, amounts, data);
+        _batchMint(msg.sender, tokens, amounts, "");
+
+        // Transfer the requisite underlying asset
+        SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
+
+        return claimId;
+    }
+
+    /// @inheritdoc IOptionSettlementEngine
+    function write(uint256 optionId, uint112 amount, uint256 claimId) public returns (uint256) {
+
+
+
+        //// Shared
+
+
+
+        (uint160 optionKey, uint96 decodedClaimNum) = decodeTokenId(optionId);
+
+        // optionId must be zero in lower 96b for provided option Id
+        if (decodedClaimNum != 0) {
+            revert InvalidOption(optionId);
+        }
+
+        // claim provided must match the option provided
+        if (claimId != 0 && ((claimId >> 96) != (optionId >> 96))) {
+            revert EncodedOptionIdInClaimIdDoesNotMatchProvidedOptionId(claimId, optionId);
+        }
+
+        if (amount == 0) {
+            revert AmountWrittenCannotBeZero();
+        }
+
+        Option storage optionRecord = _option[optionKey];
+
+        uint40 expiry = optionRecord.expiryTimestamp;
+        if (expiry == 0) {
+            revert InvalidOption(optionKey);
+        }
+        if (expiry <= block.timestamp) {
+            revert ExpiredOption(optionId, expiry);
+        }
+
+        uint256 rxAmount = amount * optionRecord.underlyingAmount;
+        uint256 fee = ((rxAmount / 10_000) * feeBps);
+        address underlyingAsset = optionRecord.underlyingAsset;
+
+        feeBalance[underlyingAsset] += fee;
+
+        emit FeeAccrued(underlyingAsset, msg.sender, fee);
+        emit OptionsWritten(optionId, msg.sender, claimId, amount);
+
+
+
+        //// Conditional
+
+
+
+        // check ownership of claim
+        uint256 balance = balanceOf[msg.sender][claimId];
+        if (balance != 1) {
+            revert CallerDoesNotOwnClaimId(claimId);
+        }
+
+        // retrieve claim
+        OptionLotClaim storage existingClaim = _claim[claimId];
+
+        existingClaim.amountWritten += amount;
+
+
+
+        //// Shared
+
+
+
+        uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
+        _addOrUpdateClaimIndex(claimId, bucketIndex, amount);
+
+        // Send tokens to writer
+        _mint(msg.sender, optionId, amount, "");
 
         // Transfer the requisite underlying asset
         SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));

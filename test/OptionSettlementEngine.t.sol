@@ -109,24 +109,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
     //                            PASS TESTS
     // **********************************************************************
 
-    function testExerciseBeforeExpiry() public {
-        // Alice writes
-        vm.startPrank(ALICE);
-        engine.write(testOptionId, 1);
-        engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
-        vm.stopPrank();
-
-        // Fast-forward to just before expiry
-        vm.warp(testExpiryTimestamp - 1);
-
-        // Bob exercises
-        vm.startPrank(BOB);
-        engine.exercise(testOptionId, 1);
-        vm.stopPrank();
-
-        assertEq(engine.balanceOf(BOB, testOptionId), 0);
-    }
-
     function testWriteMultipleWriteSameOptionType() public {
         IOptionSettlementEngine.OptionLotClaim memory claim;
 
@@ -158,6 +140,24 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(claim.amountWritten, 100);
         _assertClaimAmountExercised(claimId2, 0);
         assertTrue(!claim.claimed);
+    }
+
+    function testExerciseBeforeExpiry() public {
+        // Alice writes
+        vm.startPrank(ALICE);
+        engine.write(testOptionId, 1);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
+        vm.stopPrank();
+
+        // Fast-forward to just before expiry
+        vm.warp(testExpiryTimestamp - 1);
+
+        // Bob exercises
+        vm.startPrank(BOB);
+        engine.exercise(testOptionId, 1);
+        vm.stopPrank();
+
+        assertEq(engine.balanceOf(BOB, testOptionId), 0);
     }
 
     function testTokenURI() public view {

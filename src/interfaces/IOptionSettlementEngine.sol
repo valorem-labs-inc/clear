@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BUSL 1.1
 pragma solidity 0.8.11;
 
-import "./IERC1155Metadata.sol";
-
 /// @title A settlement engine for options
 /// @author 0xAlcibiades
 /// @author Flip-Liquid
@@ -199,12 +197,6 @@ interface IOptionSettlementEngine {
      * @param amount The amount of the supplied option requested for exercise.
      */
     error CallerHoldsInsufficientOptions(uint256 optionId, uint112 amount);
-
-    /**
-     * @notice This claimId has already been claimed.
-     * @param claimId Supplied claim ID.
-     */
-    error AlreadyClaimed(uint256 claimId);
 
     /**
      * @notice You can't claim before expiry.

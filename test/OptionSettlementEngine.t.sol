@@ -317,6 +317,19 @@ contract OptionSettlementTest is Test, NFTreceiver {
         _assertPosition(underlyingPositions.exercisePosition, 2 * testExerciseAmount);
     }
 
+    function testWriteAfterFullyExercisingDay() public {
+        uint256 claim1 = _writeAndExerciseOption(testOptionId, ALICE, BOB, 1, 1);
+        uint256 claim2 = _writeAndExerciseOption(testOptionId, ALICE, BOB, 1, 1);
+
+        IOptionSettlementEngine.Underlying memory underlyingPositions = engine.underlying(claim1);
+        _assertPosition(underlyingPositions.underlyingPosition, 0);
+        _assertPosition(underlyingPositions.exercisePosition, testExerciseAmount);
+
+        underlyingPositions = engine.underlying(claim2);
+        _assertPosition(underlyingPositions.underlyingPosition, 0);
+        _assertPosition(underlyingPositions.exercisePosition, testExerciseAmount);
+    }
+
     function testUnderlyingForFungibleOptionToken() public {
         IOptionSettlementEngine.Underlying memory underlying = engine.underlying(testOptionId);
         // before expiry, position is entirely the underlying amount
@@ -1082,8 +1095,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.write(invalidOptionId, 1);
 
         // Option ID not initialized
-        invalidOptionId = testOptionId / 2;
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId));
+        invalidOptionId = engine.encodeTokenId(0x1, 0x0);
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId >> 96));
         engine.write(invalidOptionId, 1);
     }
 

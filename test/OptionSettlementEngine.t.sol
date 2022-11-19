@@ -317,6 +317,19 @@ contract OptionSettlementTest is Test, NFTreceiver {
         _assertPosition(underlyingPositions.exercisePosition, 2 * testExerciseAmount);
     }
 
+    function testWriteAfterFullyExercisingDay() public { 
+        uint256 claim1 = _writeAndExerciseOption(testOptionId, ALICE, BOB, 2, 2);
+        uint256 claim2 = _writeAndExerciseOption(testOptionId, ALICE, BOB, 2, 2);
+
+        IOptionSettlementEngine.Underlying memory underlyingPositions = engine.underlying(claim1);
+        _assertPosition(underlyingPositions.underlyingPosition, 0);
+        _assertPosition(underlyingPositions.exercisePosition, 2 * testExerciseAmount);
+
+        underlyingPositions = engine.underlying(claim2);
+        _assertPosition(underlyingPositions.underlyingPosition, 0);
+        _assertPosition(underlyingPositions.exercisePosition, 2 * testExerciseAmount);
+    }
+
     function testUnderlyingForFungibleOptionToken() public {
         IOptionSettlementEngine.Underlying memory underlying = engine.underlying(testOptionId);
         // before expiry, position is entirely the underlying amount

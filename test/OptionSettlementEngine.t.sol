@@ -724,7 +724,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         emit FeeAccrued(WETH_A, ALICE, expectedFeeAccruedAmount);
 
         vm.expectEmit(true, true, true, true);
-        emit OptionsWritten(testOptionId, ALICE, 0, 1);
+        emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, 1);
 
         vm.prank(ALICE);
         engine.write(testOptionId, 1);

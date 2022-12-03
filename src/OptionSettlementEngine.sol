@@ -292,10 +292,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function write(uint256 optionId, uint112 amount, uint256 claimId) public returns (uint256) {
-        (uint160 optionKey, uint96 decodedClaimNum) = decodeTokenId(optionId);
+        (uint160 optionKey, uint96 decodedClaimIndex) = decodeTokenId(optionId);
 
         // optionId must be zero in lower 96b for provided option Id
-        if (decodedClaimNum != 0) {
+        if (decodedClaimIndex != 0) {
             revert InvalidOption(optionId);
         }
 
@@ -303,6 +303,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         if (claimId != 0 && ((claimId >> 96) != (optionId >> 96))) {
             revert EncodedOptionIdInClaimIdDoesNotMatchProvidedOptionId(claimId, optionId);
         }
+
+        (, decodedClaimIndex) = decodeTokenId(claimId);
+        
+        if (claimId != 0 && decodedClaimIndex == 0) {
+            revert InvalidClaim(claimId);
+        }
+
 
         if (amount == 0) {
             revert AmountWrittenCannotBeZero();

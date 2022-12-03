@@ -162,6 +162,17 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertTrue(!claim.claimed);
     }
 
+    function testWriteClaimWithOptionId() public {
+        vm.startPrank(ALICE);
+        engine.write(testOptionId, 1, 0);
+
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidClaim.selector, testOptionId));
+        engine.write(testOptionId, 68, testOptionId);
+
+        IOptionSettlementEngine.OptionLotClaim memory lot = engine.claim(testOptionId);
+        assertEq(lot.amountWritten, 0);
+    }
+
     function testTokenURI() public view {
         engine.uri(testOptionId);
     }

@@ -305,11 +305,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
 
         (, decodedClaimIndex) = decodeTokenId(claimId);
-        
+
         if (claimId != 0 && decodedClaimIndex == 0) {
             revert InvalidClaim(claimId);
         }
-
 
         if (amount == 0) {
             revert AmountWrittenCannotBeZero();

@@ -163,14 +163,6 @@ interface IOptionSettlementEngine {
     error InvalidClaim(uint256 token);
 
     /**
-     * @notice Provided claimId does not match provided option id in the upper 160b
-     * encoding the corresponding option ID for which the claim was written.
-     * @param claimId The provided claim ID.
-     * @param optionId The provided option ID.
-     */
-    error EncodedOptionIdInClaimIdDoesNotMatchProvidedOptionId(uint256 claimId, uint256 optionId);
-
-    /**
      * @notice The optionId specified expired at expiry.
      * @param optionId The id of the expired option.
      * @param expiry The time of expiry of the supplied option Id.
@@ -395,21 +387,10 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Writes a specified amount of the specified option, returning claim NFT id.
-     * @param optionId The desired option id to write.
+     * @param tokenId The desired token id to write against, set lower 96 bytes to zero to mint a new claim NFT
      * @param amount The desired number of options to write.
-     * @return claimId The claim NFT id for the option bundle.
      */
-    function write(uint256 optionId, uint112 amount) external returns (uint256 claimId);
-
-    /**
-     * @notice This override allows additional options to be written against a particular
-     * claim id.
-     * @param optionId The desired option id to write.
-     * @param amount The desired number of options to write.
-     * @param claimId The claimId for the options lot to which the caller will add options
-     * @return claimId The claim NFT id for the option bundle.
-     */
-    function write(uint256 optionId, uint112 amount, uint256 claimId) external returns (uint256);
+    function write(uint256 tokenId, uint112 amount) external returns (uint256 claimId);
 
     /*//////////////////////////////////////////////////////////////
     //  Exercise Options

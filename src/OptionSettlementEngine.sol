@@ -336,6 +336,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
         _addOrUpdateClaimIndex(encodedClaim, bucketIndex, amount);
 
+        emit FeeAccrued(underlyingAsset, msg.sender, fee);
+        emit OptionsWritten(encodedOption, msg.sender, encodedClaim, amount);
+
         if (claimNum == 0) {
             // Mint options and claim token to writer
             uint256[] memory tokens = new uint256[](2);
@@ -354,9 +357,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Transfer the requisite underlying asset
         SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
-
-        emit FeeAccrued(underlyingAsset, msg.sender, fee);
-        emit OptionsWritten(encodedOption, msg.sender, encodedClaim, amount);
 
         return encodedClaim;
     }

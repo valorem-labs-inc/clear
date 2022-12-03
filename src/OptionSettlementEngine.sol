@@ -306,7 +306,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Calculate the amount of underlying and exercise assets to transfer
         uint256 rxAmount = amount * optionRecord.underlyingAmount;
-        uint256 fee = ((rxAmount / 10_000) * feeBps);
+        uint256 fee = ((rxAmount * feeBps) / 10_000);
         address underlyingAsset = optionRecord.underlyingAsset;
 
         feeBalance[underlyingAsset] += fee;

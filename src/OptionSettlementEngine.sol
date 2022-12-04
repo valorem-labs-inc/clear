@@ -298,7 +298,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         uint40 expiry = optionRecord.expiryTimestamp;
         if (expiry == 0) {
-            revert InvalidOption(optionKey);
+            revert InvalidOption(encodedOption);
         }
         if (expiry <= block.timestamp) {
             revert ExpiredOption(encodedOption, expiry);

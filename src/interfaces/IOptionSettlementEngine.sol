@@ -385,13 +385,17 @@ interface IOptionSettlementEngine {
         uint40 expiryTimestamp
     ) external returns (uint256 optionId);
 
-    /**
-     * @notice Writes a specified amount of the specified option, returning claim NFT id.
-     * @param tokenId The desired token id to write against, set lower 96 bytes to zero to mint a new claim NFT
-     * @param amount The desired number of options to write.
-     */
-    function write(uint256 tokenId, uint112 amount) external returns (uint256 claimId);
+    // /**
+    //  * @notice Writes a specified amount of the specified option, returning claim NFT id.
+    //  * @param tokenId The desired token id to write against, set lower 96 bytes to zero to mint a new claim NFT
+    //  * @param amount The desired number of options to write.
+    //  */
+    // function write(uint256 tokenId, uint112 amount) external returns (uint256 claimId);
 
+    function writeNew(uint256 optionId, uint112 amount) external returns (uint256 claimId);
+
+    function writeExisting(uint256 claimId, uint112 amount) external;
+    
     /*//////////////////////////////////////////////////////////////
     //  Exercise Options
     //////////////////////////////////////////////////////////////*/

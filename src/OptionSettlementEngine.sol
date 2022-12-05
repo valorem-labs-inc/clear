@@ -319,7 +319,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
 
         uint256 rxAmount = amount * optionRecord.underlyingAmount;
-        uint256 fee = ((rxAmount / 10_000) * feeBps);
+        uint256 fee = ((rxAmount * feeBps) / 10_000);
         address underlyingAsset = optionRecord.underlyingAsset;
 
         feeBalance[underlyingAsset] += fee;
@@ -403,7 +403,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         uint256 rxAmount = optionRecord.exerciseAmount * amount;
         uint256 txAmount = optionRecord.underlyingAmount * amount;
-        uint256 fee = ((rxAmount / 10_000) * feeBps);
+        uint256 fee = ((rxAmount * feeBps) / 10_000);
         address exerciseAsset = optionRecord.exerciseAsset;
 
         _assignExercise(optionKey, optionRecord, amount);

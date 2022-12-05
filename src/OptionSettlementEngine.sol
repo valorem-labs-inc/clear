@@ -287,7 +287,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function writeNew(uint256 optionId, uint112 amount) external returns (uint256 claimId) {
-        // Check claimId is the tokenId of an option
+        // Check optionId is the tokenId of an option
         if (tokenType(optionId) != Type.Option) {
             revert InvalidOption(optionId);
         }

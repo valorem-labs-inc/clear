@@ -184,16 +184,19 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function encodeTokenId(uint160 optionKey, uint96 claimNum) public pure returns (uint256 tokenId) {
+        // Encode option key into higher 160b
         tokenId |= (uint256(optionKey) << 96);
+
+        // Encode claim number into lower 96b
         tokenId |= uint256(claimNum);
     }
 
     /// @inheritdoc IOptionSettlementEngine
     function decodeTokenId(uint256 tokenId) public pure returns (uint160 optionKey, uint96 claimNum) {
-        // move key to lsb to fit into uint160
+        // Move option key to lsb to fit into uint160
         optionKey = uint160(tokenId >> 96);
 
-        // grab lower 96b of id for claim number
+        // Grab lower 96b of id for claim number
         uint256 claimNumMask = 0xFFFFFFFFFFFFFFFFFFFFFFFF;
         claimNum = uint96(tokenId & claimNumMask);
     }
@@ -293,25 +296,17 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert AmountWrittenCannotBeZero();
         }
 
-        // Decode the token ID
-        (uint160 optionKey, uint96 claimNum) = decodeTokenId(optionId);
+        // Decode the optionKey from the optionId
+        (uint160 optionKey,) = decodeTokenId(optionId);
 
         // Get the option record and check that it's valid to write against
         Option storage optionRecord = _option[optionKey];
-        uint40 expiry = optionRecord.expiryTimestamp;
-        if (expiry == 0) {
-            revert InvalidOption(optionKey);
-        }
-        if (expiry <= block.timestamp) {
-            revert ExpiredOption(optionId, expiry);
-        }
+        _checkOptionIsNotExpired(optionRecord, optionId);
 
-        // Calculate the amount of underlying and exercise assets to transfer
-        uint256 rxAmount = amount * optionRecord.underlyingAmount;
-        uint256 fee = ((rxAmount * feeBps) / 10_000);
+        // Calculate and record fee for underlying asset
+        uint256 rxAmount = optionRecord.underlyingAmount * amount;
         address underlyingAsset = optionRecord.underlyingAsset;
-
-        feeBalance[underlyingAsset] += fee;
+        uint256 fee = _calculateAndRecordFee(underlyingAsset, rxAmount);
 
         // Store info about the claim
         claimId = encodeTokenId(optionKey, optionRecord.nextClaimNum++);
@@ -353,28 +348,20 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert AmountWrittenCannotBeZero();
         }
 
-        // Decode the token ID
-        (uint160 optionKey, uint96 claimNum) = decodeTokenId(claimId);
+        // Decode the optionKey from the claimId
+        (uint160 optionKey,) = decodeTokenId(claimId);
 
-        // Encode the option ID for this claim
+        // Encode the optionId for this claim
         uint256 encodedOptionId = encodeTokenId(optionKey, 0);
 
         // Get the option record and check that it's valid to write against
         Option storage optionRecord = _option[optionKey];
-        uint40 expiry = optionRecord.expiryTimestamp;
-        if (expiry == 0) {
-            revert InvalidOption(optionKey);
-        }
-        if (expiry <= block.timestamp) {
-            revert ExpiredOption(encodedOptionId, expiry);
-        }
+        _checkOptionIsNotExpired(optionRecord, encodedOptionId);
 
-        // Calculate the amount of underlying and exercise assets to transfer
-        uint256 rxAmount = amount * optionRecord.underlyingAmount;
-        uint256 fee = ((rxAmount * feeBps) / 10_000);
+        // Calculate and record fee for underlying asset
+        uint256 rxAmount = optionRecord.underlyingAmount * amount;
         address underlyingAsset = optionRecord.underlyingAsset;
-
-        feeBalance[underlyingAsset] += fee;
+        uint256 fee = _calculateAndRecordFee(underlyingAsset, rxAmount);
 
         // Check ownership of claim
         uint256 balance = balanceOf[msg.sender][claimId];
@@ -403,85 +390,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
     }
 
-    // /// @inheritdoc IOptionSettlementEngine
-    // function write(uint256 tokenId, uint112 amount) public returns (uint256) {
-    //     // You need to write some amount
-    //     if (amount == 0) {
-    //         revert AmountWrittenCannotBeZero();
-    //     }
-
-    //     (uint160 optionKey, uint96 claimNum) = decodeTokenId(tokenId);
-    //     uint256 encodedClaim = tokenId;
-    //     uint256 encodedOption = encodeTokenId(optionKey, 0);
-
-    //     // Get the option record and check that it's valid to write against
-    //     Option storage optionRecord = _option[optionKey];
-
-    //     uint40 expiry = optionRecord.expiryTimestamp;
-    //     if (expiry == 0) {
-    //         revert InvalidOption(optionKey);
-    //     }
-    //     if (expiry <= block.timestamp) {
-    //         revert ExpiredOption(encodedOption, expiry);
-    //     }
-
-    //     // Calculate the amount of underlying and exercise assets to transfer
-    //     uint256 rxAmount = amount * optionRecord.underlyingAmount;
-    //     uint256 fee = ((rxAmount * feeBps) / 10_000);
-    //     address underlyingAsset = optionRecord.underlyingAsset;
-
-    //     feeBalance[underlyingAsset] += fee;
-
-    //     // Create new claim
-    //     if (claimNum == 0) {
-    //         encodedClaim = encodeTokenId(optionKey, optionRecord.nextClaimNum++);
-    //         // Store info about the claim
-    //         _claim[encodedClaim] = OptionLotClaim({amountWritten: amount, claimed: false});
-    //     }
-    //     // Add to existing claim
-    //     else {
-    //         // Check ownership of claim
-    //         uint256 balance = balanceOf[msg.sender][encodedClaim];
-    //         if (balance != 1) {
-    //             revert CallerDoesNotOwnClaimId(encodedClaim);
-    //         }
-
-    //         // Retrieve claim
-    //         OptionLotClaim storage existingClaim = _claim[encodedClaim];
-
-    //         // Increment balance
-    //         existingClaim.amountWritten += amount;
-    //     }
-
-    //     // Handle internal claim bucket accounting
-    //     uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
-    //     _addOrUpdateClaimIndex(encodedClaim, bucketIndex, amount);
-
-    //     emit FeeAccrued(underlyingAsset, msg.sender, fee);
-    //     emit OptionsWritten(encodedOption, msg.sender, encodedClaim, amount);
-
-    //     if (claimNum == 0) {
-    //         // Mint options and claim token to writer
-    //         uint256[] memory tokens = new uint256[](2);
-    //         tokens[0] = encodedOption;
-    //         tokens[1] = encodedClaim;
-
-    //         uint256[] memory amounts = new uint256[](2);
-    //         amounts[0] = amount;
-    //         amounts[1] = 1; // claim NFT
-
-    //         _batchMint(msg.sender, tokens, amounts, "");
-    //     } else {
-    //         // Mint more options on existing claim to writer
-    //         _mint(msg.sender, encodedOption, amount, "");
-    //     }
-
-    //     // Transfer the requisite underlying asset
-    //     SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
-
-    //     return encodedClaim;
-    // }
-
     /*//////////////////////////////////////////////////////////////
     //  Exercise Options
     //////////////////////////////////////////////////////////////*/
@@ -490,7 +398,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function exercise(uint256 optionId, uint112 amount) external {
         (uint160 optionKey, uint96 claimNum) = decodeTokenId(optionId);
 
-        // option ID should be specified without claim in lower 96b
+        // The optionId should be specified without claim in lower 96b
         if (claimNum != 0) {
             revert InvalidOption(optionId);
         }
@@ -509,14 +417,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert CallerHoldsInsufficientOptions(optionId, amount);
         }
 
+        // Calculate and record fee for exercise asset
         uint256 rxAmount = optionRecord.exerciseAmount * amount;
         uint256 txAmount = optionRecord.underlyingAmount * amount;
-        uint256 fee = ((rxAmount * feeBps) / 10_000);
         address exerciseAsset = optionRecord.exerciseAsset;
+        address underlyingAsset = optionRecord.underlyingAsset;
+        uint256 fee = _calculateAndRecordFee(exerciseAsset, rxAmount);
 
         _assignExercise(optionKey, optionRecord, amount);
-
-        feeBalance[exerciseAsset] += fee;
 
         _burn(msg.sender, optionId, amount);
 
@@ -524,7 +432,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         SafeTransferLib.safeTransferFrom(ERC20(exerciseAsset), msg.sender, address(this), (rxAmount + fee));
 
         // Transfer out the underlying
-        SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, txAmount);
+        SafeTransferLib.safeTransfer(ERC20(underlyingAsset), msg.sender, txAmount);
 
         emit FeeAccrued(exerciseAsset, msg.sender, fee);
         emit OptionsExercised(optionId, msg.sender, amount);
@@ -639,6 +547,24 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /*//////////////////////////////////////////////////////////////
     //  Internal Helper Functions
     //////////////////////////////////////////////////////////////*/
+
+    /// @dev Internal helper function to check that an option is not expired when writing
+    function _checkOptionIsNotExpired(Option storage optionRecord, uint256 optionId) internal view {
+        uint40 expiry = optionRecord.expiryTimestamp;
+        if (expiry == 0) {
+            revert InvalidOption(optionId);
+        }
+        if (expiry <= block.timestamp) {
+            revert ExpiredOption(optionId, expiry);
+        }
+    }
+
+    /// @dev Internal helper function to calculate and record fee when writing (on underlying asset)
+    /// and when exercising (on exercise asset)
+    function _calculateAndRecordFee(address assetAddress, uint256 assetAmount) internal returns (uint256 fee) {
+        fee = ((assetAmount * feeBps) / 10_000);
+        feeBalance[assetAddress] += fee;
+    }
 
     /// @dev Performs fair exercise assignment by pseudorandomly selecting a claim
     /// bucket between the intial creation of the option type and "today". The buckets

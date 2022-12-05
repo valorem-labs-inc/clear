@@ -1000,13 +1000,12 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId));
 
         vm.prank(ALICE);
-        uint256 claimId = engine.writeNew(invalidOptionId, 10);
-        
+        engine.writeNew(invalidOptionId, 10);
     }
 
     function testRevertWriteExistingWhenNotClaimId() public {
         vm.startPrank(ALICE);
-        uint256 claimId = engine.writeNew(testOptionId, 10);
+        engine.writeNew(testOptionId, 10);
 
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidClaim.selector, testOptionId));
 
@@ -1111,7 +1110,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 invalidOptionId = testOptionId + 1;
         // Option ID not initialized
         invalidOptionId = engine.encodeTokenId(0x1, 0x0);
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId >> 96));
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId));
         engine.writeNew(invalidOptionId, 1);
     }
 

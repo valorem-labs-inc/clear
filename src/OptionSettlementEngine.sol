@@ -285,6 +285,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             );
     }
 
+    /// @inheritdoc IOptionSettlementEngine
     function writeNew(uint256 optionId, uint112 amount) external returns (uint256 claimId) {
         // Check claimId is the tokenId of an option
         if (tokenType(optionId) != Type.Option) {
@@ -337,6 +338,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return claimId;
     }
 
+    /// @inheritdoc IOptionSettlementEngine
     function writeExisting(uint256 claimId, uint112 amount) external {
         // Check claimId is the tokenId of a claim
         if (tokenType(claimId) != Type.OptionLotClaim) {

@@ -83,11 +83,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @param _feeTo The address fees accrue to
     constructor(address _feeTo, address _tokenURIGenerator) {
         if (_feeTo == address(0)) {
-            revert InvalidFeeToAddress(_feeTo);
+            revert InvalidFeeToAddress(address(0));
         }
-
         if (_tokenURIGenerator == address(0)) {
-            revert InvalidTokenURIGeneratorAddress(_tokenURIGenerator);
+            revert InvalidTokenURIGeneratorAddress(address(0));
         }
 
         feeTo = _feeTo;
@@ -495,7 +494,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert AccessControlViolation(msg.sender, feeTo);
         }
         if (newFeeTo == address(0)) {
-            revert InvalidFeeToAddress(newFeeTo);
+            revert InvalidFeeToAddress(address(0));
         }
         feeTo = newFeeTo;
     }
@@ -530,7 +529,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert AccessControlViolation(msg.sender, feeTo);
         }
         if (newTokenURIGenerator == address(0)) {
-            revert InvalidTokenURIGeneratorAddress(newTokenURIGenerator);
+            revert InvalidTokenURIGeneratorAddress(address(0));
         }
 
         tokenURIGenerator = ITokenURIGenerator(newTokenURIGenerator);

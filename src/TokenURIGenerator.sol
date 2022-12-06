@@ -12,6 +12,13 @@ import "./interfaces/ITokenURIGenerator.sol";
 /// @author Flip-Liquid
 /// @author neodaoist
 contract TokenURIGenerator is ITokenURIGenerator {
+
+    string internal constant JSON_START = "data:application/json;base64,";
+    string internal constant JSON_NAME = '{"name":"';
+    string internal constant JSON_DESCRIPTION = '", "description": "';
+    string internal constant JSON_IMAGE = '", "image": "data:image/svg+xml;base64,';
+    string internal constant JSON_END = '"}';
+
     /// @inheritdoc ITokenURIGenerator
     function constructTokenURI(TokenURIParams memory params) public view returns (string memory) {
         string memory svg = generateNFT(params);
@@ -19,16 +26,16 @@ contract TokenURIGenerator is ITokenURIGenerator {
         /* solhint-disable quotes */
         return string(
             abi.encodePacked(
-                "data:application/json;base64,",
+                JSON_START,
                 Base64.encode(
                     abi.encodePacked(
-                        '{"name":"',
+                        JSON_NAME,
                         generateName(params),
-                        '", "description": "',
+                        JSON_DESCRIPTION,
                         generateDescription(params),
-                        '", "image": "data:image/svg+xml;base64,',
+                        JSON_IMAGE,
                         Base64.encode(bytes(svg)),
-                        '"}'
+                        JSON_END
                     )
                 )
             )
@@ -373,12 +380,14 @@ contract TokenURIGenerator is ITokenURIGenerator {
         return string(buffer);
     }
 
+    bytes1 internal constant DOUBLE_QUOTE = '"';
+
     function _escapeQuotes(string memory symbol) internal pure returns (string memory) {
         bytes memory symbolBytes = bytes(symbol);
         uint8 quotesCount = 0;
         for (uint8 i = 0; i < symbolBytes.length; i++) {
             // solhint-disable quotes
-            if (symbolBytes[i] == '"') {
+            if (symbolBytes[i] == DOUBLE_QUOTE) {
                 quotesCount++;
             }
         }
@@ -389,7 +398,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
             uint256 index;
             for (uint8 i = 0; i < symbolBytes.length; i++) {
                 // solhint-disable quotes
-                if (symbolBytes[i] == '"') {
+                if (symbolBytes[i] == DOUBLE_QUOTE) {
                     escapedBytes[index++] = "\\";
                 }
                 escapedBytes[index++] = symbolBytes[i];
@@ -401,6 +410,10 @@ contract TokenURIGenerator is ITokenURIGenerator {
 
     bytes16 internal constant ALPHABET = "0123456789abcdef";
 
+    function addressToString(address addr) internal pure returns (string memory) {
+        return toHexString(uint256(uint160(addr)), 20);
+    }
+
     function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
@@ -410,10 +423,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
             value >>= 4;
         }
         require(value == 0, "Strings: hex length insufficient");
+        
         return string(buffer);
-    }
-
-    function addressToString(address addr) internal pure returns (string memory) {
-        return toHexString(uint256(uint160(addr)), 20);
     }
 }

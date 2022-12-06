@@ -114,7 +114,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             });
         } else {
             // token ID is a claim
-            (uint256 amountExerciseAsset, uint256 amountUnderlyingAsset) =
+            (, uint256 amountExerciseAsset,, uint256 amountUnderlyingAsset) =
                 _getPositionsForClaim(optionKey, tokenId, optionRecord);
 
             underlyingPositions = Underlying({
@@ -138,6 +138,26 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @inheritdoc IOptionSettlementEngine
     function isOptionInitialized(uint160 optionKey) public view returns (bool) {
         return _option[optionKey].underlyingAsset != address(0);
+    }
+
+    /// @inheritdoc IOptionSettlementEngine
+    function claim(uint256 claimId) public view returns (OptionLotClaim memory) {
+        (uint160 optionKey,) = decodeTokenId(claimId);
+
+        if (!isOptionInitialized(optionKey)) {
+            revert TokenNotFound(claimId);
+        }
+
+        Option storage optionRecord = _option[optionKey];
+        (uint256 amountExercised,, uint256 amountUnexercised,) = _getPositionsForClaim(optionKey, claimId, optionRecord);
+
+        uint256 _amountWritten = amountExercised + amountUnexercised;
+        return OptionLotClaim({
+            amountWritten: uint112(_amountWritten),
+            amountExercised: uint112(amountExercised),
+            optionId: uint256(optionKey) << 96,
+            unclaimed: _amountWritten != 0
+        });
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -602,16 +622,18 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function _getPositionsForClaim(uint160 optionKey, uint256 claimId, Option storage optionRecord)
         internal
         view
-        returns (uint256 exerciseAmount, uint256 underlyingAmount)
+        returns (uint256 amountExercised, uint256 exerciseAmount, uint256 amountUnexercised, uint256 underlyingAmount)
     {
         OptionLotClaimIndex[] storage claimIndexArray = _claimIdToClaimIndexArray[claimId];
         for (uint256 i = 0; i < claimIndexArray.length; i++) {
             OptionLotClaimIndex storage claimIndex = claimIndexArray[i];
             OptionsDayBucket storage claimBucketInfo = _claimBucketByOption[optionKey][claimIndex.bucketIndex];
-            (uint256 amountExercised, uint256 amountUnexercised) = _getAmountExercised(claimIndex, claimBucketInfo);
-            exerciseAmount += optionRecord.exerciseAmount * amountExercised;
-            underlyingAmount += optionRecord.underlyingAmount * amountUnexercised;
+            (uint256 _amountExercised, uint256 _amountUnexercised) = _getAmountExercised(claimIndex, claimBucketInfo);
+            amountExercised += _amountExercised;
+            amountUnexercised += _amountUnexercised;
         }
+        exerciseAmount = amountExercised * optionRecord.exerciseAmount;
+        underlyingAmount = amountUnexercised * optionRecord.underlyingAmount;
     }
 
     /// @dev Help with internal options bucket accounting

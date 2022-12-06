@@ -250,8 +250,13 @@ interface IOptionSettlementEngine {
     struct OptionLotClaim {
         /// @param amountWritten The number of options written in this option lot claim
         uint112 amountWritten;
-        /// @param claimed Whether or not this option lot has been claimed by the writer
-        bool claimed;
+        /// @param amountExercised The amount of options that have been exercised in this lot
+        uint112 amountExercised;
+        /// @param optionId The option ID corresponding to the option type for which this lot is
+        /// written.
+        uint256 optionId;
+        /// @param unclaimed Whether or not this option lot has been claimed by the writer
+        bool unclaimed;
     }
 
     /**
@@ -328,6 +333,13 @@ interface IOptionSettlementEngine {
      * @return Whether or not the option is initialized
      */
     function isOptionInitialized(uint160 optionKey) external view returns (bool);
+
+    /**
+     * @notice Returns information about the exercised and unexercised assets associated with
+     * an options lot claim.
+     * @
+     */
+    function claim(uint256 claimId) external view returns (OptionLotClaim memory claim);
 
     /*//////////////////////////////////////////////////////////////
     //  Token ID Encoding

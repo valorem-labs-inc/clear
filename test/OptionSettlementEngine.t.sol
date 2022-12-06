@@ -129,9 +129,38 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(engine.balanceOf(BOB, testOptionId), 0);
     }
 
-    function testWriteMultipleWriteSameOptionType() public {
-        IOptionSettlementEngine.OptionLotClaim memory claim;
+    function testClaimAccessor() public {
+        vm.startPrank(ALICE);
+        uint256 claimId1 = engine.write(testOptionId, 69);
+        IOptionSettlementEngine.OptionLotClaim memory claimLot = engine.claim(claimId1);
 
+        assertEq(claimLot.amountExercised, 0);
+        assertEq(claimLot.amountWritten, 69);
+        assertEq(claimLot.optionId, testOptionId);
+        assertTrue(claimLot.unclaimed);
+
+        vm.warp(testExerciseTimestamp + 1);
+       
+        // Alice would probably never exercise her own option irl
+        engine.exercise(testOptionId, 1);
+        claimLot = engine.claim(claimId1);
+        
+        assertEq(claimLot.amountExercised, 1);
+        assertEq(claimLot.amountWritten, 69);
+        assertEq(claimLot.optionId, testOptionId);
+        assertTrue(claimLot.unclaimed);
+
+        vm.warp(testExpiryTimestamp + 1);
+        engine.redeem(claimId1);
+        claimLot = engine.claim(claimId1);
+        
+        assertEq(claimLot.amountExercised, 0);
+        assertEq(claimLot.amountWritten, 0);
+        assertEq(claimLot.optionId, testOptionId);
+        assertTrue(!claimLot.unclaimed);
+    }
+
+    function testWriteMultipleWriteSameOptionType() public {
         // Alice writes a few options and later decides to write more
         vm.startPrank(ALICE);
         uint256 claimId1 = engine.write(testOptionId, 69);
@@ -150,7 +179,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(claimIdx, 1);
         assertEq(uint256(claimUnderlying.underlyingPosition), 69 * testUnderlyingAmount);
         _assertClaimAmountExercised(claimId1, 0);
-        assertTrue(!claim.claimed);
 
         claimUnderlying = engine.underlying(claimId2);
         (optionId, claimIdx) = engine.decodeTokenId(claimId2);
@@ -159,7 +187,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(claimIdx, 2);
         assertEq(uint256(claimUnderlying.underlyingPosition), 100 * testUnderlyingAmount);
         _assertClaimAmountExercised(claimId2, 0);
-        assertTrue(!claim.claimed);
     }
 
     function testTokenURI() public view {

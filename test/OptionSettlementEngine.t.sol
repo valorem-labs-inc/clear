@@ -150,6 +150,14 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(claimLot.optionId, testOptionId);
         assertTrue(claimLot.unredeemed);
 
+        engine.exercise(testOptionId, 1);
+        claimLot = engine.claim(claimId1);
+
+        assertEq(claimLot.amountExercised, 2);
+        assertEq(claimLot.amountWritten, 69);
+        assertEq(claimLot.optionId, testOptionId);
+        assertTrue(claimLot.unredeemed);
+
         vm.warp(testExpiryTimestamp + 1);
         engine.redeem(claimId1);
         claimLot = engine.claim(claimId1);

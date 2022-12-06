@@ -140,11 +140,11 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertTrue(claimLot.unclaimed);
 
         vm.warp(testExerciseTimestamp + 1);
-       
+
         // Alice would probably never exercise her own option irl
         engine.exercise(testOptionId, 1);
         claimLot = engine.claim(claimId1);
-        
+
         assertEq(claimLot.amountExercised, 1);
         assertEq(claimLot.amountWritten, 69);
         assertEq(claimLot.optionId, testOptionId);
@@ -153,7 +153,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.warp(testExpiryTimestamp + 1);
         engine.redeem(claimId1);
         claimLot = engine.claim(claimId1);
-        
+
         assertEq(claimLot.amountExercised, 0);
         assertEq(claimLot.amountWritten, 0);
         assertEq(claimLot.optionId, testOptionId);

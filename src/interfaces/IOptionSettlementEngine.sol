@@ -307,14 +307,6 @@ interface IOptionSettlementEngine {
     function option(uint256 tokenId) external view returns (Option memory optionInfo);
 
     /**
-     * @notice Returns OptionLotClaim struct details about a given tokenId if that token is a
-     * claim NFT.
-     * @param tokenId The id of the claim.
-     * @return claimInfo The Claim struct for tokenId.
-     */
-    function claim(uint256 tokenId) external view returns (OptionLotClaim memory claimInfo);
-
-    /**
      * @notice Information about the position underlying a token, useful for determining value.
      * When supplied an Option Lot Claim id, this function returns the total amounts of underlying
      * and exercise assets currently associated with a given options lot.

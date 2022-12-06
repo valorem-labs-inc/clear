@@ -49,9 +49,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @notice Accessor for Option contract details
     mapping(uint160 => Option) internal _option;
 
-    /// @notice Accessor for option lot claim ticket details
-    mapping(uint256 => OptionLotClaim) internal _claim;
-
     /// @notice Accessor for buckets of claims grouped by day
     /// @dev This is to enable O(constant) time options exercise. When options are written,
     /// the Claim struct in this mapping is updated to reflect the cumulative amount written
@@ -94,11 +91,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function option(uint256 tokenId) external view returns (Option memory optionInfo) {
         (uint160 optionKey,) = decodeTokenId(tokenId);
         optionInfo = _option[optionKey];
-    }
-
-    /// @inheritdoc IOptionSettlementEngine
-    function claim(uint256 tokenId) external view returns (OptionLotClaim memory claimInfo) {
-        claimInfo = _claim[tokenId];
     }
 
     /// @inheritdoc IOptionSettlementEngine
@@ -330,23 +322,17 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // Increment the next token ID
             uint96 claimNum = optionRecord.nextClaimNum++;
             encodedClaimId = encodeTokenId(optionKey, claimNum);
-            // Store info about the claim
-            _claim[encodedClaimId] = OptionLotClaim({amountWritten: amount, claimed: false});
         } else {
             // check ownership of claim
             uint256 balance = balanceOf[msg.sender][encodedClaimId];
             if (balance != 1) {
                 revert CallerDoesNotOwnClaimId(encodedClaimId);
             }
-
-            // retrieve claim
-            OptionLotClaim storage existingClaim = _claim[encodedClaimId];
-
-            existingClaim.amountWritten += amount;
         }
 
         // Handle internal claim bucket accounting
         uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
+        // Store info about the option lot claim
         _addOrUpdateClaimIndex(encodedClaimId, bucketIndex, amount);
 
         if (claimId == 0) {
@@ -445,16 +431,26 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert CallerDoesNotOwnClaimId(claimId);
         }
 
-        OptionLotClaim storage claimRecord = _claim[claimId];
         Option storage optionRecord = _option[optionKey];
 
         if (optionRecord.expiryTimestamp > block.timestamp) {
             revert ClaimTooSoon(claimId, optionRecord.expiryTimestamp);
         }
 
-        (uint256 exerciseAmount, uint256 underlyingAmount) = _getPositionsForClaim(optionKey, claimId, optionRecord);
+        uint256 exerciseAmount;
+        uint256 underlyingAmount;
 
-        claimRecord.claimed = true;
+        OptionLotClaimIndex[] storage claimIndexArray = _claimIdToClaimIndexArray[claimId];
+        uint256 claimIndexArrayLength = claimIndexArray.length;
+        for (uint256 i = 0; i < claimIndexArrayLength; i++) {
+            OptionLotClaimIndex storage claimIndex = claimIndexArray[claimIndexArray.length - 1];
+            OptionsDayBucket storage claimBucketInfo = _claimBucketByOption[optionKey][claimIndex.bucketIndex];
+            (uint256 amountExercised, uint256 amountUnexercised) = _getAmountExercised(claimIndex, claimBucketInfo);
+            exerciseAmount += optionRecord.exerciseAmount * amountExercised;
+            underlyingAmount += optionRecord.underlyingAmount * amountUnexercised;
+            // zeroes out the array during the redemption process
+            claimIndexArray.pop();
+        }
 
         _burn(msg.sender, claimId, 1);
 

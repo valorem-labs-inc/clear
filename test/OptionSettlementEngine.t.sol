@@ -143,21 +143,21 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(engine.balanceOf(ALICE, claimId1), 1);
         assertEq(engine.balanceOf(ALICE, claimId2), 1);
 
-        claim = engine.claim(claimId1);
+        IOptionSettlementEngine.Underlying memory claimUnderlying = engine.underlying(claimId1);
         (uint160 _optionId, uint96 claimIdx) = engine.decodeTokenId(claimId1);
         uint256 optionId = uint256(_optionId) << 96;
         assertEq(optionId, testOptionId);
         assertEq(claimIdx, 1);
-        assertEq(claim.amountWritten, 69);
+        assertEq(uint256(claimUnderlying.underlyingPosition), 69 * testUnderlyingAmount);
         _assertClaimAmountExercised(claimId1, 0);
         assertTrue(!claim.claimed);
 
-        claim = engine.claim(claimId2);
+        claimUnderlying = engine.underlying(claimId2);
         (optionId, claimIdx) = engine.decodeTokenId(claimId2);
         optionId = uint256(_optionId) << 96;
         assertEq(optionId, testOptionId);
         assertEq(claimIdx, 2);
-        assertEq(claim.amountWritten, 100);
+        assertEq(uint256(claimUnderlying.underlyingPosition), 100 * testUnderlyingAmount);
         _assertClaimAmountExercised(claimId2, 0);
         assertTrue(!claim.claimed);
     }
@@ -230,7 +230,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     // NOTE: This test needed as testFuzz_redeem does not check if exerciseAmount == 0
     function testRedeemNotExercised() public {
-        IOptionSettlementEngine.OptionLotClaim memory claimRecord;
+        IOptionSettlementEngine.Underlying memory claimUnderlying;
         uint256 wethBalanceEngine = WETH.balanceOf(address(engine));
         uint256 wethBalanceA = WETH.balanceOf(ALICE);
         // Alice writes 7 and no one exercises
@@ -239,12 +239,12 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         vm.warp(testExpiryTimestamp + 1);
 
-        claimRecord = engine.claim(claimId);
-        assertTrue(!claimRecord.claimed);
-        engine.redeem(claimId);
+        claimUnderlying = engine.underlying(claimId);
+        assertTrue(claimUnderlying.underlyingPosition != 0);
 
-        claimRecord = engine.claim(claimId);
-        assertTrue(claimRecord.claimed);
+        engine.redeem(claimId);
+        claimUnderlying = engine.underlying(claimId);
+        assertEq(claimUnderlying.underlyingPosition, 0);
 
         // Fees
         uint256 writeAmount = 7 * testUnderlyingAmount;
@@ -351,11 +351,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
 
-        IOptionSettlementEngine.OptionLotClaim memory claimRecord = engine.claim(claimId);
+        IOptionSettlementEngine.Underlying memory claimUnderlying = engine.underlying(claimId);
 
-        assertEq(1, claimRecord.amountWritten);
+        assertEq(testUnderlyingAmount, uint256(claimUnderlying.underlyingPosition));
         _assertClaimAmountExercised(claimId, 0);
-        assertEq(false, claimRecord.claimed);
         assertEq(1, engine.balanceOf(ALICE, claimId));
         assertEq(1, engine.balanceOf(ALICE, testOptionId));
 
@@ -371,10 +370,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(1, engine.balanceOf(ALICE, claimId3));
         assertEq(3, engine.balanceOf(ALICE, testOptionId));
 
-        claimRecord = engine.claim(claimId3);
-        assertEq(2, claimRecord.amountWritten);
+        claimUnderlying = engine.underlying(claimId3);
+        assertEq(2 * testUnderlyingAmount, uint256(claimUnderlying.underlyingPosition));
         _assertClaimAmountExercised(claimId, 0);
-        assertEq(false, claimRecord.claimed);
     }
 
     function testAssignMultipleBuckets() public {
@@ -666,10 +664,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.prank(ALICE);
         uint256 claimId = engine.write(optionId, 7);
 
-        IOptionSettlementEngine.OptionLotClaim memory claim = engine.claim(claimId);
+        IOptionSettlementEngine.Underlying memory claimUnderlying = engine.underlying(claimId);
 
-        assertEq(claim.amountWritten, 7);
-        assertEq(claim.claimed, false);
+        assertEq(uint256(claimUnderlying.underlyingPosition), 7 * 1);
     }
 
     function testIsOptionInitialized() public {
@@ -1385,19 +1382,18 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, amount);
-        IOptionSettlementEngine.OptionLotClaim memory claimRecord = engine.claim(claimId);
+        IOptionSettlementEngine.Underlying memory claimUnderlying = engine.underlying(claimId);
 
         assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + rxAmount + fee);
         assertEq(WETH.balanceOf(ALICE), wethBalance - rxAmount - fee);
 
         assertEq(engine.balanceOf(ALICE, testOptionId), amount);
         assertEq(engine.balanceOf(ALICE, claimId), 1);
-        assertTrue(!claimRecord.claimed);
+        assertEq(uint256(claimUnderlying.underlyingPosition), testUnderlyingAmount * amount);
 
         (uint160 optionId, uint96 claimIdx) = engine.decodeTokenId(claimId);
         assertEq(uint256(optionId) << 96, testOptionId);
         assertEq(claimIdx, 1);
-        assertEq(claimRecord.amountWritten, amount);
         _assertClaimAmountExercised(claimId, 0);
 
         _assertTokenIsClaim(claimId);
@@ -1429,10 +1425,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         engine.exercise(testOptionId, amountExercise);
 
-        IOptionSettlementEngine.OptionLotClaim memory claimRecord = engine.claim(claimId);
-
-        assertTrue(!claimRecord.claimed);
-        assertEq(claimRecord.amountWritten, amountWrite);
         _assertClaimAmountExercised(claimId, amountExercise);
 
         assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + writeAmount - txAmount + writeFee);
@@ -1469,7 +1461,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         engine.redeem(claimId);
 
-        IOptionSettlementEngine.OptionLotClaim memory claimRecord = engine.claim(claimId);
+        IOptionSettlementEngine.Underlying memory claimUnderlying = engine.underlying(claimId);
 
         assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + writeFee);
         assertEq(WETH.balanceOf(ALICE), wethBalance - writeFee);
@@ -1477,7 +1469,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(DAI.balanceOf(ALICE), daiBalance - exerciseFee);
         assertEq(engine.balanceOf(ALICE, testOptionId), amountWrite - amountExercise);
         assertEq(engine.balanceOf(ALICE, claimId), 0);
-        assertTrue(claimRecord.claimed);
+        assertEq(claimUnderlying.underlyingPosition, 0);
+        assertEq(claimUnderlying.exercisePosition, 0);
 
         _assertTokenIsClaim(claimId);
     }

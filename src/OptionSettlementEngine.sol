@@ -156,7 +156,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             amountWritten: uint112(_amountWritten),
             amountExercised: uint112(amountExercised),
             optionId: uint256(optionKey) << 96,
-            unclaimed: _amountWritten != 0
+            unredeemed: _amountWritten != 0
         });
     }
 

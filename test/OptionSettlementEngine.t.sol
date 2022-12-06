@@ -137,7 +137,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(claimLot.amountExercised, 0);
         assertEq(claimLot.amountWritten, 69);
         assertEq(claimLot.optionId, testOptionId);
-        assertTrue(claimLot.unclaimed);
+        assertTrue(claimLot.unredeemed);
 
         vm.warp(testExerciseTimestamp + 1);
 
@@ -148,7 +148,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(claimLot.amountExercised, 1);
         assertEq(claimLot.amountWritten, 69);
         assertEq(claimLot.optionId, testOptionId);
-        assertTrue(claimLot.unclaimed);
+        assertTrue(claimLot.unredeemed);
 
         vm.warp(testExpiryTimestamp + 1);
         engine.redeem(claimId1);
@@ -157,7 +157,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(claimLot.amountExercised, 0);
         assertEq(claimLot.amountWritten, 0);
         assertEq(claimLot.optionId, testOptionId);
-        assertTrue(!claimLot.unclaimed);
+        assertTrue(!claimLot.unredeemed);
     }
 
     function testWriteMultipleWriteSameOptionType() public {

@@ -255,8 +255,8 @@ interface IOptionSettlementEngine {
         /// @param optionId The option ID corresponding to the option type for which this lot is
         /// written.
         uint256 optionId;
-        /// @param unclaimed Whether or not this option lot has been claimed by the writer
-        bool unclaimed;
+        /// @param unredeemed Whether or not this option lot has been claimed by the writer
+        bool unredeemed;
     }
 
     /**

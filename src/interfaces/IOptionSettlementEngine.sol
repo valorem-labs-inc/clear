@@ -337,7 +337,8 @@ interface IOptionSettlementEngine {
     /**
      * @notice Returns information about the exercised and unexercised assets associated with
      * an options lot claim.
-     * @
+     * @param claimId The id of the claim
+     * @return claim The OptionLotClaim struct reflecting information about the options lot.
      */
     function claim(uint256 claimId) external view returns (OptionLotClaim memory claim);
 

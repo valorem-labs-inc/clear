@@ -366,7 +366,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(2, engine.balanceOf(ALICE, testOptionId));
 
         // write some more options, adding to existing claim
-        uint256 claimId3 = engine.write(testOptionId, 1, claimId);
+        uint256 claimId3 = engine.write(claimId, 1);
         assertEq(claimId, claimId3);
         assertEq(1, engine.balanceOf(ALICE, claimId3));
         assertEq(3, engine.balanceOf(ALICE, testOptionId));
@@ -759,7 +759,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         emit OptionsWritten(testOptionId, ALICE, claimId, 1);
 
         vm.prank(ALICE);
-        engine.write(testOptionId, 1, claimId);
+        engine.write(claimId, 1);
     }
 
     function testEventExercise() public {
@@ -1107,28 +1107,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testRevertWriteWhenInvalidOption() public {
         // Option ID not 0 in lower 96 b
         uint256 invalidOptionId = testOptionId + 1;
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId));
-        engine.write(invalidOptionId, 1);
-
         // Option ID not initialized
         invalidOptionId = engine.encodeTokenId(0x1, 0x0);
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId >> 96));
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId));
         engine.write(invalidOptionId, 1);
-    }
-
-    function testRevertWriteWhenEncodedOptionIdInClaimIdDoesNotMatchProvidedOptionId() public {
-        uint256 option1Claim1 = engine.encodeTokenId(0xDEADBEEF1, 0xCAFECAFE1);
-        uint256 option2WithoutClaim = engine.encodeTokenId(0xDEADBEEF2, 0x0);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOptionSettlementEngine.EncodedOptionIdInClaimIdDoesNotMatchProvidedOptionId.selector,
-                option1Claim1,
-                option2WithoutClaim
-            )
-        );
-
-        engine.write(option2WithoutClaim, 1, option1Claim1);
     }
 
     function testRevertWriteWhenAmountWrittenCannotBeZero() public {
@@ -1173,7 +1155,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
 
         vm.prank(BOB);
-        engine.write(testOptionId, 1, claimId);
+        engine.write(claimId, 1);
     }
 
     function testRevertWriteWhenExpiredOption() public {
@@ -1188,7 +1170,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
         );
 
-        engine.write(testOptionId, 1, claimId);
+        engine.write(claimId, 1);
         vm.stopPrank();
     }
 
@@ -1633,7 +1615,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
                 } else {
                     uint256 claimId = claimIds[_randBetween(seed++, claimIdLength)];
                     emit log_named_uint("ADD EXISTING CLAIM", claimId);
-                    engine.write(optionId, toWrite, claimId);
+                    engine.write(claimId, toWrite);
                 }
 
                 // add to total written

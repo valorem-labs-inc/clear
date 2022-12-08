@@ -296,44 +296,50 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert AmountWrittenCannotBeZero();
         }
 
+        // Get the optionKey and claimNum from the tokenId
         (uint160 optionKey, uint96 claimNum) = decodeTokenId(tokenId);
-        uint256 encodedClaim = tokenId;
-        uint256 encodedOption = encodeTokenId(optionKey, 0);
+
+        // Pass through the tokenId as the encodedClaimId
+        uint256 encodedClaimId = tokenId;
+
+        // Sanitize a zeroed encodedOptionId from the optionKey
+        uint256 encodedOptionId = uint256(optionKey) << 96;
 
         // Get the option record and check that it's valid to write against
         Option storage optionRecord = _option[optionKey];
 
+        // Make sure the option exists, and hasn't expired
         uint40 expiry = optionRecord.expiryTimestamp;
         if (expiry == 0) {
-            revert InvalidOption(encodedOption);
+            revert InvalidOption(encodedOptionId);
         }
         if (expiry <= block.timestamp) {
-            revert ExpiredOption(encodedOption, expiry);
+            revert ExpiredOption(encodedOptionId, expiry);
         }
 
         // create new claim
         if (claimNum == 0) {
-            // Increment the next token ID
-            claimNum = optionRecord.nextClaimNum++;
-            encodedClaim = encodeTokenId(optionKey, claimNum);
-            // Store info about the claim
-            _claim[encodedClaim] = OptionLotClaim({amountWritten: amount, claimed: false});
+            // Make encodedClaimId reflect the next available claim and increment the next
+            // available claim in storage.
+            encodedClaimId = encodeTokenId(optionKey, optionRecord.nextClaimNum++);
+            // Store info about the claim.
+            _claim[encodedClaimId] = OptionLotClaim({amountWritten: amount, claimed: false});
         }
         // Add to existing claim
         else {
             // Check ownership of claim
-            uint256 balance = balanceOf[msg.sender][encodedClaim];
+            uint256 balance = balanceOf[msg.sender][encodedClaimId];
             if (balance != 1) {
-                revert CallerDoesNotOwnClaimId(encodedClaim);
+                revert CallerDoesNotOwnClaimId(encodedClaimId);
             }
 
             // Increment balance
-            _claim[encodedClaim].amountWritten += amount;
+            _claim[encodedClaimId].amountWritten += amount;
         }
 
         // Handle internal claim bucket accounting
         uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
-        _addOrUpdateClaimIndex(encodedClaim, bucketIndex, amount);
+        _addOrUpdateClaimIndex(encodedClaimId, bucketIndex, amount);
 
         // Calculate amount to receive
         uint256 rxAmount = optionRecord.underlyingAmount * amount;
@@ -343,13 +349,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Calculate Fee and emit events
         uint256 fee = _calculateRecordAndEmitFee(underlyingAsset, rxAmount);
-        emit OptionsWritten(encodedOption, msg.sender, encodedClaim, amount);
+        emit OptionsWritten(encodedOptionId, msg.sender, encodedClaimId, amount);
 
         if (claimNum == 0) {
             // Mint options and claim token to writer
             uint256[] memory tokens = new uint256[](2);
-            tokens[0] = encodedOption;
-            tokens[1] = encodedClaim;
+            tokens[0] = encodedOptionId;
+            tokens[1] = encodedClaimId;
 
             uint256[] memory amounts = new uint256[](2);
             amounts[0] = amount;
@@ -358,13 +364,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             _batchMint(msg.sender, tokens, amounts, "");
         } else {
             // Mint more options on existing claim to writer
-            _mint(msg.sender, encodedOption, amount, "");
+            _mint(msg.sender, encodedOptionId, amount, "");
         }
 
         // Transfer the requisite underlying asset
         SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
 
-        return encodedClaim;
+        return encodedClaimId;
     }
 
     /*//////////////////////////////////////////////////////////////

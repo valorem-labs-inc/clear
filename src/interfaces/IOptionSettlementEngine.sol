@@ -312,6 +312,14 @@ interface IOptionSettlementEngine {
     function option(uint256 tokenId) external view returns (Option memory optionInfo);
 
     /**
+     * @notice Returns information about the exercised and unexercised assets associated with
+     * an options lot claim.
+     * @param claimId The id of the claim
+     * @return claim The OptionLotClaim struct reflecting information about the options lot.
+     */
+    function claim(uint256 claimId) external view returns (OptionLotClaim memory claim);
+
+    /**
      * @notice Information about the position underlying a token, useful for determining value.
      * When supplied an Option Lot Claim id, this function returns the total amounts of underlying
      * and exercise assets currently associated with a given options lot.
@@ -333,15 +341,7 @@ interface IOptionSettlementEngine {
      * @return Whether or not the option is initialized
      */
     function isOptionInitialized(uint160 optionKey) external view returns (bool);
-
-    /**
-     * @notice Returns information about the exercised and unexercised assets associated with
-     * an options lot claim.
-     * @param claimId The id of the claim
-     * @return claim The OptionLotClaim struct reflecting information about the options lot.
-     */
-    function claim(uint256 claimId) external view returns (OptionLotClaim memory claim);
-
+ 
     /*//////////////////////////////////////////////////////////////
     //  Token ID Encoding
     //////////////////////////////////////////////////////////////*/

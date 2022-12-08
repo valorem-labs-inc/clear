@@ -94,6 +94,25 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @inheritdoc IOptionSettlementEngine
+    function claim(uint256 claimId) public view returns (OptionLotClaim memory) {
+        (uint160 optionKey,) = decodeTokenId(claimId);
+
+        if (!isOptionInitialized(optionKey)) {
+            revert TokenNotFound(claimId);
+        }
+
+        (uint256 amountExercised, uint256 amountUnexercised) = _getExercisedAmountsForClaim(optionKey, claimId);
+
+        uint256 _amountWritten = amountExercised + amountUnexercised;
+        return OptionLotClaim({
+            amountWritten: uint112(_amountWritten),
+            amountExercised: uint112(amountExercised),
+            optionId: uint256(optionKey) << 96,
+            unredeemed: _amountWritten != 0
+        });
+    }
+
+    /// @inheritdoc IOptionSettlementEngine
     function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions) {
         (uint160 optionKey, uint96 claimNum) = decodeTokenId(tokenId);
 
@@ -138,25 +157,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @inheritdoc IOptionSettlementEngine
     function isOptionInitialized(uint160 optionKey) public view returns (bool) {
         return _option[optionKey].underlyingAsset != address(0);
-    }
-
-    /// @inheritdoc IOptionSettlementEngine
-    function claim(uint256 claimId) public view returns (OptionLotClaim memory) {
-        (uint160 optionKey,) = decodeTokenId(claimId);
-
-        if (!isOptionInitialized(optionKey)) {
-            revert TokenNotFound(claimId);
-        }
-
-        (uint256 amountExercised, uint256 amountUnexercised) = _getExercisedAmountsForClaim(optionKey, claimId);
-
-        uint256 _amountWritten = amountExercised + amountUnexercised;
-        return OptionLotClaim({
-            amountWritten: uint112(_amountWritten),
-            amountExercised: uint112(amountExercised),
-            optionId: uint256(optionKey) << 96,
-            unredeemed: _amountWritten != 0
-        });
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -600,27 +600,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return uint16(block.timestamp / 1 days);
     }
 
-    /// @dev Get the amount of exercised and unexercised options for a given claim + day bucket combo
-    function _getAmountExercised(OptionLotClaimIndex storage claimIndex, OptionsDayBucket storage claimBucketInfo)
-        internal
-        view
-        returns (uint256 _exercised, uint256 _unexercised)
-    {
-        // The ratio of exercised to written options in the bucket multiplied by the
-        // number of options actaully written in the claim.
-        _exercised = FixedPointMathLib.mulDivDown(
-            claimBucketInfo.amountExercised, claimIndex.amountWritten, claimBucketInfo.amountWritten
-        );
-
-        // The ratio of unexercised to written options in the bucket multiplied by the
-        // number of options actually written in the claim.
-        _unexercised = FixedPointMathLib.mulDivDown(
-            claimBucketInfo.amountWritten - claimBucketInfo.amountExercised,
-            claimIndex.amountWritten,
-            claimBucketInfo.amountWritten
-        );
-    }
-
     /// @dev Get the exercise and underlying amounts for a claim
     function _getExercisedAmountsForClaim(uint160 optionKey, uint256 claimId)
         internal
@@ -643,7 +622,19 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     {
         OptionLotClaimIndex storage claimIndex = claimIndexArray[index];
         OptionsDayBucket storage claimBucketInfo = _claimBucketByOption[optionKey][claimIndex.bucketIndex];
-        return _getAmountExercised(claimIndex, claimBucketInfo);
+        // The ratio of exercised to written options in the bucket multiplied by the
+        // number of options actaully written in the claim.
+        amountExercised = FixedPointMathLib.mulDivDown(
+            claimBucketInfo.amountExercised, claimIndex.amountWritten, claimBucketInfo.amountWritten
+        );
+
+        // The ratio of unexercised to written options in the bucket multiplied by the
+        // number of options actually written in the claim.
+        amountUnexercised = FixedPointMathLib.mulDivDown(
+            claimBucketInfo.amountWritten - claimBucketInfo.amountExercised,
+            claimIndex.amountWritten,
+            claimBucketInfo.amountWritten
+        );
     }
 
     /// @dev Help with internal options bucket accounting

@@ -341,7 +341,7 @@ interface IOptionSettlementEngine {
      * @return Whether or not the option is initialized
      */
     function isOptionInitialized(uint160 optionKey) external view returns (bool);
- 
+
     /*//////////////////////////////////////////////////////////////
     //  Token ID Encoding
     //////////////////////////////////////////////////////////////*/

@@ -442,13 +442,13 @@ interface IOptionSettlementEngine {
      * @notice Check if the protocol fee switch is enabled.
      * @return Whether or not the protocol fee switch is enabled.
      */
-    function isFeeSwitchEnabled() external view returns (bool);
+    function feeSwitch() external view returns (bool);
 
     /**
-     * @notice Toggles the protocol fee on / off.
+     * @notice Sets the protocol fee on / off.
      * @param enabled Whether or not the protocol fee switch should be enabled.
      */
-    function toggleFeeSwitch(bool enabled) external;
+    function setFeeSwitch(bool enabled) external;
 
     /**
      * @notice The protocol fee, expressed in basis points.

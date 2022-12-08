@@ -104,12 +104,12 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Enable fee switch
         vm.prank(FEE_TO);
-        engine.toggleFeeSwitch(true);
+        engine.setFeeSwitch(true);
     }
 
     function testInitial() public {
         assertEq(engine.feeTo(), FEE_TO);
-        assertEq(engine.isFeeSwitchEnabled(), true);
+        assertEq(engine.feeSwitch(), true);
     }
 
     // **********************************************************************
@@ -547,7 +547,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Disable fee switch
         vm.prank(FEE_TO);
-        engine.toggleFeeSwitch(false);
+        engine.setFeeSwitch(false);
 
         // Write 3 more, no fee is recorded or emitted
         vm.prank(ALICE);
@@ -556,7 +556,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Re-enable
         vm.prank(FEE_TO);
-        engine.toggleFeeSwitch(true);
+        engine.setFeeSwitch(true);
 
         // Write 5 more, fee is again recorded and emitted
         vm.prank(ALICE);
@@ -601,7 +601,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Disable fee switch
         vm.prank(FEE_TO);
-        engine.toggleFeeSwitch(false);
+        engine.setFeeSwitch(false);
 
         // Exercise 3 more, no fee is recorded or emitted
         vm.prank(BOB);
@@ -610,7 +610,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Re-enable
         vm.prank(FEE_TO);
-        engine.toggleFeeSwitch(true);
+        engine.setFeeSwitch(true);
 
         // Exercise 5 more, fee is again recorded and emitted
         vm.prank(BOB);
@@ -624,27 +624,27 @@ contract OptionSettlementTest is Test, NFTreceiver {
     //                            PROTOCOL ADMIN
     // **********************************************************************
 
-    function testToggleFeeSwitch() public {
+    function testSetFeeSwitch() public {
         // precondition check -- in test suite, fee switch is enabled by default
-        assertTrue(engine.isFeeSwitchEnabled());
+        assertTrue(engine.feeSwitch());
 
         // disable
         vm.startPrank(FEE_TO);
-        engine.toggleFeeSwitch(false);
+        engine.setFeeSwitch(false);
 
-        assertFalse(engine.isFeeSwitchEnabled());
+        assertFalse(engine.feeSwitch());
 
         // enable
-        engine.toggleFeeSwitch(true);
+        engine.setFeeSwitch(true);
 
-        assertTrue(engine.isFeeSwitchEnabled());
+        assertTrue(engine.feeSwitch());
     }
 
-    function testRevertToggleFeeSwitchWhenNotFeeTo() public {
+    function testRevertSetFeeSwitchWhenNotFeeTo() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
 
         vm.prank(ALICE);
-        engine.toggleFeeSwitch(true);
+        engine.setFeeSwitch(true);
     }
 
     function testSetFeeTo() public {

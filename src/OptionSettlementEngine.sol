@@ -30,8 +30,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //  State variables - Public
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Whether or not the protocol fee switch is enabled.
-    bool public isFeeSwitchEnabled;
+    /// @notice Whether or not the protocol fee switch is enabled
+    bool public feeSwitch;
 
     /// @notice The protocol fee
     uint8 public immutable feeBps = 5;
@@ -495,8 +495,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IOptionSettlementEngine
-    function toggleFeeSwitch(bool enabled) external onlyFeeTo {
-        isFeeSwitchEnabled = enabled;
+    function setFeeSwitch(bool enabled) external onlyFeeTo {
+        feeSwitch = enabled;
     }
 
     /// @inheritdoc IOptionSettlementEngine
@@ -548,7 +548,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// when writing (on underlying asset) and when exercising (on exercise asset). Checks
     /// that fee switch is enabled, otherwise returns fee of 0 and does not record or emit.
     function _calculateRecordAndEmitFee(address assetAddress, uint256 assetAmount) internal returns (uint256 fee) {
-        if (isFeeSwitchEnabled) {
+        if (feeSwitch) {
             fee = ((assetAmount * feeBps) / 10_000);
             feeBalance[assetAddress] += fee;
             emit FeeAccrued(assetAddress, msg.sender, fee);

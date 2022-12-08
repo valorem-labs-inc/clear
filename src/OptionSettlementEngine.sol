@@ -411,13 +411,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint256 txAmount = optionRecord.underlyingAmount * amount;
         address exerciseAsset = optionRecord.exerciseAsset;
         address underlyingAsset = optionRecord.underlyingAsset;
-        uint256 fee = _calculateRecordAndEmitFee(exerciseAsset, rxAmount);
-
-        emit OptionsExercised(optionId, msg.sender, amount);
 
         _assignExercise(optionKey, optionRecord, amount);
 
-        emit FeeAccrued(exerciseAsset, msg.sender, fee);
+        // Update counters and emit events
+        uint256 fee = _calculateRecordAndEmitFee(exerciseAsset, rxAmount);
         emit OptionsExercised(optionId, msg.sender, amount);
 
         _burn(msg.sender, optionId, amount);

@@ -114,14 +114,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             });
         } else {
             // token ID is a claim
-            (, uint256 amountExerciseAsset,, uint256 amountUnderlyingAsset) =
-                _getPositionsForClaim(optionKey, tokenId, optionRecord);
+            (uint256 amountExercised, uint256 amountUnexercised) =
+                _getExercisedAmountsForClaim(optionKey, tokenId);
 
             underlyingPositions = Underlying({
                 underlyingAsset: optionRecord.underlyingAsset,
-                underlyingPosition: int256(amountUnderlyingAsset),
+                underlyingPosition: int256(amountUnexercised * optionRecord.underlyingAmount),
                 exerciseAsset: optionRecord.exerciseAsset,
-                exercisePosition: int256(amountExerciseAsset)
+                exercisePosition: int256(amountExercised * optionRecord.exerciseAmount)
             });
         }
     }
@@ -148,8 +148,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert TokenNotFound(claimId);
         }
 
-        Option storage optionRecord = _option[optionKey];
-        (uint256 amountExercised,, uint256 amountUnexercised,) = _getPositionsForClaim(optionKey, claimId, optionRecord);
+        (uint256 amountExercised, uint256 amountUnexercised) = _getExercisedAmountsForClaim(optionKey, claimId);
 
         uint256 _amountWritten = amountExercised + amountUnexercised;
         return OptionLotClaim({
@@ -457,29 +456,33 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert ClaimTooSoon(claimId, optionRecord.expiryTimestamp);
         }
 
-        uint256 exerciseAmount;
-        uint256 underlyingAmount;
+        uint256 totalExerciseAssetAmount;
+        uint256 totalUnderlyingAssetAmount;
 
         OptionLotClaimIndex[] storage claimIndexArray = _claimIdToClaimIndexArray[claimId];
         uint256 claimIndexArrayLength = claimIndexArray.length;
         for (uint256 i = 0; i < claimIndexArrayLength; i++) {
-            OptionLotClaimIndex storage claimIndex = claimIndexArray[claimIndexArray.length - 1];
-            OptionsDayBucket storage claimBucketInfo = _claimBucketByOption[optionKey][claimIndex.bucketIndex];
-            (uint256 amountExercised, uint256 amountUnexercised) = _getAmountExercised(claimIndex, claimBucketInfo);
-            exerciseAmount += optionRecord.exerciseAmount * amountExercised;
-            underlyingAmount += optionRecord.underlyingAmount * amountUnexercised;
+            (uint256 _amountExercisedInBucket, uint256 _amountUnexercisedInBucket) = 
+                _getExercisedAmountsForClaimIndex(optionKey, claimIndexArray, claimIndexArray.length - 1);
+            // accumulate the amount exercised and unexercised in these variables for later mul by 
+            // optionRecord.exerciseAmount/underlyingAmount
+            totalExerciseAssetAmount += _amountExercisedInBucket;
+            totalUnderlyingAssetAmount += _amountUnexercisedInBucket;
             // zeroes out the array during the redemption process
             claimIndexArray.pop();
         }
+        
+        totalExerciseAssetAmount *= optionRecord.exerciseAmount;
+        totalUnderlyingAssetAmount *= optionRecord.underlyingAmount;
 
         _burn(msg.sender, claimId, 1);
 
-        if (exerciseAmount > 0) {
-            SafeTransferLib.safeTransfer(ERC20(optionRecord.exerciseAsset), msg.sender, exerciseAmount);
+        if (totalExerciseAssetAmount > 0) {
+            SafeTransferLib.safeTransfer(ERC20(optionRecord.exerciseAsset), msg.sender, totalExerciseAssetAmount);
         }
 
-        if (underlyingAmount > 0) {
-            SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, underlyingAmount);
+        if (totalUnderlyingAssetAmount > 0) {
+            SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, totalUnderlyingAssetAmount);
         }
 
         emit ClaimRedeemed(
@@ -488,8 +491,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             msg.sender,
             optionRecord.exerciseAsset,
             optionRecord.underlyingAsset,
-            uint96(exerciseAmount),
-            uint96(underlyingAmount)
+            uint96(totalExerciseAssetAmount),
+            uint96(totalUnderlyingAssetAmount)
             );
     }
 
@@ -619,21 +622,28 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @dev Get the exercise and underlying amounts for a claim
-    function _getPositionsForClaim(uint160 optionKey, uint256 claimId, Option storage optionRecord)
+    function _getExercisedAmountsForClaim(uint160 optionKey, uint256 claimId)
         internal
         view
-        returns (uint256 amountExercised, uint256 exerciseAmount, uint256 amountUnexercised, uint256 underlyingAmount)
+        returns (uint256 amountExercised, uint256 amountUnexercised)
     {
         OptionLotClaimIndex[] storage claimIndexArray = _claimIdToClaimIndexArray[claimId];
         for (uint256 i = 0; i < claimIndexArray.length; i++) {
-            OptionLotClaimIndex storage claimIndex = claimIndexArray[i];
-            OptionsDayBucket storage claimBucketInfo = _claimBucketByOption[optionKey][claimIndex.bucketIndex];
-            (uint256 _amountExercised, uint256 _amountUnexercised) = _getAmountExercised(claimIndex, claimBucketInfo);
-            amountExercised += _amountExercised;
-            amountUnexercised += _amountUnexercised;
+            (uint256 _amountExercisedInBucket, uint256 _amountUnexercisedInBucket) = 
+                _getExercisedAmountsForClaimIndex(optionKey, claimIndexArray, i);
+            amountExercised += _amountExercisedInBucket;
+            amountUnexercised += _amountUnexercisedInBucket;
         }
-        exerciseAmount = amountExercised * optionRecord.exerciseAmount;
-        underlyingAmount = amountUnexercised * optionRecord.underlyingAmount;
+    }
+
+    function _getExercisedAmountsForClaimIndex(uint160 optionKey, OptionLotClaimIndex[] storage claimIndexArray, uint256 index) 
+        internal
+        view
+        returns (uint256 amountExercised, uint256 amountUnexercised) 
+    {
+        OptionLotClaimIndex storage claimIndex = claimIndexArray[index];
+        OptionsDayBucket storage claimBucketInfo = _claimBucketByOption[optionKey][claimIndex.bucketIndex];
+        return _getAmountExercised(claimIndex, claimBucketInfo);
     }
 
     /// @dev Help with internal options bucket accounting

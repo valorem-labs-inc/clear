@@ -101,10 +101,15 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Approve test contract approval for all on settlement engine ERC1155 token balances
         engine.setApprovalForAll(address(this), true);
+
+        // Enable fee switch
+        vm.prank(FEE_TO);
+        engine.toggleFeeSwitch(true);
     }
 
     function testInitial() public {
         assertEq(engine.feeTo(), FEE_TO);
+        assertEq(engine.isFeeSwitchEnabled(), true);
     }
 
     // **********************************************************************
@@ -519,9 +524,128 @@ contract OptionSettlementTest is Test, NFTreceiver {
         _assertClaimAmountExercised(claimIds[6], 0);
     }
 
+    function testWriteRecordFees() public {
+        // Alice writes 2
+        vm.prank(ALICE);
+        engine.write(testOptionId, 2);
+
+        // Fee is recorded on underlying asset, not on exercise assset
+        uint256 writeAmount = 2 * testUnderlyingAmount;
+        uint256 writeFee = (writeAmount * engine.feeBps()) / 10_000;
+        assertEq(engine.feeBalance(address(WETH)), writeFee);
+        assertEq(engine.feeBalance(address(DAI)), 0);
+    }
+
+    function testWriteNoFeesRecordedWhenFeeSwitchIsDisabled() public {
+        // precondition check, fee is recorded and emitted on write
+        vm.prank(ALICE);
+        engine.write(testOptionId, 2);
+
+        uint256 writeAmount = 2 * testUnderlyingAmount;
+        uint256 writeFee = (writeAmount * engine.feeBps()) / 10_000;
+        assertEq(engine.feeBalance(address(WETH)), writeFee);
+
+        // Disable fee switch
+        vm.prank(FEE_TO);
+        engine.toggleFeeSwitch(false);
+
+        // Write 3 more, no fee is recorded or emitted
+        vm.prank(ALICE);
+        engine.write(testOptionId, 3);
+        assertEq(engine.feeBalance(address(WETH)), writeFee); // no change
+
+        // Re-enable
+        vm.prank(FEE_TO);
+        engine.toggleFeeSwitch(true);
+
+        // Write 5 more, fee is again recorded and emitted
+        vm.prank(ALICE);
+        engine.write(testOptionId, 5);
+        writeAmount = 5 * testUnderlyingAmount;
+        writeFee += (writeAmount * engine.feeBps()) / 10_000;
+        assertEq(engine.feeBalance(address(WETH)), writeFee); // includes fee on writing 5 more
+    }
+
+    function testExerciseRecordFees() public {
+        // Alice writes 2 and transfers to Bob
+        vm.startPrank(ALICE);
+        engine.write(testOptionId, 2);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 2, "");
+        vm.stopPrank();
+
+        // Bob exercises 2
+        vm.warp(testExerciseTimestamp + 1 seconds);
+        vm.prank(BOB);
+        engine.exercise(testOptionId, 2);
+
+        // Fee is recorded on exercise asset
+        uint256 exerciseAmount = 2 * testExerciseAmount;
+        uint256 exerciseFee = (exerciseAmount * engine.feeBps()) / 10_000;
+        assertEq(engine.feeBalance(address(DAI)), exerciseFee);
+    }
+
+    function testExerciseNoFeesRecordedWhenFeeSwitchIsDisabled() public {
+        // precondition check, fee is recorded and emitted on exercise
+        vm.startPrank(ALICE);
+        engine.write(testOptionId, 10);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 10, "");
+        vm.stopPrank();
+
+        vm.warp(testExerciseTimestamp + 1 seconds);
+        vm.prank(BOB);
+        engine.exercise(testOptionId, 2);
+
+        uint256 exerciseAmount = 2 * testExerciseAmount;
+        uint256 exerciseFee = (exerciseAmount * engine.feeBps()) / 10_000;
+        assertEq(engine.feeBalance(address(DAI)), exerciseFee);
+
+        // Disable fee switch
+        vm.prank(FEE_TO);
+        engine.toggleFeeSwitch(false);
+
+        // Exercise 3 more, no fee is recorded or emitted
+        vm.prank(BOB);
+        engine.exercise(testOptionId, 3);
+        assertEq(engine.feeBalance(address(DAI)), exerciseFee); // no change
+
+        // Re-enable
+        vm.prank(FEE_TO);
+        engine.toggleFeeSwitch(true);
+
+        // Exercise 5 more, fee is again recorded and emitted
+        vm.prank(BOB);
+        engine.exercise(testOptionId, 5);
+        exerciseAmount = 5 * testExerciseAmount;
+        exerciseFee += (exerciseAmount * engine.feeBps()) / 10_000;
+        assertEq(engine.feeBalance(address(DAI)), exerciseFee); // includes fee on exercising 5 more
+    }
+
     // **********************************************************************
     //                            PROTOCOL ADMIN
     // **********************************************************************
+
+    function testToggleFeeSwitch() public {
+        // precondition check -- in test suite, fee switch is enabled by default
+        assertTrue(engine.isFeeSwitchEnabled());
+
+        // disable
+        vm.startPrank(FEE_TO);
+        engine.toggleFeeSwitch(false);
+
+        assertFalse(engine.isFeeSwitchEnabled());
+
+        // enable
+        engine.toggleFeeSwitch(true);
+
+        assertTrue(engine.isFeeSwitchEnabled());
+    }
+
+    function testRevertToggleFeeSwitchWhenNotFeeTo() public {
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
+
+        vm.prank(ALICE);
+        engine.toggleFeeSwitch(true);
+    }
 
     function testSetFeeTo() public {
         // precondition check

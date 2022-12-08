@@ -30,6 +30,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //  State variables - Public
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Whether or not the protocol fee switch is enabled.
+    bool public isFeeSwitchEnabled;
+
     /// @notice The protocol fee
     uint8 public immutable feeBps = 5;
 
@@ -74,6 +77,19 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @notice Accessor for mapping a claim id to its ClaimIndices
     mapping(uint256 => OptionLotClaimIndex[]) internal _claimIdToClaimIndexArray;
+
+    /*//////////////////////////////////////////////////////////////
+    //  Modifiers
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice This modifier restricts function access to the feeTo address.
+    modifier onlyFeeTo() {
+        if (msg.sender != feeTo) {
+            revert AccessControlViolation(msg.sender, feeTo);
+        }
+
+        _;
+    }
 
     /*//////////////////////////////////////////////////////////////
     //  Constructor
@@ -479,10 +495,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IOptionSettlementEngine
-    function setFeeTo(address newFeeTo) public {
-        if (msg.sender != feeTo) {
-            revert AccessControlViolation(msg.sender, feeTo);
-        }
+    function toggleFeeSwitch(bool enabled) external onlyFeeTo {
+        isFeeSwitchEnabled = enabled;
+    }
+
+    /// @inheritdoc IOptionSettlementEngine
+    function setFeeTo(address newFeeTo) external onlyFeeTo {
         if (newFeeTo == address(0)) {
             revert InvalidFeeToAddress(newFeeTo);
         }
@@ -490,7 +508,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @inheritdoc IOptionSettlementEngine
-    function sweepFees(address[] memory tokens) public {
+    function sweepFees(address[] memory tokens) external {
         address sendFeeTo = feeTo;
         address token;
         uint256 fee;
@@ -514,10 +532,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @inheritdoc IOptionSettlementEngine
-    function setTokenURIGenerator(address newTokenURIGenerator) public {
-        if (msg.sender != feeTo) {
-            revert AccessControlViolation(msg.sender, feeTo);
-        }
+    function setTokenURIGenerator(address newTokenURIGenerator) external onlyFeeTo {
         if (newTokenURIGenerator == address(0)) {
             revert InvalidTokenURIGeneratorAddress(address(0));
         }
@@ -530,11 +545,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Internal helper function to calculate, record, and emit event for fee accrual
-    /// when writing (on underlying asset) and when exercising (on exercise asset)
+    /// when writing (on underlying asset) and when exercising (on exercise asset). Checks
+    /// that fee switch is enabled, otherwise returns fee of 0 and does not record or emit.
     function _calculateRecordAndEmitFee(address assetAddress, uint256 assetAmount) internal returns (uint256 fee) {
-        fee = ((assetAmount * feeBps) / 10_000);
-        feeBalance[assetAddress] += fee;
-        emit FeeAccrued(assetAddress, msg.sender, fee);
+        if (isFeeSwitchEnabled) {
+            fee = ((assetAmount * feeBps) / 10_000);
+            feeBalance[assetAddress] += fee;
+            emit FeeAccrued(assetAddress, msg.sender, fee);
+        }
     }
 
     /// @dev Performs fair exercise assignment by pseudorandomly selecting a claim

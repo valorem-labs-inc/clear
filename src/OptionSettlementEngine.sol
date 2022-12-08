@@ -299,7 +299,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // Get the optionKey and claimNum from the tokenId
         (uint160 optionKey, uint96 claimNum) = decodeTokenId(tokenId);
 
-        // Pass through the tokenId as the encodedClaimId
+        // Pass through the tokenId as the encodedClaimId, which will be
+        // overwritten in the case of a new claim.
         uint256 encodedClaimId = tokenId;
 
         // Sanitize a zeroed encodedOptionId from the optionKey

@@ -325,11 +325,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert ExpiredOption(optionId, expiry);
         }
 
-        uint256 rxAmount = amount * optionRecord.underlyingAmount;
-        uint256 fee = ((rxAmount / 10_000) * feeBps);
+        // Calculate, record, and emit event for fee accrual on underlying asset
+        uint256 rxAmount = optionRecord.underlyingAmount * amount;
         address underlyingAsset = optionRecord.underlyingAsset;
-
-        feeBalance[underlyingAsset] += fee;
 
         uint256 encodedClaimId = claimId;
         if (claimId == 0) {
@@ -356,8 +354,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
         _addOrUpdateClaimIndex(encodedClaimId, bucketIndex, amount);
 
-        // Emit events
-        emit FeeAccrued(underlyingAsset, msg.sender, fee);
+        uint256 fee = _calculateRecordAndEmitFee(underlyingAsset, rxAmount);
         emit OptionsWritten(optionId, msg.sender, encodedClaimId, amount);
 
         if (claimId == 0) {
@@ -409,14 +406,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert CallerHoldsInsufficientOptions(optionId, amount);
         }
 
+        // Calculate, record, and emit event for fee accrual on exercise asset
         uint256 rxAmount = optionRecord.exerciseAmount * amount;
         uint256 txAmount = optionRecord.underlyingAmount * amount;
-        uint256 fee = ((rxAmount / 10_000) * feeBps);
         address exerciseAsset = optionRecord.exerciseAsset;
+        address underlyingAsset = optionRecord.underlyingAsset;
+        uint256 fee = _calculateRecordAndEmitFee(exerciseAsset, rxAmount);
+
+        emit OptionsExercised(optionId, msg.sender, amount);
 
         _assignExercise(optionKey, optionRecord, amount);
-
-        feeBalance[exerciseAsset] += fee;
 
         emit FeeAccrued(exerciseAsset, msg.sender, fee);
         emit OptionsExercised(optionId, msg.sender, amount);
@@ -427,7 +426,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         SafeTransferLib.safeTransferFrom(ERC20(exerciseAsset), msg.sender, address(this), (rxAmount + fee));
 
         // Transfer out the underlying
-        SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, txAmount);
+        SafeTransferLib.safeTransfer(ERC20(underlyingAsset), msg.sender, txAmount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -539,6 +538,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /*//////////////////////////////////////////////////////////////
     //  Internal Helper Functions
     //////////////////////////////////////////////////////////////*/
+
+    /// @dev Internal helper function to calculate, record, and emit event for fee accrual
+    /// when writing (on underlying asset) and when exercising (on exercise asset)
+    function _calculateRecordAndEmitFee(address assetAddress, uint256 assetAmount) internal returns (uint256 fee) {
+        fee = ((assetAmount * feeBps) / 10_000);
+        feeBalance[assetAddress] += fee;
+        emit FeeAccrued(assetAddress, msg.sender, fee);
+    }
 
     /// @dev Performs fair exercise assignment by pseudorandomly selecting a claim
     /// bucket between the intial creation of the option type and "today". The buckets

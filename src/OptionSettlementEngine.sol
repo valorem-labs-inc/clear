@@ -349,6 +349,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
         _addOrUpdateClaimIndex(encodedClaimId, bucketIndex, amount);
 
+        // Emit events
+        emit FeeAccrued(underlyingAsset, msg.sender, fee);
+        emit OptionsWritten(optionId, msg.sender, encodedClaimId, amount);
+
         if (claimId == 0) {
             // Mint options and claim token to writer
             uint256[] memory tokens = new uint256[](2);
@@ -367,9 +371,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Transfer the requisite underlying asset
         SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
-
-        emit FeeAccrued(underlyingAsset, msg.sender, fee);
-        emit OptionsWritten(optionId, msg.sender, encodedClaimId, amount);
 
         return encodedClaimId;
     }
@@ -410,6 +411,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         feeBalance[exerciseAsset] += fee;
 
+        emit FeeAccrued(exerciseAsset, msg.sender, fee);
+        emit OptionsExercised(optionId, msg.sender, amount);
+
         _burn(msg.sender, optionId, amount);
 
         // Transfer in the requisite exercise asset
@@ -417,9 +421,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Transfer out the underlying
         SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, txAmount);
-
-        emit FeeAccrued(exerciseAsset, msg.sender, fee);
-        emit OptionsExercised(optionId, msg.sender, amount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -456,16 +457,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         claimRecord.claimed = true;
 
-        _burn(msg.sender, claimId, 1);
-
-        if (exerciseAmount > 0) {
-            SafeTransferLib.safeTransfer(ERC20(optionRecord.exerciseAsset), msg.sender, exerciseAmount);
-        }
-
-        if (underlyingAmount > 0) {
-            SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, underlyingAmount);
-        }
-
         emit ClaimRedeemed(
             claimId,
             optionKey,
@@ -475,6 +466,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             uint96(exerciseAmount),
             uint96(underlyingAmount)
             );
+
+        _burn(msg.sender, claimId, 1);
+
+        if (exerciseAmount > 0) {
+            SafeTransferLib.safeTransfer(ERC20(optionRecord.exerciseAsset), msg.sender, exerciseAmount);
+        }
+
+        if (underlyingAmount > 0) {
+            SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, underlyingAmount);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -509,8 +510,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 if (fee > 1) {
                     sweep = fee - 1;
                     feeBalance[token] = 1;
-                    SafeTransferLib.safeTransfer(ERC20(token), sendFeeTo, sweep);
                     emit FeeSwept(token, sendFeeTo, sweep);
+                    SafeTransferLib.safeTransfer(ERC20(token), sendFeeTo, sweep);
                 }
             }
         }

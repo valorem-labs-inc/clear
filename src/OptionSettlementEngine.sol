@@ -497,6 +497,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @inheritdoc IOptionSettlementEngine
     function setFeeSwitch(bool enabled) external onlyFeeTo {
         feeSwitch = enabled;
+
+        emit FeeSwitchUpdated(enabled);
     }
 
     /// @inheritdoc IOptionSettlementEngine
@@ -505,6 +507,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert InvalidFeeToAddress(newFeeTo);
         }
         feeTo = newFeeTo;
+
+        emit FeeToUpdated(newFeeTo);
     }
 
     /// @inheritdoc IOptionSettlementEngine

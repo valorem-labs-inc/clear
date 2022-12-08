@@ -640,6 +640,21 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertTrue(engine.feeSwitch());
     }
 
+    function testEventSetFeeSwitch() public {
+        vm.expectEmit(true, true, true, true);
+        emit FeeSwitchUpdated(false);
+
+        // disable
+        vm.startPrank(FEE_TO);
+        engine.setFeeSwitch(false);
+
+        vm.expectEmit(true, true, true, true);
+        emit FeeSwitchUpdated(true);
+
+        // enable
+        engine.setFeeSwitch(true);
+    }
+
     function testRevertSetFeeSwitchWhenNotFeeTo() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
 
@@ -650,6 +665,16 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testSetFeeTo() public {
         // precondition check
         assertEq(engine.feeTo(), FEE_TO);
+
+        vm.prank(FEE_TO);
+        engine.setFeeTo(address(0xCAFE));
+
+        assertEq(engine.feeTo(), address(0xCAFE));
+    }
+
+    function testEventSetFeeTo() public {
+        vm.expectEmit(true, true, true, true);
+        emit FeeToUpdated(address(0xCAFE));
 
         vm.prank(FEE_TO);
         engine.setFeeTo(address(0xCAFE));
@@ -1979,4 +2004,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint96 exerciseAmount,
         uint96 underlyingAmount
     );
+
+    event FeeSwitchUpdated(bool indexed enabled);
+
+    event FeeToUpdated(address indexed newFeeTo);
 }

@@ -69,6 +69,18 @@ interface IOptionSettlementEngine {
     event FeeAccrued(address indexed asset, address indexed payor, uint256 amount);
 
     /**
+     * @notice Emitted when fee switch is updated.
+     * @param enabled Whether the fee switch is enabled or disabled.
+     */
+    event FeeSwitchUpdated(bool indexed enabled);
+
+    /**
+     * @notice Emitted when feeTo address is updated.
+     * @param newFeeTo The new feeTo address.
+     */
+    event FeeToUpdated(address indexed newFeeTo);
+
+    /**
      * @notice Emitted when a claim is redeemed.
      * @param claimId The id of the claim being redeemed.
      * @param optionId The option id associated with the redeeming claim.

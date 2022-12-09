@@ -235,18 +235,22 @@ interface IOptionSettlementEngine {
         uint96 nextClaimNum;
     }
 
-    struct ClaimInfo {
-        OptionLotClaim claim;
+    struct Claim {
+        OptionLotClaim claim; // replace with amountWritten and Flip's PR
         OptionLotClaimIndex[] claimIndices;
         uint16 bucketId;
     }
 
-    struct OptionInfo {
-        mapping(uint96 => ClaimInfo) claimInfo;
+    struct BucketInfo {
+        Bucket[] buckets;
+        uint16[] unexercisedBuckets;
+        mapping(uint16 => bool) doesBucketHaveUnexercisedOptions;
+    }
+
+    struct OptionState {
+        mapping(uint96 => Claim) claims;
         Option option;
-        OptionsDayBucket[] dayBuckets;
-        uint16[] unexercisedBucketsByOption;
-        mapping(uint16 => bool) doesBucketIndexHaveUnexercisedOptions;
+        BucketInfo bucketInfo;
     }
 
     /**
@@ -281,7 +285,7 @@ interface IOptionSettlementEngine {
      * claims bucketed by day. Used in fair assignement to calculate the ratio of
      * underlying to exercise assets to be transferred to claimants.
      */
-    struct OptionsDayBucket {
+    struct Bucket {
         /// @param amountWritten The number of options written in this bucket
         uint112 amountWritten;
         /// @param amountExercised The number of options exercised in this bucket

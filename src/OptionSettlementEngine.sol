@@ -30,20 +30,20 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //  State variables - Public
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice The protocol fee
+    uint8 public constant feeBps = 5;
+
     /// @notice Whether or not the protocol fee switch is enabled
     bool public feeSwitch;
-
-    /// @notice The protocol fee
-    uint8 public immutable feeBps = 5;
-
-    /// @notice Fee balance for a given token
-    mapping(address => uint256) public feeBalance;
 
     /// @notice The address fees accrue to
     address public feeTo;
 
     /// @notice The contract for token uri generation
     ITokenURIGenerator public tokenURIGenerator;
+
+    /// @notice Fee balance for a given token
+    mapping(address => uint256) public feeBalance;
 
     /*//////////////////////////////////////////////////////////////
     //  State variables - Internal
@@ -364,8 +364,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // Add underlying asset to stack
         address underlyingAsset = optionRecord.underlyingAsset;
 
-        // Calculate Fee and emit events
-        uint256 fee = _calculateRecordAndEmitFee(underlyingAsset, rxAmount);
+        // Assess fee (if fee switch enabled) and emit events
+        uint256 fee = 0;
+        if (feeSwitch) {
+            fee = _calculateRecordAndEmitFee(underlyingAsset, rxAmount);
+        }
         emit OptionsWritten(encodedOptionId, msg.sender, encodedClaimId, amount);
 
         if (claimNum == 0) {
@@ -425,7 +428,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         _assignExercise(optionKey, optionRecord, amount);
 
-        uint256 fee = _calculateRecordAndEmitFee(exerciseAsset, rxAmount);
+        // Assess fee (if fee switch enabled) and emit events
+        uint256 fee = 0;
+        if (feeSwitch) {
+            fee = _calculateRecordAndEmitFee(exerciseAsset, rxAmount);
+        }
         emit OptionsExercised(optionId, msg.sender, amount);
 
         _burn(msg.sender, optionId, amount);
@@ -554,11 +561,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// when writing (on underlying asset) and when exercising (on exercise asset). Checks
     /// that fee switch is enabled, otherwise returns fee of 0 and does not record or emit.
     function _calculateRecordAndEmitFee(address assetAddress, uint256 assetAmount) internal returns (uint256 fee) {
-        if (feeSwitch) {
-            fee = ((assetAmount * feeBps) / 10_000);
-            feeBalance[assetAddress] += fee;
-            emit FeeAccrued(assetAddress, msg.sender, fee);
-        }
+        fee = ((assetAmount * feeBps) / 10_000);
+        feeBalance[assetAddress] += fee;
+
+        emit FeeAccrued(assetAddress, msg.sender, fee);
     }
 
     /// @dev Performs fair exercise assignment by pseudorandomly selecting a claim

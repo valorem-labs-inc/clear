@@ -63,43 +63,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //  State variables - Internal
     //////////////////////////////////////////////////////////////*/
 
-    // TODO(We can nest Bucket, OptionLotClaim, OptionLotClaimIndex inside Option and possibly save some gas)
-
     /// @notice Accessor for Option contract details
     mapping(uint160 => OptionState) internal _optionStates;
-    // 8 uses
-
-    /// @notice Accessor for option lot claim ticket details
-    // mapping(uint256 => OptionLotClaim) internal _claim;
-    // ~3–4 uses -- replace with _optionStates[optionKey][claimNum].claim
-    // replace claimNum with claimKey
-
-    /// @notice Accessor for buckets of claims grouped by day
-    /// @dev This is to enable O(constant) time options exercise. When options are written,
-    /// the Claim struct in this mapping is updated to reflect the cumulative amount written
-    /// on the day in question. write() will add unexercised options into the bucket
-    /// corresponding to the # of days after the option type's creation.
-    /// exercise() will randomly assign exercise to a bucket <= the current day.
-    // mapping(uint160 => OptionsDayBucket[]) internal _claimBucketByOption;
-    // 4 uses
-
-    /// @notice Maintains a mapping from option id to a list of unexercised bucket (indices)
-    /// @dev Used during the assignment process to find claim buckets with unexercised
-    /// options.
-    // mapping(uint160 => uint16[]) internal _unexercisedBucketsByOption;
-    // 4 uses
-
-    /// @notice Maps a bucket's index (in _claimBucketByOption) to a boolean indicating
-    /// if the bucket has any unexercised options.
-    /// @dev Used to determine if a bucket index needs to be added to
-    /// _unexercisedBucketsByOption during write(). Set false if a bucket is fully
-    /// exercised.
-    // mapping(uint160 => mapping(uint16 => bool)) internal _doesBucketHaveUnexercisedOptions;
-    // 3 uses
-
-    /// @notice Accessor for mapping a claim id to its ClaimIndices
-    // mapping(uint256 => OptionLotClaimIndex[]) internal _claimIdToClaimIndexArray;
-    // 2 uses
 
     /*//////////////////////////////////////////////////////////////
     //  Modifiers

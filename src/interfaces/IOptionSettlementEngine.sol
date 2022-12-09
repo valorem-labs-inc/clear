@@ -236,9 +236,9 @@ interface IOptionSettlementEngine {
     }
 
     struct Claim {
+        uint16 bucketId;
         OptionLotClaim claim; // replace with amountWritten and Flip's PR
         OptionLotClaimIndex[] claimIndices;
-        uint16 bucketId;
     }
 
     struct BucketInfo {
@@ -248,9 +248,9 @@ interface IOptionSettlementEngine {
     }
 
     struct OptionState {
-        mapping(uint96 => Claim) claims;
         Option option;
         BucketInfo bucketInfo;
+        mapping(uint96 => Claim) claims;
     }
 
     /**

@@ -364,7 +364,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             encodedClaimId = encodeTokenId(optionKey, nextClaimNum);
 
             // Store info about the claim.
-            _optionStates[optionKey].claims[nextClaimNum].claim = OptionLotClaim({amountWritten: amount, claimed: false});
+            _optionStates[optionKey].claims[nextClaimNum].claim =
+                OptionLotClaim({amountWritten: amount, claimed: false});
         }
         // Add to existing claim
         else {
@@ -622,7 +623,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 unexercisedBucketIndices[unexercisedBucketsIndex] = overwrite;
                 unexercisedBucketIndices.pop();
                 unexercisedBucketsMod -= 1;
-                
+
                 _optionStates[optionKey].bucketInfo.doesBucketHaveUnexercisedOptions[bucketIndex] = false;
             } else {
                 amountPresentlyExercised = amount;

@@ -1972,8 +1972,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(actual.nextClaimNum, expected.nextClaimNum);
     }
 
-    event FeeSwept(address indexed asset, address indexed feeTo, uint256 amount);
-
     event NewOptionType(
         uint256 optionId,
         address indexed exerciseAsset,
@@ -1984,11 +1982,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint40 indexed expiryTimestamp
     );
 
-    event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
-
     event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
-
-    event FeeAccrued(uint256 indexed optionId, address indexed asset, address indexed payer, uint256 amount);
 
     event ClaimRedeemed(
         uint256 indexed claimId,
@@ -1999,6 +1993,12 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 exerciseAmountRedeemed,
         uint256 underlyingAmountRedeemed
     );
+
+    event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
+
+    event FeeAccrued(uint256 indexed optionId, address indexed asset, address indexed payer, uint256 amount);
+
+    event FeeSwept(address indexed asset, address indexed feeTo, uint256 amount);
 
     event FeeSwitchUpdated(address feeTo, bool enabled);
 

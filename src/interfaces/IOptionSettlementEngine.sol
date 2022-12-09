@@ -69,6 +69,18 @@ interface IOptionSettlementEngine {
     event FeeAccrued(address indexed asset, address indexed payor, uint256 amount);
 
     /**
+     * @notice Emitted when fee switch is updated.
+     * @param enabled Whether the fee switch is enabled or disabled.
+     */
+    event FeeSwitchUpdated(bool indexed enabled);
+
+    /**
+     * @notice Emitted when feeTo address is updated.
+     * @param newFeeTo The new feeTo address.
+     */
+    event FeeToUpdated(address indexed newFeeTo);
+
+    /**
      * @notice Emitted when a claim is redeemed.
      * @param claimId The id of the claim being redeemed.
      * @param optionId The option id associated with the redeeming claim.
@@ -420,6 +432,18 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /**
+     * @notice Check if the protocol fee switch is enabled.
+     * @return Whether or not the protocol fee switch is enabled.
+     */
+    function feeSwitch() external view returns (bool);
+
+    /**
+     * @notice Sets the protocol fee on / off.
+     * @param enabled Whether or not the protocol fee switch should be enabled.
+     */
+    function setFeeSwitch(bool enabled) external;
+
+    /**
      * @notice The protocol fee, expressed in basis points.
      * @return The fee in basis points.
      */
@@ -435,7 +459,7 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Returns the address to which protocol fees are swept.
-     * @return The address to which fees are swept
+     * @return The address to which fees are swept.
      */
     function feeTo() external view returns (address);
 

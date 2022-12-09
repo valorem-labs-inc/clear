@@ -642,14 +642,14 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function testEventSetFeeSwitch() public {
         vm.expectEmit(true, true, true, true);
-        emit FeeSwitchUpdated(false);
+        emit FeeSwitchUpdated(FEE_TO, false);
 
         // disable
         vm.startPrank(FEE_TO);
         engine.setFeeSwitch(false);
 
         vm.expectEmit(true, true, true, true);
-        emit FeeSwitchUpdated(true);
+        emit FeeSwitchUpdated(FEE_TO, true);
 
         // enable
         engine.setFeeSwitch(true);
@@ -873,8 +873,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             testExerciseAmount,
             testUnderlyingAmount,
             testExerciseTimestamp,
-            testExpiryTimestamp,
-            1
+            testExpiryTimestamp
             );
 
         engine.newOptionType(
@@ -886,7 +885,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
 
         vm.expectEmit(true, true, true, true);
-        emit FeeAccrued(WETH_A, ALICE, expectedFeeAccruedAmount);
+        emit FeeAccrued(testOptionId, WETH_A, ALICE, expectedFeeAccruedAmount);
 
         vm.expectEmit(true, true, true, true);
         emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, 1);
@@ -902,7 +901,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 claimId = engine.write(testOptionId, 1);
 
         vm.expectEmit(true, true, true, true);
-        emit FeeAccrued(WETH_A, ALICE, expectedFeeAccruedAmount);
+        emit FeeAccrued(testOptionId, WETH_A, ALICE, expectedFeeAccruedAmount);
 
         vm.expectEmit(true, true, true, true);
         emit OptionsWritten(testOptionId, ALICE, claimId, 1);
@@ -923,7 +922,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 expectedFeeAccruedAmount = (testExerciseAmount / 10_000) * engine.feeBps();
 
         vm.expectEmit(true, true, true, true);
-        emit FeeAccrued(DAI_A, BOB, expectedFeeAccruedAmount);
+        emit FeeAccrued(testOptionId, DAI_A, BOB, expectedFeeAccruedAmount);
 
         vm.expectEmit(true, true, true, true);
         emit OptionsExercised(testOptionId, BOB, 1);
@@ -936,7 +935,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.startPrank(ALICE);
         uint96 amountWritten = 7;
         uint256 claimId = engine.write(testOptionId, amountWritten);
-        (uint256 optionId,) = engine.decodeTokenId(claimId);
         uint96 expectedUnderlyingAmount = testUnderlyingAmount * amountWritten;
 
         vm.warp(testExpiryTimestamp + 1 seconds);
@@ -944,12 +942,12 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.expectEmit(true, true, true, true);
         emit ClaimRedeemed(
             claimId,
-            optionId,
+            testOptionId,
             ALICE,
             DAI_A,
             WETH_A,
-            uint96(0), // no one has exercised
-            uint96(expectedUnderlyingAmount)
+            0, // no one has exercised
+            expectedUnderlyingAmount
             );
 
         engine.redeem(claimId);
@@ -1974,24 +1972,17 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(actual.nextClaimNum, expected.nextClaimNum);
     }
 
-    event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);
-
     event NewOptionType(
-        uint256 indexed optionId,
+        uint256 optionId,
         address indexed exerciseAsset,
         address indexed underlyingAsset,
         uint96 exerciseAmount,
         uint96 underlyingAmount,
         uint40 exerciseTimestamp,
-        uint40 expiryTimestamp,
-        uint96 nextClaimNum
+        uint40 indexed expiryTimestamp
     );
 
-    event OptionsExercised(uint256 indexed optionId, address indexed exercisee, uint112 amount);
-
     event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
-
-    event FeeAccrued(address indexed asset, address indexed payor, uint256 amount);
 
     event ClaimRedeemed(
         uint256 indexed claimId,
@@ -1999,11 +1990,17 @@ contract OptionSettlementTest is Test, NFTreceiver {
         address indexed redeemer,
         address exerciseAsset,
         address underlyingAsset,
-        uint96 exerciseAmount,
-        uint96 underlyingAmount
+        uint256 exerciseAmountRedeemed,
+        uint256 underlyingAmountRedeemed
     );
 
-    event FeeSwitchUpdated(bool indexed enabled);
+    event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
+
+    event FeeAccrued(uint256 indexed optionId, address indexed asset, address indexed payer, uint256 amount);
+
+    event FeeSwept(address indexed asset, address indexed feeTo, uint256 amount);
+
+    event FeeSwitchUpdated(address feeTo, bool enabled);
 
     event FeeToUpdated(address indexed newFeeTo);
 }

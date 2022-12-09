@@ -30,8 +30,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //  State variables - Public
     //////////////////////////////////////////////////////////////*/
 
+    uint8 public constant OPTION_ID_PADDING = 96;
+
+    uint96 private constant CLAIM_NUMBER_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFF;
+
     /// @notice The protocol fee
-    uint8 public constant feeBps = 5;
+    uint8 public immutable feeBps = 5;
 
     /// @notice Whether or not the protocol fee switch is enabled
     bool public feeSwitch;
@@ -207,18 +211,17 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function encodeTokenId(uint160 optionKey, uint96 claimNum) public pure returns (uint256 tokenId) {
-        tokenId |= (uint256(optionKey) << 96);
+        tokenId |= (uint256(optionKey) << OPTION_ID_PADDING);
         tokenId |= uint256(claimNum);
     }
 
     /// @inheritdoc IOptionSettlementEngine
     function decodeTokenId(uint256 tokenId) public pure returns (uint160 optionKey, uint96 claimNum) {
         // move key to lsb to fit into uint160
-        optionKey = uint160(tokenId >> 96);
+        optionKey = uint160(tokenId >> OPTION_ID_PADDING);
 
         // grab lower 96b of id for claim number
-        uint256 claimNumMask = 0xFFFFFFFFFFFFFFFFFFFFFFFF;
-        claimNum = uint96(tokenId & claimNumMask);
+        claimNum = uint96(tokenId & CLAIM_NUMBER_MASK);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -251,7 +254,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 )
             )
         );
-        optionId = uint256(optionKey) << 96;
+        optionId = uint256(optionKey) << OPTION_ID_PADDING;
 
         // If it does, revert
         if (isOptionInitialized(optionKey)) {
@@ -300,8 +303,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             exerciseAmount,
             underlyingAmount,
             exerciseTimestamp,
-            expiryTimestamp,
-            1
+            expiryTimestamp
             );
     }
 
@@ -320,7 +322,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint256 encodedClaimId = tokenId;
 
         // Sanitize a zeroed encodedOptionId from the optionKey
-        uint256 encodedOptionId = uint256(optionKey) << 96;
+        uint256 encodedOptionId = uint256(optionKey) << OPTION_ID_PADDING;
 
         // Get the option record and check that it's valid to write against
         Option storage optionRecord = _option[optionKey];
@@ -367,7 +369,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // Assess fee (if fee switch enabled) and emit events
         uint256 fee = 0;
         if (feeSwitch) {
-            fee = _calculateRecordAndEmitFee(underlyingAsset, rxAmount);
+            fee = _calculateRecordAndEmitFee(encodedOptionId, underlyingAsset, rxAmount);
         }
         emit OptionsWritten(encodedOptionId, msg.sender, encodedClaimId, amount);
 
@@ -431,7 +433,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // Assess fee (if fee switch enabled) and emit events
         uint256 fee = 0;
         if (feeSwitch) {
-            fee = _calculateRecordAndEmitFee(exerciseAsset, rxAmount);
+            fee = _calculateRecordAndEmitFee(optionId, exerciseAsset, rxAmount);
         }
         emit OptionsExercised(optionId, msg.sender, amount);
 
@@ -474,28 +476,29 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert ClaimTooSoon(claimId, optionRecord.expiryTimestamp);
         }
 
-        (uint256 exerciseAmount, uint256 underlyingAmount) = _getPositionsForClaim(optionKey, claimId, optionRecord);
+        (uint256 exerciseAmountRedeemed, uint256 underlyingAmountRedeemed) =
+            _getPositionsForClaim(optionKey, claimId, optionRecord);
 
         claimRecord.claimed = true;
 
         emit ClaimRedeemed(
             claimId,
-            optionKey,
+            uint256(optionKey) << OPTION_ID_PADDING,
             msg.sender,
             optionRecord.exerciseAsset,
             optionRecord.underlyingAsset,
-            uint96(exerciseAmount),
-            uint96(underlyingAmount)
+            exerciseAmountRedeemed,
+            underlyingAmountRedeemed
             );
 
         _burn(msg.sender, claimId, 1);
 
-        if (exerciseAmount > 0) {
-            SafeTransferLib.safeTransfer(ERC20(optionRecord.exerciseAsset), msg.sender, exerciseAmount);
+        if (exerciseAmountRedeemed > 0) {
+            SafeTransferLib.safeTransfer(ERC20(optionRecord.exerciseAsset), msg.sender, exerciseAmountRedeemed);
         }
 
-        if (underlyingAmount > 0) {
-            SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, underlyingAmount);
+        if (underlyingAmountRedeemed > 0) {
+            SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, underlyingAmountRedeemed);
         }
     }
 
@@ -507,7 +510,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function setFeeSwitch(bool enabled) external onlyFeeTo {
         feeSwitch = enabled;
 
-        emit FeeSwitchUpdated(enabled);
+        emit FeeSwitchUpdated(feeTo, enabled);
     }
 
     /// @inheritdoc IOptionSettlementEngine
@@ -560,11 +563,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @dev Internal helper function to calculate, record, and emit event for fee accrual
     /// when writing (on underlying asset) and when exercising (on exercise asset). Checks
     /// that fee switch is enabled, otherwise returns fee of 0 and does not record or emit.
-    function _calculateRecordAndEmitFee(address assetAddress, uint256 assetAmount) internal returns (uint256 fee) {
+    function _calculateRecordAndEmitFee(uint256 optionId, address assetAddress, uint256 assetAmount)
+        internal
+        returns (uint256 fee)
+    {
         fee = ((assetAmount * feeBps) / 10_000);
         feeBalance[assetAddress] += fee;
 
-        emit FeeAccrued(assetAddress, msg.sender, fee);
+        emit FeeAccrued(optionId, assetAddress, msg.sender, fee);
     }
 
     /// @dev Performs fair exercise assignment by pseudorandomly selecting a claim

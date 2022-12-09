@@ -11,15 +11,6 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Emitted when accrued protocol fees for a given token are swept to the
-     * feeTo address.
-     * @param token The token for which protocol fees are being swept.
-     * @param feeTo The account to which fees are being swept.
-     * @param amount The total amount being swept.
-     */
-    event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);
-
-    /**
      * @notice Emitted when a new unique options type is created.
      * @param optionId The id of the initial option created.
      * @param exerciseAsset The contract address of the exercise asset.
@@ -28,26 +19,16 @@ interface IOptionSettlementEngine {
      * @param underlyingAmount The amount of the underlying asset in the option.
      * @param exerciseTimestamp The timestamp after which this option can be exercised.
      * @param expiryTimestamp The timestamp before which this option can be exercised.
-     * @param nextClaimNum The next claim number.
      */
     event NewOptionType(
-        uint256 indexed optionId,
+        uint256 optionId,
         address indexed exerciseAsset,
         address indexed underlyingAsset,
         uint96 exerciseAmount,
         uint96 underlyingAmount,
         uint40 exerciseTimestamp,
-        uint40 expiryTimestamp,
-        uint96 nextClaimNum
+        uint40 indexed expiryTimestamp
     );
-
-    /**
-     * @notice Emitted when an option is exercised.
-     * @param optionId The id of the option being exercised.
-     * @param exercisee The contract address of the asset being exercised.
-     * @param amount The amount of the exercissee being exercised.
-     */
-    event OptionsExercised(uint256 indexed optionId, address indexed exercisee, uint112 amount);
 
     /**
      * @notice Emitted when a new option is written.
@@ -59,36 +40,14 @@ interface IOptionSettlementEngine {
     event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
 
     /**
-     * @notice Emitted when protocol fees are accrued for a given asset.
-     * @dev Emitted on write() when fees are accrued on the underlying asset,
-     * or exercise() when fees are accrued on the exercise asset.
-     * @param asset Asset for which fees are accrued.
-     * @param payor The address paying the fee.
-     * @param amount The amount of fees which are accrued.
-     */
-    event FeeAccrued(address indexed asset, address indexed payor, uint256 amount);
-
-    /**
-     * @notice Emitted when fee switch is updated.
-     * @param enabled Whether the fee switch is enabled or disabled.
-     */
-    event FeeSwitchUpdated(bool indexed enabled);
-
-    /**
-     * @notice Emitted when feeTo address is updated.
-     * @param newFeeTo The new feeTo address.
-     */
-    event FeeToUpdated(address indexed newFeeTo);
-
-    /**
      * @notice Emitted when a claim is redeemed.
+     * @param optionId The id of the option the claim is being redeemed against.
      * @param claimId The id of the claim being redeemed.
-     * @param optionId The option id associated with the redeeming claim.
      * @param redeemer The address redeeming the claim.
      * @param exerciseAsset The exercise asset of the option.
      * @param underlyingAsset The underlying asset of the option.
-     * @param exerciseAmount The amount of options being
-     * @param underlyingAmount The amount of underlying
+     * @param exerciseAmountRedeemed The amount of options being
+     * @param underlyingAmountRedeemed The amount of underlying
      */
     event ClaimRedeemed(
         uint256 indexed claimId,
@@ -96,17 +55,50 @@ interface IOptionSettlementEngine {
         address indexed redeemer,
         address exerciseAsset,
         address underlyingAsset,
-        uint96 exerciseAmount,
-        uint96 underlyingAmount
+        uint256 exerciseAmountRedeemed,
+        uint256 underlyingAmountRedeemed
     );
 
     /**
-     * @notice Emitted when an option id is exercised and assigned to a particular claim NFT.
-     * @param claimId The claim NFT id being assigned.
+     * @notice Emitted when an option is exercised.
      * @param optionId The id of the option being exercised.
-     * @param amountAssigned The total amount of options contracts assigned.
+     * @param exerciser The address exercising the option.
+     * @param amount The amount of options being exercised.
      */
-    event ExerciseAssigned(uint256 indexed claimId, uint256 indexed optionId, uint112 amountAssigned);
+    event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
+
+    /**
+     * @notice Emitted when protocol fees are accrued for a given asset.
+     * @dev Emitted on write() when fees are accrued on the underlying asset,
+     * or exercise() when fees are accrued on the exercise asset.
+     * @param optionId The id of the option being written or exercised.
+     * @param asset Asset for which fees are accrued.
+     * @param payer The address paying the fee.
+     * @param amount The amount of fees which are accrued.
+     */
+    event FeeAccrued(uint256 indexed optionId, address indexed asset, address indexed payer, uint256 amount);
+
+    /**
+     * @notice Emitted when accrued protocol fees for a given token are swept to the
+     * feeTo address.
+     * @param asset The token for which protocol fees are being swept.
+     * @param feeTo The account to which fees are being swept.
+     * @param amount The total amount being swept.
+     */
+    event FeeSwept(address indexed asset, address indexed feeTo, uint256 amount);
+
+    /**
+     * @notice Emitted when fee switch is updated.
+     * @param feeTo The address which altered the switch state.
+     * @param enabled Whether the fee switch is enabled or disabled.
+     */
+    event FeeSwitchUpdated(address feeTo, bool enabled);
+
+    /**
+     * @notice Emitted when feeTo address is updated.
+     * @param newFeeTo The new feeTo address.
+     */
+    event FeeToUpdated(address indexed newFeeTo);
 
     /*//////////////////////////////////////////////////////////////
     //  Errors

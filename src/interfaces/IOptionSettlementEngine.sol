@@ -260,7 +260,7 @@ interface IOptionSettlementEngine {
         mapping(uint16 => bool) doesBucketHaveUnexercisedOptions;
     }
 
-    struct OptionRecord {
+    struct OptionEngineState {
         /// @notice Information about the option type
         Option option;
         /// @notice Information about the option's claim buckets

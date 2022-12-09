@@ -48,7 +48,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Accessor for Option contract details
-    mapping(uint160 => OptionRecord) internal optionRecords;
+    mapping(uint160 => OptionEngineState) internal optionRecords;
 
     /*//////////////////////////////////////////////////////////////
     //  State variables - Public
@@ -310,7 +310,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint256 encodedOptionId = uint256(optionKey) << OPTION_ID_PADDING;
 
         // Get the option record and check that it's valid to write against
-        OptionRecord storage optionState = optionRecords[optionKey];
+        OptionEngineState storage optionState = optionRecords[optionKey];
 
         // Make sure the option exists, and hasn't expired
         uint40 expiry = optionState.option.expiryTimestamp;

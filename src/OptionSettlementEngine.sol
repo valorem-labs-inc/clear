@@ -59,12 +59,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @notice The contract for token uri generation
     ITokenURIGenerator public tokenURIGenerator;
-    
-    /// @notice Whether or not the protocol fee switch is enabled
-    bool public feeSwitch;
 
     /// @notice The address fees accrue to
     address public feeTo;
+
+    /// @notice Whether or not the protocol fee switch is enabled
+    bool public feeSwitch;
 
     /*//////////////////////////////////////////////////////////////
     //  Modifiers

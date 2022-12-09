@@ -11,15 +11,6 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Emitted when accrued protocol fees for a given token are swept to the
-     * feeTo address.
-     * @param asset The token for which protocol fees are being swept.
-     * @param feeTo The account to which fees are being swept.
-     * @param amount The total amount being swept.
-     */
-    event FeeSwept(address indexed asset, address indexed feeTo, uint256 amount);
-
-    /**
      * @notice Emitted when a new unique options type is created.
      * @param optionId The id of the initial option created.
      * @param exerciseAsset The contract address of the exercise asset.
@@ -40,14 +31,6 @@ interface IOptionSettlementEngine {
     );
 
     /**
-     * @notice Emitted when an option is exercised.
-     * @param optionId The id of the option being exercised.
-     * @param exerciser The address exercising the option.
-     * @param amount The amount of options being exercised.
-     */
-    event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
-
-    /**
      * @notice Emitted when a new option is written.
      * @param optionId The id of the newly written option.
      * @param writer The address of the writer of the new option.
@@ -55,30 +38,6 @@ interface IOptionSettlementEngine {
      * @param amount The amount of options written.
      */
     event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
-
-    /**
-     * @notice Emitted when protocol fees are accrued for a given asset.
-     * @dev Emitted on write() when fees are accrued on the underlying asset,
-     * or exercise() when fees are accrued on the exercise asset.
-     * @param optionId The id of the option being written or exercised.
-     * @param asset Asset for which fees are accrued.
-     * @param payer The address paying the fee.
-     * @param amount The amount of fees which are accrued.
-     */
-    event FeeAccrued(uint256 indexed optionId, address indexed asset, address indexed payer, uint256 amount);
-
-    /**
-     * @notice Emitted when fee switch is updated.
-     * @param feeTo The address which altered the switch state.
-     * @param enabled Whether the fee switch is enabled or disabled.
-     */
-    event FeeSwitchUpdated(address feeTo, bool enabled);
-
-    /**
-     * @notice Emitted when feeTo address is updated.
-     * @param newFeeTo The new feeTo address.
-     */
-    event FeeToUpdated(address indexed newFeeTo);
 
     /**
      * @notice Emitted when a claim is redeemed.
@@ -99,6 +58,47 @@ interface IOptionSettlementEngine {
         uint256 exerciseAmountRedeemed,
         uint256 underlyingAmountRedeemed
     );
+
+    /**
+     * @notice Emitted when an option is exercised.
+     * @param optionId The id of the option being exercised.
+     * @param exerciser The address exercising the option.
+     * @param amount The amount of options being exercised.
+     */
+    event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
+
+    /**
+     * @notice Emitted when protocol fees are accrued for a given asset.
+     * @dev Emitted on write() when fees are accrued on the underlying asset,
+     * or exercise() when fees are accrued on the exercise asset.
+     * @param optionId The id of the option being written or exercised.
+     * @param asset Asset for which fees are accrued.
+     * @param payer The address paying the fee.
+     * @param amount The amount of fees which are accrued.
+     */
+    event FeeAccrued(uint256 indexed optionId, address indexed asset, address indexed payer, uint256 amount);
+
+    /**
+     * @notice Emitted when accrued protocol fees for a given token are swept to the
+     * feeTo address.
+     * @param asset The token for which protocol fees are being swept.
+     * @param feeTo The account to which fees are being swept.
+     * @param amount The total amount being swept.
+     */
+    event FeeSwept(address indexed asset, address indexed feeTo, uint256 amount);
+
+    /**
+     * @notice Emitted when fee switch is updated.
+     * @param feeTo The address which altered the switch state.
+     * @param enabled Whether the fee switch is enabled or disabled.
+     */
+    event FeeSwitchUpdated(address feeTo, bool enabled);
+
+    /**
+     * @notice Emitted when feeTo address is updated.
+     * @param newFeeTo The new feeTo address.
+     */
+    event FeeToUpdated(address indexed newFeeTo);
 
     /*//////////////////////////////////////////////////////////////
     //  Errors

@@ -196,7 +196,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function encodeTokenId(uint160 optionKey, uint96 claimNum) public pure returns (uint256 tokenId) {
-        tokenId |= (uint256(optionKey) << OPTION_ID_PADDING);
+        tokenId |= uint256(optionKey) << OPTION_ID_PADDING;
         tokenId |= uint256(claimNum);
     }
 

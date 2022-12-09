@@ -60,11 +60,12 @@ interface IOptionSettlementEngine {
      * @notice Emitted when protocol fees are accrued for a given asset.
      * @dev Emitted on write() when fees are accrued on the underlying asset,
      * or exercise() when fees are accrued on the exercise asset.
+     * @param optionId The id of the option being written or exercised.
      * @param asset Asset for which fees are accrued.
-     * @param payor The address paying the fee.
+     * @param payer The address paying the fee.
      * @param amount The amount of fees which are accrued.
      */
-    event FeeAccrued(address indexed asset, address indexed payor, uint256 amount);
+    event FeeAccrued(uint256 indexed optionId, address indexed asset, address indexed payer, uint256 amount);
 
     /**
      * @notice Emitted when fee switch is updated.

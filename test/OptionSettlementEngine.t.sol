@@ -885,7 +885,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
 
         vm.expectEmit(true, true, true, true);
-        emit FeeAccrued(WETH_A, ALICE, expectedFeeAccruedAmount);
+        emit FeeAccrued(testOptionId, WETH_A, ALICE, expectedFeeAccruedAmount);
 
         vm.expectEmit(true, true, true, true);
         emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, 1);
@@ -901,7 +901,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 claimId = engine.write(testOptionId, 1);
 
         vm.expectEmit(true, true, true, true);
-        emit FeeAccrued(WETH_A, ALICE, expectedFeeAccruedAmount);
+        emit FeeAccrued(testOptionId, WETH_A, ALICE, expectedFeeAccruedAmount);
 
         vm.expectEmit(true, true, true, true);
         emit OptionsWritten(testOptionId, ALICE, claimId, 1);
@@ -922,7 +922,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 expectedFeeAccruedAmount = (testExerciseAmount / 10_000) * engine.feeBps();
 
         vm.expectEmit(true, true, true, true);
-        emit FeeAccrued(DAI_A, BOB, expectedFeeAccruedAmount);
+        emit FeeAccrued(testOptionId, DAI_A, BOB, expectedFeeAccruedAmount);
 
         vm.expectEmit(true, true, true, true);
         emit OptionsExercised(testOptionId, BOB, 1);
@@ -1988,7 +1988,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
 
-    event FeeAccrued(address indexed asset, address indexed payor, uint256 amount);
+    event FeeAccrued(uint256 indexed optionId, address indexed asset, address indexed payer, uint256 amount);
 
     event ClaimRedeemed(
         uint256 indexed claimId,

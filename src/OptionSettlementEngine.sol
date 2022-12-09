@@ -31,10 +31,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     // @dev The bit padding for option IDs
-    uint8 private constant OPTION_ID_PADDING = 96;
+    uint8 internal constant OPTION_ID_PADDING = 96;
 
     // @dev The mask to mask out a claim number from a claimId
-    uint96 private constant CLAIM_NUMBER_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFF;
+    uint96 internal constant CLAIM_NUMBER_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFF;
 
     /*//////////////////////////////////////////////////////////////
     //  Immutable/Constant - Public
@@ -44,27 +44,27 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     uint8 public immutable feeBps = 5;
 
     /*//////////////////////////////////////////////////////////////
-    //  State variables - Public
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Whether or not the protocol fee switch is enabled
-    bool public feeSwitch;
-
-    /// @notice The address fees accrue to
-    address public feeTo;
-
-    /// @notice The contract for token uri generation
-    ITokenURIGenerator public tokenURIGenerator;
-
-    /// @notice Fee balance for a given token
-    mapping(address => uint256) public feeBalance;
-
-    /*//////////////////////////////////////////////////////////////
     //  State variables - Internal
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Accessor for Option contract details
     mapping(uint160 => OptionState) internal _optionStates;
+
+    /*//////////////////////////////////////////////////////////////
+    //  State variables - Public
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Fee balance for a given token
+    mapping(address => uint256) public feeBalance;
+
+    /// @notice The contract for token uri generation
+    ITokenURIGenerator public tokenURIGenerator;
+    
+    /// @notice Whether or not the protocol fee switch is enabled
+    bool public feeSwitch;
+
+    /// @notice The address fees accrue to
+    address public feeTo;
 
     /*//////////////////////////////////////////////////////////////
     //  Modifiers

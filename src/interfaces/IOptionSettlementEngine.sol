@@ -28,25 +28,24 @@ interface IOptionSettlementEngine {
      * @param underlyingAmount The amount of the underlying asset in the option.
      * @param exerciseTimestamp The timestamp after which this option can be exercised.
      * @param expiryTimestamp The timestamp before which this option can be exercised.
-     * @param nextClaimNum The next claim number.
      */
     event NewOptionType(
-        uint256 indexed optionId,
+        uint256 optionId,
         address indexed exerciseAsset,
         address indexed underlyingAsset,
         uint96 exerciseAmount,
         uint96 underlyingAmount,
         uint40 exerciseTimestamp,
-        uint40 expiryTimestamp
+        uint40 indexed expiryTimestamp
     );
 
     /**
      * @notice Emitted when an option is exercised.
      * @param optionId The id of the option being exercised.
-     * @param exercisee The contract address of the asset being exercised.
-     * @param amount The amount of the exercissee being exercised.
+     * @param exerciser The address exercising the option.
+     * @param amount The amount of the exerciser being exercised.
      */
-    event OptionsExercised(uint256 indexed optionId, address indexed exercisee, uint112 amount);
+    event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
 
     /**
      * @notice Emitted when a new option is written.

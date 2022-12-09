@@ -235,6 +235,40 @@ interface IOptionSettlementEngine {
         uint96 nextClaimNum;
     }
 
+    struct Claim {
+        /// @notice Option lot claim ticket details
+        OptionLotClaim claim; // replace with amountWritten and Flip's PR
+        /// @notice Claim Indices for a claim ID
+        OptionLotClaimIndex[] claimIndices;
+    }
+
+    struct BucketInfo {
+        /// @notice Buckets of claims grouped by period
+        /// @dev This is to enable O(constant) time options exercise. When options are written,
+        /// the Claim struct in this mapping is updated to reflect the cumulative amount written
+        /// on the day in question. write() will add unexercised options into the bucket
+        /// corresponding to the # of days after the option type's creation.
+        /// exercise() will randomly assign exercise to a bucket <= the current day.
+        Bucket[] buckets;
+        /// @notice An array of unexercised bucket indices.
+        uint16[] unexercisedBuckets;
+        /// @notice Maps a bucket's index (in _claimBucketByOption) to a boolean indicating
+        /// if the bucket has any unexercised options.
+        /// @dev Used to determine if a bucket index needs to be added to
+        /// unexercisedBuckets during write(). Set false if a bucket is fully
+        /// exercised.
+        mapping(uint16 => bool) doesBucketHaveUnexercisedOptions;
+    }
+
+    struct OptionEngineState {
+        /// @notice Information about the option type
+        Option option;
+        /// @notice Information about the option's claim buckets
+        BucketInfo bucketInfo;
+        /// @notice Information about the option's claims
+        mapping(uint96 => Claim) claims;
+    }
+
     /**
      * @dev This struct contains the data about a lot of options written for a particular option type.
      * When writing an amount of options of a particular type, the writer will be issued an ERC 1155 NFT
@@ -267,7 +301,7 @@ interface IOptionSettlementEngine {
      * claims bucketed by day. Used in fair assignement to calculate the ratio of
      * underlying to exercise assets to be transferred to claimants.
      */
-    struct OptionsDayBucket {
+    struct Bucket {
         /// @param amountWritten The number of options written in this bucket
         uint112 amountWritten;
         /// @param amountExercised The number of options exercised in this bucket

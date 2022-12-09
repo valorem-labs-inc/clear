@@ -1,0 +1,35 @@
+TokenURIGenerator._getDateUnits(uint256) (src/TokenURIGenerator.sol#308-326) performs a multiplication on the result of a division:
+        -doe = z - era * 146097 (src/TokenURIGenerator.sol#311)
+        -era = (z - 146096) / 146097 (src/TokenURIGenerator.sol#310)
+
+TokenURIGenerator._getDateUnits(uint256) (src/TokenURIGenerator.sol#308-326) performs a multiplication on the result of a division:
+        -y = yoe + era * 400 (src/TokenURIGenerator.sol#313)
+        -era = (z - 146096) / 146097 (src/TokenURIGenerator.sol#310)
+
+TokenURIGenerator._getDateUnits(uint256) (src/TokenURIGenerator.sol#308-326) performs a multiplication on the result of a division:
+        -yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365 (src/TokenURIGenerator.sol#312)
+        -doy = doe - (365 * yoe + yoe / 4 - yoe / 100) (src/TokenURIGenerator.sol#314)
+
+TokenURIGenerator._getDateUnits(uint256) (src/TokenURIGenerator.sol#308-326) performs a multiplication on the result of a division:
+        -mp = (5 * doy + 2) / 153 (src/TokenURIGenerator.sol#315)
+        -d = doy - (153 * mp + 2) / 5 + 1 (src/TokenURIGenerator.sol#316)
+
+
+
+TokenURIGenerator._generateDateString(uint256) (src/TokenURIGenerator.sol#328-358) performs a multiplication on the result of a division:
+        -doe = z - era * 146097 (src/TokenURIGenerator.sol#331)
+        -era = (z) / 146097 (src/TokenURIGenerator.sol#330)
+
+TokenURIGenerator._generateDateString(uint256) (src/TokenURIGenerator.sol#328-358) performs a multiplication on the result of a division:
+        -y = yoe + era * 400 (src/TokenURIGenerator.sol#333)
+        -era = (z - 146096) / 146097 (src/TokenURIGenerator.sol#330)
+
+TokenURIGenerator._generateDateString(uint256) (src/TokenURIGenerator.sol#328-358) performs a multiplication on the result of a division:
+        -yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365 (src/TokenURIGenerator.sol#332)
+        -doy = doe - (365 * yoe + yoe / 4 - yoe / 100) (src/TokenURIGenerator.sol#334)
+
+TokenURIGenerator._generateDateString(uint256) (src/TokenURIGenerator.sol#328-358) performs a multiplication on the result of a division:
+        -mp = (5 * doy + 2) / 153 (src/TokenURIGenerator.sol#335)
+        -d = doy - (153 * mp + 2) / 5 + 1 (src/TokenURIGenerator.sol#336)
+
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#divide-before-multiply

@@ -47,14 +47,14 @@ contract TokenURIGenerator is ITokenURIGenerator {
     function generateName(TokenURIParams memory params) public pure returns (string memory) {
         (uint256 month, uint256 day, uint256 year) = _getDateUnits(params.expiryTimestamp);
 
-        bytes memory yearDigits = bytes(_toString(year));
-        bytes memory monthDigits = bytes(_toString(month));
-        bytes memory dayDigits = bytes(_toString(day));
+        bytes memory yearDigits = bytes(uintToString(year));
+        bytes memory monthDigits = bytes(uintToString(month));
+        bytes memory dayDigits = bytes(uintToString(day));
 
         return string(
             abi.encodePacked(
-                _escapeQuotes(params.underlyingSymbol),
-                _escapeQuotes(params.exerciseSymbol),
+                escapeQuotes(params.underlyingSymbol),
+                escapeQuotes(params.exerciseSymbol),
                 yearDigits[2],
                 yearDigits[3],
                 monthDigits.length == 2 ? monthDigits[0] : bytes1(uint8(48)),
@@ -170,9 +170,9 @@ contract TokenURIGenerator is ITokenURIGenerator {
         return string(
             abi.encodePacked(
                 "<text x='",
-                _toString(_x),
+                uintToString(_x),
                 "px' y='",
-                _toString(_y),
+                uintToString(_y),
                 "px' font-size='18' fill='#fff' font-family='Helvetica' font-weight='300'>",
                 _decimalString(_amount, _decimals, false),
                 " ",
@@ -190,9 +190,9 @@ contract TokenURIGenerator is ITokenURIGenerator {
         return string(
             abi.encodePacked(
                 "<text x='",
-                _toString(_x),
+                uintToString(_x),
                 "px' y='",
-                _toString(_y),
+                uintToString(_y),
                 "px' font-size='18' fill='#fff' font-family='Helvetica' font-weight='300'>",
                 _generateDateString(_timestamp),
                 "</text>"
@@ -308,12 +308,12 @@ contract TokenURIGenerator is ITokenURIGenerator {
     function _getDateUnits(uint256 _timestamp) internal pure returns (uint256 month, uint256 day, uint256 year) {
         int256 z = int256(_timestamp) / 86400 + 719468;
         int256 era = (z >= 0 ? z : z - 146096) / 146097;
-        int256 doe = z - era * 146097;
+        int256 doe = z - era * 146097; // after 310
         int256 yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
-        int256 y = yoe + era * 400;
-        int256 doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+        int256 y = yoe + era * 400; // after 310
+        int256 doy = doe - (365 * yoe + yoe / 4 - yoe / 100); // after 312
         int256 mp = (5 * doy + 2) / 153;
-        int256 d = doy - (153 * mp + 2) / 5 + 1;
+        int256 d = doy - (153 * mp + 2) / 5 + 1; // after 315
         int256 m = mp + (mp < 10 ? int256(3) : -9);
 
         if (m <= 2) {
@@ -328,12 +328,12 @@ contract TokenURIGenerator is ITokenURIGenerator {
     function _generateDateString(uint256 _timestamp) internal pure returns (string memory) {
         int256 z = int256(_timestamp) / 86400 + 719468;
         int256 era = (z >= 0 ? z : z - 146096) / 146097;
-        int256 doe = z - era * 146097;
+        int256 doe = z - era * 146097; // after 330
         int256 yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
-        int256 y = yoe + era * 400;
-        int256 doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+        int256 y = yoe + era * 400; // after 330
+        int256 doy = doe - (365 * yoe + yoe / 4 - yoe / 100); // after 332
         int256 mp = (5 * doy + 2) / 153;
-        int256 d = doy - (153 * mp + 2) / 5 + 1;
+        int256 d = doy - (153 * mp + 2) / 5 + 1; // after 335
         int256 m = mp + (mp < 10 ? int256(3) : -9);
 
         if (m <= 2) {
@@ -343,23 +343,25 @@ contract TokenURIGenerator is ITokenURIGenerator {
         string memory s = "";
 
         if (m < 10) {
-            s = _toString(0);
+            s = uintToString(0);
         }
 
-        s = string(abi.encodePacked(s, _toString(uint256(m)), bytes1(0x2F)));
+        s = string(abi.encodePacked(s, uintToString(uint256(m)), bytes1(0x2F)));
 
         if (d < 10) {
             s = string(abi.encodePacked(s, bytes1(0x30)));
         }
 
-        s = string(abi.encodePacked(s, _toString(uint256(d)), bytes1(0x2F), _toString(uint256(y))));
+        s = string(abi.encodePacked(s, uintToString(uint256(d)), bytes1(0x2F), uintToString(uint256(y))));
 
         return string(s);
     }
 
-    function _toString(uint256 value) internal pure returns (string memory) {
-        // This is borrowed from https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/Strings.sol#L16
+    bytes1 internal constant DOUBLE_QUOTE = '"';
+    bytes16 internal constant ALPHABET = "0123456789abcdef";
 
+    // From https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/Strings.sol#L16
+    function uintToString(uint256 value) internal pure returns (string memory) {        
         if (value == 0) {
             return "0";
         }
@@ -377,12 +379,11 @@ contract TokenURIGenerator is ITokenURIGenerator {
             buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
             value /= 10;
         }
+        
         return string(buffer);
     }
 
-    bytes1 internal constant DOUBLE_QUOTE = '"';
-
-    function _escapeQuotes(string memory symbol) internal pure returns (string memory) {
+    function escapeQuotes(string memory symbol) internal pure returns (string memory) {
         bytes memory symbolBytes = bytes(symbol);
         uint8 quotesCount = 0;
         for (uint8 i = 0; i < symbolBytes.length; i++) {
@@ -405,16 +406,14 @@ contract TokenURIGenerator is ITokenURIGenerator {
             }
             return string(escapedBytes);
         }
+
         return symbol;
     }
 
-    bytes16 internal constant ALPHABET = "0123456789abcdef";
-
     function addressToString(address addr) internal pure returns (string memory) {
-        return toHexString(uint256(uint160(addr)), 20);
-    }
+        uint256 value = uint256(uint160(addr));
+        uint256 length = 20;
 
-    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";

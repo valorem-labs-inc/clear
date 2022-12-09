@@ -430,7 +430,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         _assignExercise(optionKey, optionRecord, amount);
 
-        // Update counters and emit events
         uint256 fee = _calculateRecordAndEmitFee(exerciseAsset, rxAmount);
         emit OptionsExercised(optionId, msg.sender, amount);
 

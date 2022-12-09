@@ -642,14 +642,14 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     function testEventSetFeeSwitch() public {
         vm.expectEmit(true, true, true, true);
-        emit FeeSwitchUpdated(false);
+        emit FeeSwitchUpdated(FEE_TO, false);
 
         // disable
         vm.startPrank(FEE_TO);
         engine.setFeeSwitch(false);
 
         vm.expectEmit(true, true, true, true);
-        emit FeeSwitchUpdated(true);
+        emit FeeSwitchUpdated(FEE_TO, true);
 
         // enable
         engine.setFeeSwitch(true);
@@ -1972,7 +1972,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(actual.nextClaimNum, expected.nextClaimNum);
     }
 
-    event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);
+    event FeeSwept(address indexed asset, address indexed feeTo, uint256 amount);
 
     event NewOptionType(
         uint256 optionId,
@@ -2000,7 +2000,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 underlyingAmountRedeemed
     );
 
-    event FeeSwitchUpdated(bool indexed enabled);
+    event FeeSwitchUpdated(address feeTo, bool enabled);
 
     event FeeToUpdated(address indexed newFeeTo);
 }

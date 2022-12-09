@@ -13,11 +13,11 @@ interface IOptionSettlementEngine {
     /**
      * @notice Emitted when accrued protocol fees for a given token are swept to the
      * feeTo address.
-     * @param token The token for which protocol fees are being swept.
+     * @param asset The token for which protocol fees are being swept.
      * @param feeTo The account to which fees are being swept.
      * @param amount The total amount being swept.
      */
-    event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);
+    event FeeSwept(address indexed asset, address indexed feeTo, uint256 amount);
 
     /**
      * @notice Emitted when a new unique options type is created.
@@ -69,9 +69,10 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Emitted when fee switch is updated.
+     * @param feeTo The address which altered the switch state.
      * @param enabled Whether the fee switch is enabled or disabled.
      */
-    event FeeSwitchUpdated(bool indexed enabled);
+    event FeeSwitchUpdated(address feeTo, bool enabled);
 
     /**
      * @notice Emitted when feeTo address is updated.

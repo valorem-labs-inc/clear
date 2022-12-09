@@ -30,6 +30,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //  State variables - Public
     //////////////////////////////////////////////////////////////*/
 
+    uint8 public constant OPTION_ID_PADDING = 96;
+
+    uint96 private constant CLAIM_NUMBER_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFF;
+
     /// @notice The protocol fee
     uint8 public immutable feeBps = 5;
 
@@ -207,18 +211,17 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function encodeTokenId(uint160 optionKey, uint96 claimNum) public pure returns (uint256 tokenId) {
-        tokenId |= (uint256(optionKey) << 96);
+        tokenId |= (uint256(optionKey) << OPTION_ID_PADDING);
         tokenId |= uint256(claimNum);
     }
 
     /// @inheritdoc IOptionSettlementEngine
     function decodeTokenId(uint256 tokenId) public pure returns (uint160 optionKey, uint96 claimNum) {
         // move key to lsb to fit into uint160
-        optionKey = uint160(tokenId >> 96);
+        optionKey = uint160(tokenId >> OPTION_ID_PADDING);
 
         // grab lower 96b of id for claim number
-        uint256 claimNumMask = 0xFFFFFFFFFFFFFFFFFFFFFFFF;
-        claimNum = uint96(tokenId & claimNumMask);
+        claimNum = uint96(tokenId & CLAIM_NUMBER_MASK);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -251,7 +254,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 )
             )
         );
-        optionId = uint256(optionKey) << 96;
+        optionId = uint256(optionKey) << OPTION_ID_PADDING;
 
         // If it does, revert
         if (isOptionInitialized(optionKey)) {
@@ -319,7 +322,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint256 encodedClaimId = tokenId;
 
         // Sanitize a zeroed encodedOptionId from the optionKey
-        uint256 encodedOptionId = uint256(optionKey) << 96;
+        uint256 encodedOptionId = uint256(optionKey) << OPTION_ID_PADDING;
 
         // Get the option record and check that it's valid to write against
         Option storage optionRecord = _option[optionKey];
@@ -473,12 +476,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert ClaimTooSoon(claimId, optionRecord.expiryTimestamp);
         }
 
-        (uint256 exerciseAmountRedeemed, uint256 underlyingAmountRedeemed) = _getPositionsForClaim(optionKey, claimId, optionRecord);
+        (uint256 exerciseAmountRedeemed, uint256 underlyingAmountRedeemed) =
+            _getPositionsForClaim(optionKey, claimId, optionRecord);
 
         claimRecord.claimed = true;
 
         emit ClaimRedeemed(
             claimId,
+            uint256(optionKey) << OPTION_ID_PADDING,
             msg.sender,
             optionRecord.exerciseAsset,
             optionRecord.underlyingAsset,

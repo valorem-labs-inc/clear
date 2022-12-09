@@ -942,6 +942,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.expectEmit(true, true, true, true);
         emit ClaimRedeemed(
             claimId,
+            testOptionId,
             ALICE,
             DAI_A,
             WETH_A,
@@ -1991,6 +1992,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     event ClaimRedeemed(
         uint256 indexed claimId,
+        uint256 indexed optionId,
         address indexed redeemer,
         address exerciseAsset,
         address underlyingAsset,

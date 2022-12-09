@@ -80,6 +80,7 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Emitted when a claim is redeemed.
+     * @param optionId The id of the option the claim is being redeemed against.
      * @param claimId The id of the claim being redeemed.
      * @param redeemer The address redeeming the claim.
      * @param exerciseAsset The exercise asset of the option.
@@ -89,6 +90,7 @@ interface IOptionSettlementEngine {
      */
     event ClaimRedeemed(
         uint256 indexed claimId,
+        uint256 indexed optionId,
         address indexed redeemer,
         address exerciseAsset,
         address underlyingAsset,

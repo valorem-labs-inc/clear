@@ -473,28 +473,27 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert ClaimTooSoon(claimId, optionRecord.expiryTimestamp);
         }
 
-        (uint256 exerciseAmount, uint256 underlyingAmount) = _getPositionsForClaim(optionKey, claimId, optionRecord);
+        (uint256 exerciseAmountRedeemed, uint256 underlyingAmountRedeemed) = _getPositionsForClaim(optionKey, claimId, optionRecord);
 
         claimRecord.claimed = true;
 
         emit ClaimRedeemed(
             claimId,
-            optionKey,
             msg.sender,
             optionRecord.exerciseAsset,
             optionRecord.underlyingAsset,
-            uint96(exerciseAmount),
-            uint96(underlyingAmount)
+            exerciseAmountRedeemed,
+            underlyingAmountRedeemed
             );
 
         _burn(msg.sender, claimId, 1);
 
-        if (exerciseAmount > 0) {
-            SafeTransferLib.safeTransfer(ERC20(optionRecord.exerciseAsset), msg.sender, exerciseAmount);
+        if (exerciseAmountRedeemed > 0) {
+            SafeTransferLib.safeTransfer(ERC20(optionRecord.exerciseAsset), msg.sender, exerciseAmountRedeemed);
         }
 
-        if (underlyingAmount > 0) {
-            SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, underlyingAmount);
+        if (underlyingAmountRedeemed > 0) {
+            SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, underlyingAmountRedeemed);
         }
     }
 
@@ -560,7 +559,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// when writing (on underlying asset) and when exercising (on exercise asset). Checks
     /// that fee switch is enabled, otherwise returns fee of 0 and does not record or emit.
     function _calculateRecordAndEmitFee(address assetAddress, uint256 assetAmount) internal returns (uint256 fee) {
-        fee = ((assetAmount * FEE_BPS) / 10_000);
+        fee = ((assetAmount * feeBps) / 10_000);
         feeBalance[assetAddress] += fee;
 
         emit FeeAccrued(assetAddress, msg.sender, fee);

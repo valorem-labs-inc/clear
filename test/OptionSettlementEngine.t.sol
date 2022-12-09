@@ -191,10 +191,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Fees
         uint256 writeAmount = 2 * testUnderlyingAmount;
-        uint256 writeFee = (writeAmount / 10000) * engine.FEE_BPS();
+        uint256 writeFee = (writeAmount / 10000) * engine.feeBps();
 
         uint256 exerciseAmount = 2 * testExerciseAmount;
-        uint256 exerciseFee = (exerciseAmount / 10000) * engine.FEE_BPS();
+        uint256 exerciseFee = (exerciseAmount / 10000) * engine.feeBps();
 
         assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + writeAmount + writeFee);
 
@@ -253,7 +253,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Fees
         uint256 writeAmount = 7 * testUnderlyingAmount;
-        uint256 writeFee = (writeAmount / 10000) * engine.FEE_BPS();
+        uint256 writeFee = (writeAmount / 10000) * engine.feeBps();
         assertEq(WETH.balanceOf(ALICE), wethBalanceA - writeFee);
         assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + writeFee);
     }
@@ -418,7 +418,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint112 bobExerciseAmount = 70;
         uint256 bobBalanceExerciseAsset1 = ERC20(option.exerciseAsset).balanceOf(BOB);
         uint256 bobBalanceUnderlyingAsset1 = ERC20(option.underlyingAsset).balanceOf(BOB);
-        uint256 bobExerciseFee = (bobExerciseAmount * option.exerciseAmount / 10000) * engine.FEE_BPS();
+        uint256 bobExerciseFee = (bobExerciseAmount * option.exerciseAmount / 10000) * engine.feeBps();
         vm.startPrank(BOB);
         engine.exercise(optionId, bobExerciseAmount);
         assertEq(bobOptionAmount - bobExerciseAmount, engine.balanceOf(BOB, optionId));
@@ -531,7 +531,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Fee is recorded on underlying asset, not on exercise assset
         uint256 writeAmount = 2 * testUnderlyingAmount;
-        uint256 writeFee = (writeAmount * engine.FEE_BPS()) / 10_000;
+        uint256 writeFee = (writeAmount * engine.feeBps()) / 10_000;
         assertEq(engine.feeBalance(address(WETH)), writeFee);
         assertEq(engine.feeBalance(address(DAI)), 0);
     }
@@ -542,7 +542,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.write(testOptionId, 2);
 
         uint256 writeAmount = 2 * testUnderlyingAmount;
-        uint256 writeFee = (writeAmount * engine.FEE_BPS()) / 10_000;
+        uint256 writeFee = (writeAmount * engine.feeBps()) / 10_000;
         assertEq(engine.feeBalance(address(WETH)), writeFee);
 
         // Disable fee switch
@@ -562,7 +562,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.prank(ALICE);
         engine.write(testOptionId, 5);
         writeAmount = 5 * testUnderlyingAmount;
-        writeFee += (writeAmount * engine.FEE_BPS()) / 10_000;
+        writeFee += (writeAmount * engine.feeBps()) / 10_000;
         assertEq(engine.feeBalance(address(WETH)), writeFee); // includes fee on writing 5 more
     }
 
@@ -580,7 +580,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Fee is recorded on exercise asset
         uint256 exerciseAmount = 2 * testExerciseAmount;
-        uint256 exerciseFee = (exerciseAmount * engine.FEE_BPS()) / 10_000;
+        uint256 exerciseFee = (exerciseAmount * engine.feeBps()) / 10_000;
         assertEq(engine.feeBalance(address(DAI)), exerciseFee);
     }
 
@@ -596,7 +596,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.exercise(testOptionId, 2);
 
         uint256 exerciseAmount = 2 * testExerciseAmount;
-        uint256 exerciseFee = (exerciseAmount * engine.FEE_BPS()) / 10_000;
+        uint256 exerciseFee = (exerciseAmount * engine.feeBps()) / 10_000;
         assertEq(engine.feeBalance(address(DAI)), exerciseFee);
 
         // Disable fee switch
@@ -616,7 +616,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.prank(BOB);
         engine.exercise(testOptionId, 5);
         exerciseAmount = 5 * testExerciseAmount;
-        exerciseFee += (exerciseAmount * engine.FEE_BPS()) / 10_000;
+        exerciseFee += (exerciseAmount * engine.feeBps()) / 10_000;
         assertEq(engine.feeBalance(address(DAI)), exerciseFee); // includes fee on exercising 5 more
     }
 
@@ -882,7 +882,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function testEventWriteWhenNewClaim() public {
-        uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.FEE_BPS());
+        uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
 
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(WETH_A, ALICE, expectedFeeAccruedAmount);
@@ -895,7 +895,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function testEventWriteWhenExistingClaim() public {
-        uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.FEE_BPS());
+        uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
 
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
@@ -919,7 +919,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.warp(testExpiryTimestamp - 1 seconds);
 
         engine.decodeTokenId(testOptionId);
-        uint256 expectedFeeAccruedAmount = (testExerciseAmount / 10_000) * engine.FEE_BPS();
+        uint256 expectedFeeAccruedAmount = (testExerciseAmount / 10_000) * engine.feeBps();
 
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(DAI_A, BOB, expectedFeeAccruedAmount);
@@ -935,7 +935,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.startPrank(ALICE);
         uint96 amountWritten = 7;
         uint256 claimId = engine.write(testOptionId, amountWritten);
-        (uint256 optionId,) = engine.decodeTokenId(claimId);
         uint96 expectedUnderlyingAmount = testUnderlyingAmount * amountWritten;
 
         vm.warp(testExpiryTimestamp + 1 seconds);
@@ -943,12 +942,11 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.expectEmit(true, true, true, true);
         emit ClaimRedeemed(
             claimId,
-            optionId,
             ALICE,
             DAI_A,
             WETH_A,
-            uint96(0), // no one has exercised
-            uint96(expectedUnderlyingAmount)
+            0, // no one has exercised
+            expectedUnderlyingAmount
             );
 
         engine.redeem(claimId);
@@ -996,9 +994,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Then assert expected fee amounts
         uint256[] memory expectedFees = new uint256[](3);
-        expectedFees[0] = (((testUnderlyingAmount * optionsWrittenWethUnderlying) / 10_000) * engine.FEE_BPS());
-        expectedFees[1] = (((daiUnderlyingAmount * optionsWrittenDaiUnderlying) / 10_000) * engine.FEE_BPS());
-        expectedFees[2] = (((usdcUnderlyingAmount * optionsWrittenUsdcUnderlying) / 10_000) * engine.FEE_BPS());
+        expectedFees[0] = (((testUnderlyingAmount * optionsWrittenWethUnderlying) / 10_000) * engine.feeBps());
+        expectedFees[1] = (((daiUnderlyingAmount * optionsWrittenDaiUnderlying) / 10_000) * engine.feeBps());
+        expectedFees[2] = (((usdcUnderlyingAmount * optionsWrittenUsdcUnderlying) / 10_000) * engine.feeBps());
 
         // Pre feeTo balance check
         assertEq(WETH.balanceOf(FEE_TO), 0);
@@ -1031,9 +1029,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.write(daiOptionId, optionsWrittenDaiUnderlying);
         engine.write(usdcOptionId, optionsWrittenUsdcUnderlying);
         vm.stopPrank();
-        expectedFees[0] = (((testUnderlyingAmount * optionsWrittenWethUnderlying) / 10_000) * engine.FEE_BPS());
-        expectedFees[1] = (((daiUnderlyingAmount * optionsWrittenDaiUnderlying) / 10_000) * engine.FEE_BPS());
-        expectedFees[2] = (((usdcUnderlyingAmount * optionsWrittenUsdcUnderlying) / 10_000) * engine.FEE_BPS());
+        expectedFees[0] = (((testUnderlyingAmount * optionsWrittenWethUnderlying) / 10_000) * engine.feeBps());
+        expectedFees[1] = (((daiUnderlyingAmount * optionsWrittenDaiUnderlying) / 10_000) * engine.feeBps());
+        expectedFees[2] = (((usdcUnderlyingAmount * optionsWrittenUsdcUnderlying) / 10_000) * engine.feeBps());
         for (uint256 i = 0; i < tokens.length; i++) {
             vm.expectEmit(true, true, true, true);
             emit FeeSwept(tokens[i], engine.feeTo(), expectedFees[i]); // true amount
@@ -1137,9 +1135,9 @@ contract OptionSettlementTest is Test, NFTreceiver {
         // taken for any of these assets, and the 1 wei-left-behind gas optimization
         // has already happened, therefore actual fee swept amount = true fee amount.
         uint256[] memory expectedFees = new uint256[](3);
-        expectedFees[0] = (((daiExerciseAmount * optionsWrittenDaiExercise) / 10_000) * engine.FEE_BPS());
-        expectedFees[1] = (((wethExerciseAmount * optionsWrittenWethExercise) / 10_000) * engine.FEE_BPS());
-        expectedFees[2] = (((usdcExerciseAmount * optionsWrittenUsdcExercise) / 10_000) * engine.FEE_BPS());
+        expectedFees[0] = (((daiExerciseAmount * optionsWrittenDaiExercise) / 10_000) * engine.feeBps());
+        expectedFees[1] = (((wethExerciseAmount * optionsWrittenWethExercise) / 10_000) * engine.feeBps());
+        expectedFees[2] = (((usdcExerciseAmount * optionsWrittenUsdcExercise) / 10_000) * engine.feeBps());
 
         for (uint256 i = 0; i < tokens.length; i++) {
             vm.expectEmit(true, true, true, true);
@@ -1527,7 +1525,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.assume(amount <= wethBalance / testUnderlyingAmount);
 
         uint256 rxAmount = amount * testUnderlyingAmount;
-        uint256 fee = ((rxAmount / 10000) * engine.FEE_BPS());
+        uint256 fee = ((rxAmount / 10000) * engine.feeBps());
 
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, amount);
@@ -1562,11 +1560,11 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.assume(amountExercise <= daiBalance / testExerciseAmount);
 
         uint256 writeAmount = amountWrite * testUnderlyingAmount;
-        uint256 writeFee = ((amountWrite * testUnderlyingAmount) / 10000) * engine.FEE_BPS();
+        uint256 writeFee = ((amountWrite * testUnderlyingAmount) / 10000) * engine.feeBps();
 
         uint256 rxAmount = amountExercise * testExerciseAmount;
         uint256 txAmount = amountExercise * testUnderlyingAmount;
-        uint256 exerciseFee = (rxAmount / 10000) * engine.FEE_BPS();
+        uint256 exerciseFee = (rxAmount / 10000) * engine.feeBps();
 
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, amountWrite);
@@ -1602,8 +1600,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.assume(amountExercise <= daiBalance / testExerciseAmount);
 
         uint256 rxAmount = amountExercise * testExerciseAmount;
-        uint256 exerciseFee = (rxAmount / 10000) * engine.FEE_BPS();
-        uint256 writeFee = ((amountWrite * testUnderlyingAmount) / 10000) * engine.FEE_BPS();
+        uint256 exerciseFee = (rxAmount / 10000) * engine.feeBps();
+        uint256 writeFee = ((amountWrite * testUnderlyingAmount) / 10000) * engine.feeBps();
 
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, amountWrite);
@@ -1993,12 +1991,11 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
     event ClaimRedeemed(
         uint256 indexed claimId,
-        uint256 indexed optionId,
         address indexed redeemer,
         address exerciseAsset,
         address underlyingAsset,
-        uint96 exerciseAmount,
-        uint96 underlyingAmount
+        uint256 exerciseAmountRedeemed,
+        uint256 underlyingAmountRedeemed
     );
 
     event FeeSwitchUpdated(bool indexed enabled);

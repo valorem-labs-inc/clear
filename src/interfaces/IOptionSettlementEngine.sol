@@ -43,7 +43,7 @@ interface IOptionSettlementEngine {
      * @notice Emitted when an option is exercised.
      * @param optionId The id of the option being exercised.
      * @param exerciser The address exercising the option.
-     * @param amount The amount of the exerciser being exercised.
+     * @param amount The amount of options being exercised.
      */
     event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
 
@@ -81,21 +81,19 @@ interface IOptionSettlementEngine {
     /**
      * @notice Emitted when a claim is redeemed.
      * @param claimId The id of the claim being redeemed.
-     * @param optionId The option id associated with the redeeming claim.
      * @param redeemer The address redeeming the claim.
      * @param exerciseAsset The exercise asset of the option.
      * @param underlyingAsset The underlying asset of the option.
-     * @param exerciseAmount The amount of options being
-     * @param underlyingAmount The amount of underlying
+     * @param exerciseAmountRedeemed The amount of options being
+     * @param underlyingAmountRedeemed The amount of underlying
      */
     event ClaimRedeemed(
         uint256 indexed claimId,
-        uint256 indexed optionId,
         address indexed redeemer,
         address exerciseAsset,
         address underlyingAsset,
-        uint96 exerciseAmount,
-        uint96 underlyingAmount
+        uint256 exerciseAmountRedeemed,
+        uint256 underlyingAmountRedeemed
     );
 
     /**

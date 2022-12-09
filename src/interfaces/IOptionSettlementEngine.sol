@@ -235,6 +235,20 @@ interface IOptionSettlementEngine {
         uint96 nextClaimNum;
     }
 
+    struct ClaimInfo {
+        OptionLotClaim claim;
+        OptionLotClaimIndex[] claimIndices;
+        uint16 bucketId;
+    }
+
+    struct OptionInfo {
+        mapping(uint96 => ClaimInfo) claimInfo;
+        Option option;
+        OptionsDayBucket[] dayBuckets;
+        uint16[] unexercisedBucketsByOption;
+        mapping(uint16 => bool) doesBucketIndexHaveUnexercisedOptions;
+    }
+
     /**
      * @dev This struct contains the data about a lot of options written for a particular option type.
      * When writing an amount of options of a particular type, the writer will be issued an ERC 1155 NFT

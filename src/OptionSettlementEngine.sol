@@ -27,15 +27,25 @@ import "./TokenURIGenerator.sol";
 /// @author neodaoist
 contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /*//////////////////////////////////////////////////////////////
-    //  State variables - Public
+    //  Immutable/Constant - Private
     //////////////////////////////////////////////////////////////*/
 
-    uint8 public constant OPTION_ID_PADDING = 96;
+    // @dev The bit padding for option IDs
+    uint8 private constant OPTION_ID_PADDING = 96;
 
+    // @dev The mask to mask out a claim number from a claimId
     uint96 private constant CLAIM_NUMBER_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFF;
+
+    /*//////////////////////////////////////////////////////////////
+    //  Immutable/Constant - Public
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice The protocol fee
     uint8 public immutable feeBps = 5;
+
+    /*//////////////////////////////////////////////////////////////
+    //  State variables - Public
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice Whether or not the protocol fee switch is enabled
     bool public feeSwitch;
@@ -53,11 +63,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //  State variables - Internal
     //////////////////////////////////////////////////////////////*/
 
+    // TODO(We can nest OptionsDayBucket, OptionLotClaim, OptionLotClaimIndex inside Option and possibly save some gas)
+
     /// @notice Accessor for Option contract details
     mapping(uint160 => Option) internal _option;
-
-    /// @notice Accessor for option lot claim ticket details
-    mapping(uint256 => OptionLotClaim) internal _claim;
 
     /// @notice Accessor for buckets of claims grouped by day
     /// @dev This is to enable O(constant) time options exercise. When options are written,
@@ -78,6 +87,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// _unexercisedBucketsByOption during write(). Set false if a bucket is fully
     /// exercised.
     mapping(uint160 => mapping(uint16 => bool)) internal _doesBucketIndexHaveUnexercisedOptions;
+
+    /// @notice Accessor for option lot claim ticket details
+    mapping(uint256 => OptionLotClaim) internal _claim;
 
     /// @notice Accessor for mapping a claim id to its ClaimIndices
     mapping(uint256 => OptionLotClaimIndex[]) internal _claimIdToClaimIndexArray;

@@ -98,14 +98,6 @@ interface IOptionSettlementEngine {
         uint256 underlyingAmountRedeemed
     );
 
-    /**
-     * @notice Emitted when an option id is exercised and assigned to a particular claim NFT.
-     * @param claimId The claim NFT id being assigned.
-     * @param optionId The id of the option being exercised.
-     * @param amountAssigned The total amount of options contracts assigned.
-     */
-    event ExerciseAssigned(uint256 indexed claimId, uint256 indexed optionId, uint112 amountAssigned);
-
     /*//////////////////////////////////////////////////////////////
     //  Errors
     //////////////////////////////////////////////////////////////*/

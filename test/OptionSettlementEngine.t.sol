@@ -662,6 +662,22 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.setFeeSwitch(true);
     }
 
+    function testRevertConstructorWhenFeeToIsZeroAddress() public {
+        TokenURIGenerator localGenerator = new TokenURIGenerator();
+
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidFeeToAddress.selector, address(0)));
+
+        new OptionSettlementEngine(address(0), address(localGenerator));
+    }
+
+    function testRevertConstructorWhenTokenURIGeneratorIsZeroAddress() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.InvalidTokenURIGeneratorAddress.selector, address(0))
+        );
+
+        new OptionSettlementEngine(FEE_TO, address(0));
+    }
+
     function testSetFeeTo() public {
         // precondition check
         assertEq(engine.feeTo(), FEE_TO);

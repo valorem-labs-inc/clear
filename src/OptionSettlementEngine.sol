@@ -98,6 +98,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @notice OptionSettlementEngine constructor
     /// @param _feeTo The address fees accrue to
     constructor(address _feeTo, address _tokenURIGenerator) {
+        if (_feeTo == address(0)) {
+            revert InvalidFeeToAddress(address(0));
+        }
+        if (_tokenURIGenerator == address(0)) {
+            revert InvalidTokenURIGeneratorAddress(address(0));
+        }
+
         feeTo = _feeTo;
         tokenURIGenerator = ITokenURIGenerator(_tokenURIGenerator);
     }
@@ -337,7 +344,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // Calculate, record, and emit event for fee accrual on underlying asset
         uint256 rxAmount = optionRecord.underlyingAmount * amount;
         address underlyingAsset = optionRecord.underlyingAsset;
-        uint256 fee = _calculateRecordAndEmitFee(underlyingAsset, rxAmount);
 
         uint256 encodedClaimId = claimId;
         if (claimId == 0) {
@@ -364,6 +370,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
         _addOrUpdateClaimIndex(encodedClaimId, bucketIndex, amount);
 
+        uint256 fee = _calculateRecordAndEmitFee(underlyingAsset, rxAmount);
         emit OptionsWritten(optionId, msg.sender, encodedClaimId, amount);
 
         if (claimId == 0) {
@@ -420,11 +427,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint256 txAmount = optionRecord.underlyingAmount * amount;
         address exerciseAsset = optionRecord.exerciseAsset;
         address underlyingAsset = optionRecord.underlyingAsset;
-        uint256 fee = _calculateRecordAndEmitFee(exerciseAsset, rxAmount);
-
-        emit OptionsExercised(optionId, msg.sender, amount);
 
         _assignExercise(optionKey, optionRecord, amount);
+
+        // Update counters and emit events
+        uint256 fee = _calculateRecordAndEmitFee(exerciseAsset, rxAmount);
+        emit OptionsExercised(optionId, msg.sender, amount);
 
         _burn(msg.sender, optionId, amount);
 
@@ -469,16 +477,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         claimRecord.claimed = true;
 
-        _burn(msg.sender, claimId, 1);
-
-        if (exerciseAmount > 0) {
-            SafeTransferLib.safeTransfer(ERC20(optionRecord.exerciseAsset), msg.sender, exerciseAmount);
-        }
-
-        if (underlyingAmount > 0) {
-            SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, underlyingAmount);
-        }
-
         emit ClaimRedeemed(
             claimId,
             optionKey,
@@ -488,6 +486,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             uint96(exerciseAmount),
             uint96(underlyingAmount)
             );
+
+        _burn(msg.sender, claimId, 1);
+
+        if (exerciseAmount > 0) {
+            SafeTransferLib.safeTransfer(ERC20(optionRecord.exerciseAsset), msg.sender, exerciseAmount);
+        }
+
+        if (underlyingAmount > 0) {
+            SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, underlyingAmount);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -504,7 +512,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @inheritdoc IOptionSettlementEngine
     function setFeeTo(address newFeeTo) external onlyFeeTo {
         if (newFeeTo == address(0)) {
-            revert InvalidFeeToAddress(newFeeTo);
+            revert InvalidFeeToAddress(address(0));
         }
         feeTo = newFeeTo;
 
@@ -528,8 +536,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 if (fee > 1) {
                     sweep = fee - 1;
                     feeBalance[token] = 1;
-                    SafeTransferLib.safeTransfer(ERC20(token), sendFeeTo, sweep);
                     emit FeeSwept(token, sendFeeTo, sweep);
+                    SafeTransferLib.safeTransfer(ERC20(token), sendFeeTo, sweep);
                 }
             }
         }

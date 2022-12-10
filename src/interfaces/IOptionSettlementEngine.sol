@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BUSL 1.1
+// Valorem Labs Inc. (c) 2022
 pragma solidity 0.8.16;
 
 import "./ITokenURIGenerator.sol";
@@ -203,7 +204,8 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /// @dev This enumeration is used to determine the type of an ERC1155 subtoken in the engine.
-    enum Type {
+    enum TokenType {
+        None,
         Option,
         Claim
     }
@@ -298,13 +300,13 @@ interface IOptionSettlementEngine {
      * in terms of the underlying and exercise ERC20 tokens.
      */
     struct Underlying {
-        /// @param underlyingAsset The address of the ERC20 underlying asset.
+        /// @custom:member underlyingAsset The address of the ERC20 underlying asset.
         address underlyingAsset;
-        /// @param underlyingPosition The amount, in wei, of the underlying asset represented by this position.
+        /// @custom:member underlyingPosition The amount, in wei, of the underlying asset represented by this position.
         int256 underlyingPosition;
-        /// @param exerciseAsset The address of the ERC20 exercise asset.
+        /// @custom:member exerciseAsset The address of the ERC20 exercise asset.
         address exerciseAsset;
-        /// @param exercisePosition The amount, in wei, of the exercise asset represented by this position.
+        /// @custom:member exercisePosition The amount, in wei, of the exercise asset represented by this position.
         int256 exercisePosition;
     }
 
@@ -313,74 +315,32 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Get option type information for a given optionId.
+     * @notice Gets option type information for a given optionId.
      * @param optionId The id of the option.
      * @return option The Option struct for optionId if the tokenId is Type.Option.
      */
     function option(uint256 optionId) external view returns (Option memory option);
 
     /**
-     * @notice Get information for a given claim token id.
+     * @notice Gets information for a given claim token id.
      * @param claimId The id of the claim
      * @return claim The Claim struct for claimId if the tokenId is Type.Claim.
      */
     function claim(uint256 claimId) external view returns (Claim memory claim);
 
     /**
-     * @notice Information about the position underlying a token, useful for determining value.
-     * When supplied an Option Lot Claim id, this function returns the total amounts of underlying
-     * and exercise assets currently associated with a given options lot.
+     * @notice Gets information about the ERC20 token positions represented by an OptionSettlementEngine token.
      * @param tokenId The token id for which to retrieve the Underlying position.
      * @return underlyingPositions The Underlying struct for the supplied tokenId.
      */
     function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions);
 
     /**
-     * @notice Returns the token type (e.g. Option/Claim) for a given token Id
-     * @param tokenId The id of the option or claim.
+     * @notice Gets the token type (e.g. Option/Claim) for a given OptionSettementEngine token id.
+     * @param tokenId The token id of the option or claim.
      * @return typeOfToken The enum Type of the tokenId.
      */
-    function tokenType(uint256 tokenId) external view returns (Type typeOfToken);
-
-    /**
-     * @notice Check to see if an option is already initialized.
-     * @param optionKey The option key to check.
-     * @return initialized Whether or not the option is initialized.
-     */
-    function isOptionInitialized(uint160 optionKey) external view returns (bool initialized);
-
-    /*//////////////////////////////////////////////////////////////
-    //  Token ID Encoding
-    //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Encode the supplied option id and claim id
-     * @dev Option and claim token ids are encoded as follows:
-     *
-     *   MSb
-     *   0000 0000   0000 0000   0000 0000   0000 0000 ┐
-     *   0000 0000   0000 0000   0000 0000   0000 0000 │
-     *   0000 0000   0000 0000   0000 0000   0000 0000 │ 160b option key, created from hash of Option struct
-     *   0000 0000   0000 0000   0000 0000   0000 0000 │
-     *   0000 0000   0000 0000   0000 0000   0000 0000 │
-     *   0000 0000   0000 0000   0000 0000   0000 0000 ┘
-     *   0000 0000   0000 0000   0000 0000   0000 0000 ┐
-     *   0000 0000   0000 0000   0000 0000   0000 0000 │ 96b auto-incrementing option lot claim number
-     *   0000 0000   0000 0000   0000 0000   0000 0000 ┘
-     *                                             LSb
-     * @param optionKey The optionKey to encode
-     * @param claimNum The claimNum to encode
-     * @return tokenId The encoded token id
-     */
-    function encodeTokenId(uint160 optionKey, uint96 claimNum) external pure returns (uint256 tokenId);
-
-    /**
-     * @notice Decode the supplied token id
-     * @dev See encodeTokenId() for encoding scheme
-     * @param tokenId The token id to decode
-     * @return optionKey claimNum The decoded components of the id as described above, padded as required
-     */
-    function decodeTokenId(uint256 tokenId) external pure returns (uint160 optionKey, uint96 claimNum);
+    function tokenType(uint256 tokenId) external view returns (TokenType typeOfToken);
 
     /*//////////////////////////////////////////////////////////////
     //  Write Options
@@ -489,7 +449,7 @@ interface IOptionSettlementEngine {
     function tokenURIGenerator() external view returns (ITokenURIGenerator uriGenerator);
 
     /**
-     * @notice Updates the contract address for generating token URIs for Valorem positions.
+     * @notice Updates the contract address for generating token URIs for OptionSettlementEngine sub-tokens.
      * @param newTokenURIGenerator The address of the new ITokenURIGenerator contract.
      */
     function setTokenURIGenerator(address newTokenURIGenerator) external;

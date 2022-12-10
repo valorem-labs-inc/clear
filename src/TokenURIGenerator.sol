@@ -107,7 +107,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
     function _generateHeaderSection(
         string memory _underlyingSymbol,
         string memory _exerciseSymbol,
-        IOptionSettlementEngine.Type _tokenType
+        IOptionSettlementEngine.TokenType _tokenType
     ) internal pure returns (string memory) {
         return string(
             abi.encodePacked(
@@ -118,7 +118,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
                     _exerciseSymbol,
                     "</text>"
                 ),
-                _tokenType == IOptionSettlementEngine.Type.Option
+                _tokenType == IOptionSettlementEngine.TokenType.Option
                     ?
                     "<text x='16px' y='80px' font-size='16' fill='#fff' font-family='Helvetica' font-weight='300'>Long Call</text>"
                     :

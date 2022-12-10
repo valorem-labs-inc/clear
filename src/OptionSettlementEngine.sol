@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BUSL 1.1
+// Valorem Labs Inc. (c) 2022.
 pragma solidity 0.8.16;
 
 import "base64/Base64.sol";
@@ -157,13 +158,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @inheritdoc IOptionSettlementEngine
-    function tokenType(uint256 tokenId) external pure returns (Type typeOfToken) {
-        typeOfToken = (tokenId & CLAIM_NUMBER_MASK) == 0 ? Type.Option : Type.Claim;
-    }
-
-    /// @inheritdoc IOptionSettlementEngine
-    function isOptionInitialized(uint160 optionKey) public view returns (bool initialized) {
-        return optionTypeStates[optionKey].option.underlyingAsset != address(0);
+    function tokenType(uint256 tokenId) public view returns (TokenType typeOfToken) {
+        (uint160 optionKey, uint96 claimKey) = decodeTokenId(tokenId);
+        typeOfToken = TokenType.None;
+        if (isOptionInitialized(optionKey)) {
+            if ((tokenId & CLAIM_NUMBER_MASK) == 0) {
+                typeOfToken = TokenType.Option;
+            } else if (isClaimInitialized(optionKey, claimKey)) {
+                typeOfToken = TokenType.Claim;
+            }
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -173,7 +177,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function uri(uint256 tokenId) public view virtual override returns (string memory) {
         Option memory optionInfo = optionTypeStates[uint160(tokenId >> OPTION_ID_PADDING)].option;
 
-        if (optionInfo.underlyingAsset == address(0)) {
+        TokenType typeOfToken = tokenType(tokenId);
+
+        if (typeOfToken == TokenType.None) {
             revert TokenNotFound(tokenId);
         }
 
@@ -186,29 +192,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             expiryTimestamp: optionInfo.expiryTimestamp,
             underlyingAmount: optionInfo.underlyingAmount,
             exerciseAmount: optionInfo.exerciseAmount,
-            tokenType: (tokenId & CLAIM_NUMBER_MASK) == 0 ? Type.Option : Type.Claim
+            tokenType: typeOfToken
         });
 
         return tokenURIGenerator.constructTokenURI(params);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-    //  Token ID Encoding
-    //////////////////////////////////////////////////////////////*/
-
-    /// @inheritdoc IOptionSettlementEngine
-    function encodeTokenId(uint160 optionKey, uint96 claimKey) public pure returns (uint256 tokenId) {
-        tokenId |= uint256(optionKey) << OPTION_ID_PADDING;
-        tokenId |= uint256(claimKey);
-    }
-
-    /// @inheritdoc IOptionSettlementEngine
-    function decodeTokenId(uint256 tokenId) public pure returns (uint160 optionKey, uint96 claimKey) {
-        // move key to lsb to fit into uint160
-        optionKey = uint160(tokenId >> OPTION_ID_PADDING);
-
-        // grab lower 96b of id for claim number
-        claimKey = uint96(tokenId & CLAIM_NUMBER_MASK);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -560,8 +547,63 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
+    //  Token ID Encoding
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Encode the supplied option id and claim id
+     * @dev Option and claim token ids are encoded as follows:
+     *
+     *   MSb
+     *   0000 0000   0000 0000   0000 0000   0000 0000 ┐
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │ 160b option key, created from hash of Option struct
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │
+     *   0000 0000   0000 0000   0000 0000   0000 0000 ┘
+     *   0000 0000   0000 0000   0000 0000   0000 0000 ┐
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │ 96b auto-incrementing option lot claim number
+     *   0000 0000   0000 0000   0000 0000   0000 0000 ┘
+     *                                             LSb
+     * @param optionKey The optionKey to encode.
+     * @param claimKey The claimKey to encode.
+     * @return tokenId The encoded token id.
+     */
+    function encodeTokenId(uint160 optionKey, uint96 claimKey) internal pure returns (uint256 tokenId) {
+        tokenId |= uint256(optionKey) << OPTION_ID_PADDING;
+        tokenId |= uint256(claimKey);
+    }
+
+    /**
+     * @notice Decode the supplied token id
+     * @dev See encodeTokenId() for encoding scheme
+     * @param tokenId The token id to decode
+     * @return optionKey claimNum The decoded components of the id as described above, padded as required
+     */
+    function decodeTokenId(uint256 tokenId) internal pure returns (uint160 optionKey, uint96 claimKey) {
+        // move key to lsb to fit into uint160
+        optionKey = uint160(tokenId >> OPTION_ID_PADDING);
+
+        // grab lower 96b of id for claim number
+        claimKey = uint96(tokenId & CLAIM_NUMBER_MASK);
+    }
+
+    /*//////////////////////////////////////////////////////////////
     //  Internal Helper Functions
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Check to see if an option type is already initialized.
+     * @param optionKey The option key to check.
+     * @return initialized Whether or not the option type is initialized.
+     */
+    function isOptionInitialized(uint160 optionKey) internal view returns (bool initialized) {
+        return optionTypeStates[optionKey].option.underlyingAsset != address(0);
+    }
+
+    function isClaimInitialized(uint160 optionKey, uint96 claimKey) internal view returns (bool initialized) {
+        return optionTypeStates[optionKey].claimIndices[claimKey].length > 0;
+    }
 
     /// @dev Internal helper function to calculate, record, and emit event for fee accrual
     /// when writing (on underlying asset) and when exercising (on exercise asset). Checks

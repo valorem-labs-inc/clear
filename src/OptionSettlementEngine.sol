@@ -95,8 +95,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IOptionSettlementEngine
-    function option(uint256 tokenId) external view returns (Option memory optionInfo) {
-        (uint160 optionKey,) = decodeTokenId(tokenId);
+    function option(uint256 optionId) external view returns (Option memory optionInfo) {
+        (uint160 optionKey,) = decodeTokenId(optionId);
         optionInfo = optionTypeStates[optionKey].option;
     }
 

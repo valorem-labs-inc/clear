@@ -313,17 +313,16 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Returns the option type information for a given option token id.
-     * @param tokenId The id of the option.
-     * @return option The Option struct for tokenId if the tokenId is Type.option.
+     * @notice Get option type information for a given optionId.
+     * @param optionId The id of the option.
+     * @return option The Option struct for optionId if the tokenId is Type.Option.
      */
-    function option(uint256 tokenId) external view returns (Option memory option);
+    function option(uint256 optionId) external view returns (Option memory option);
 
     /**
-     * @notice Returns information about the exercised and unexercised assets associated with
-     * an options lot claim.
+     * @notice Get information for a given claim token id.
      * @param claimId The id of the claim
-     * @return claim The Claim struct reflecting information about the claim.
+     * @return claim The Claim struct for claimId if the tokenId is Type.Claim.
      */
     function claim(uint256 claimId) external view returns (Claim memory claim);
 

@@ -164,12 +164,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @inheritdoc IOptionSettlementEngine
-    function tokenType(uint256 tokenId) external pure returns (Type) {
+    function tokenType(uint256 tokenId) external pure returns (Type typeOfToken) {
+        typeOfToken = Type.Claim;
         (, uint96 claimNum) = decodeTokenId(tokenId);
         if (claimNum == 0) {
-            return Type.Option;
+            typeOfToken = Type.Option;
         }
-        return Type.Claim;
     }
 
     /// @inheritdoc IOptionSettlementEngine

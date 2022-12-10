@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL 1.1
-pragma solidity 0.8.11;
+pragma solidity 0.8.16;
 
 import "base64/Base64.sol";
 import "solmate/tokens/ERC20.sol";
@@ -11,29 +11,25 @@ import "./interfaces/IOptionSettlementEngine.sol";
 import "./TokenURIGenerator.sol";
 
 /**
- * Valorem Options V1 is a DeFi money lego for writing physically settled covered call and covered put options.
+ * @title A settlement engine for options on ERC20 tokens
+ * @author 0xAlcibiades
+ * @author Flip-Liquid
+ * @author neodaoist
+ * @notice Valorem Options V1 is a DeFi money lego for writing physically settled covered call and covered put options.
  * All options are fully collateralized against an ERC-20 underlying asset and exercised with an
- * ERC-20 exercise asset using a pseudorandom number per unique option type for fair settlement. Options contracts
- * are issued as fungible ERC-1155 tokens, with each token representing a contract. Option writers are additionally issued
- * an ERC-1155 NFT representing a lot of contracts written for claiming collateral and exercise assignment. This design
- * eliminates the need for market price oracles, and allows for permission-less writing, and gas efficient transfer, of
- * a broad swath of traditional options.
+ * ERC-20 exercise asset using a fair settlement process. Options contracts, or long positions, are issued as
+ * fungible ERC-1155 tokens, with each token representing a contract. Option writers are additionally issued
+ * an ERC-1155 NFT claim, or short position, which is used to claim collateral and for option exercise assignment.
  */
-
-/// @title A settlement engine for options
-/// @dev This settlement protocol does not support rebasing, fee-on-transfer, or ERC-777 tokens
-/// @author 0xAlcibiades
-/// @author Flip-Liquid
-/// @author neodaoist
 contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /*//////////////////////////////////////////////////////////////
     //  Immutable/Constant - Private
     //////////////////////////////////////////////////////////////*/
 
-    // @dev The bit padding for option IDs
+    /// @dev The bit padding for option IDs
     uint8 internal constant OPTION_ID_PADDING = 96;
 
-    // @dev The mask to mask out a claim number from a claimId
+    /// @dev The mask to mask out a claim number from a claimId
     uint96 internal constant CLAIM_NUMBER_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFF;
 
     /*//////////////////////////////////////////////////////////////

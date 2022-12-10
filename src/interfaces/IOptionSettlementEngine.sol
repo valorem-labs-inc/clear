@@ -1,26 +1,22 @@
 // SPDX-License-Identifier: BUSL 1.1
-pragma solidity 0.8.11;
+pragma solidity 0.8.16;
 
 import "./ITokenURIGenerator.sol";
 
-/// @title A settlement engine for options
-/// @author 0xAlcibiades
-/// @author Flip-Liquid
-/// @author neodaoist
 interface IOptionSettlementEngine {
     /*//////////////////////////////////////////////////////////////
     //  Events
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Emitted when a new unique options type is created.
-     * @param optionId The id of the initial option created.
-     * @param exerciseAsset The contract address of the exercise asset.
-     * @param underlyingAsset The contract address of the underlying asset.
-     * @param exerciseAmount The amount of the exercise asset to be exercised.
-     * @param underlyingAmount The amount of the underlying asset in the option.
-     * @param exerciseTimestamp The timestamp after which this option can be exercised.
-     * @param expiryTimestamp The timestamp before which this option can be exercised.
+     * @notice Emitted when a new option type is created.
+     * @param optionId The token id of the new option type created.
+     * @param exerciseAsset The ERC20 contract address of the exercise asset.
+     * @param underlyingAsset The ERC20 contract address of the underlying asset.
+     * @param exerciseAmount The amount, in wei, of the exercise asset required to exercise each contract.
+     * @param underlyingAmount The amount, in wei of the underlying asset in each contract.
+     * @param exerciseTimestamp The timestamp after which this option type can be exercised.
+     * @param expiryTimestamp The timestamp before which this option type can be exercised.
      */
     event NewOptionType(
         uint256 optionId,
@@ -33,11 +29,11 @@ interface IOptionSettlementEngine {
     );
 
     /**
-     * @notice Emitted when a new option is written.
-     * @param optionId The id of the newly written option.
-     * @param writer The address of the writer of the new option.
-     * @param claimId The claim ID for the option.
-     * @param amount The amount of options written.
+     * @notice Emitted when new options contracts are written.
+     * @param optionId The token id of the option type written.
+     * @param writer The address of the writer.
+     * @param claimId The claim id of the new or existing short position written against.
+     * @param amount The amount of options contracts written.
      */
     event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
 

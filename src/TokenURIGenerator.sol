@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL 1.1
-pragma solidity 0.8.11;
+pragma solidity 0.8.16;
 
 import "base64/Base64.sol";
 import "solmate/tokens/ERC20.sol";

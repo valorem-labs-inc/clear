@@ -329,16 +329,16 @@ interface IOptionSettlementEngine {
     function claim(uint256 claimId) external view returns (Claim memory claim);
 
     /**
-     * @notice Gets information about the ERC20 token positions represented by an OptionSettlementEngine token.
+     * @notice Gets information about the ERC20 token positions represented by a tokenId.
      * @param tokenId The token id for which to retrieve the Underlying position.
      * @return underlyingPositions The Underlying struct for the supplied tokenId.
      */
     function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions);
 
     /**
-     * @notice Gets the token type (e.g. Option/Claim) for a given OptionSettementEngine token id.
-     * @param tokenId The token id of the option or claim.
-     * @return typeOfToken The enum Type of the tokenId.
+     * @notice Gets the TokenType for a given tokenId.
+     * @param tokenId The token id to get the TokenType of.
+     * @return typeOfToken The enum TokenType of the tokenId.
      */
     function tokenType(uint256 tokenId) external view returns (TokenType typeOfToken);
 
@@ -347,14 +347,14 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Create a new option type if it doesn't already exist
-     * @param underlyingAsset The contract address of the underlying asset.
-     * @param underlyingAmount The amount of the underlying asset in the option.
-     * @param exerciseAsset The contract address of the exercise asset.
-     * @param exerciseAmount The amount of the exercise asset to be exercised.
+     * @notice Creates a new option contract type if it doesn't already exist.
+     * @param underlyingAsset The contract address of the ERC20 underlying asset.
+     * @param underlyingAmount The amount of underlyingAsset, in wei, collateralizing each option contract.
+     * @param exerciseAsset The contract address of the ERC20 exercise asset.
+     * @param exerciseAmount The amount of exerciseAsset, in wei, required to exercise each option contract.
      * @param exerciseTimestamp The timestamp after which this option can be exercised.
      * @param expiryTimestamp The timestamp before which this option can be exercised.
-     * @return optionId The optionId for the option.
+     * @return optionId The token id for the new option type created by this call.
      */
     function newOptionType(
         address underlyingAsset,
@@ -367,8 +367,10 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Writes a specified amount of the specified option, returning claim NFT id.
-     * @param tokenId The desired token id to write against, set lower 96 bytes to zero to mint a new claim NFT
-     * @param amount The desired number of options to write.
+     * @param tokenId The desired token id to write against, input an optionId to get a new claim, or a claimId
+     * to add to an existing claim.
+     * @param amount The desired number of option contracts to write.
+     * @return claimId The token id of the claim NFT which was input or created.
      */
     function write(uint256 tokenId, uint112 amount) external returns (uint256 claimId);
 
@@ -378,10 +380,9 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Exercises specified amount of optionId, transferring in the exercise asset,
-     * and transferring out the underlying asset if requirements are met. Will revert with
-     * an underflow/overflow if the user does not have the required assets.
-     * @param optionId The option id to exercise.
-     * @param amount The amount of option id to exercise.
+     * and transferring out the underlying asset if requirements are met.
+     * @param optionId The option token id of the option type to exercise.
+     * @param amount The amount of option contracts to exercise.
      */
     function exercise(uint256 optionId, uint112 amount) external;
 
@@ -390,7 +391,7 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Redeem a claim NFT, transfers the underlying tokens.
+     * @notice Redeems a claim NFT, transfers the underlying/exercise tokens to the caller.
      * @param claimId The ID of the claim to redeem.
      */
     function redeem(uint256 claimId) external;
@@ -400,14 +401,14 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Check if the protocol fee switch is enabled.
-     * @return enabled Whether or not the protocol fee switch is enabled.
+     * @notice Checks if protocol fees are enabled.
+     * @return enabled Whether or not protocol fees are enabled.
      */
     function feesEnabled() external view returns (bool enabled);
 
     /**
-     * @notice Enable or disable protocol fees switch.
-     * @param enabled Whether or not the protocol fee switch should be enabled.
+     * @notice Enables or disables protocol fees.
+     * @param enabled Whether or not protocol fees should be enabled.
      */
     function protocolFees(bool enabled) external;
 
@@ -417,29 +418,28 @@ interface IOptionSettlementEngine {
     function feeBps() external view returns (uint8 fee);
 
     /**
-     * @notice The balance of protocol fees for a given token which have not yet
-     * been swept.
+     * @notice Gets the balance of protocol fees for a given token which have not been swept yet.
      * @param token The token for the un-swept fee balance.
      * @return The balance of un-swept fees.
      */
     function feeBalance(address token) external view returns (uint256);
 
     /**
-     * @notice Returns the address to which protocol fees are swept.
-     * @return The address to which fees are swept.
+     * @notice Returns the address which protocol fees are swept to.
+     * @return The address which fees are swept to.
      */
     function feeTo() external view returns (address);
 
     /**
-     * @notice Updates the address fees can be swept to.
-     * @param newFeeTo The new address to which fees can be swept.
+     * @notice Updates the address fees are swept to.
+     * @param newFeeTo The new address which fees are swept to.
      */
     function setFeeTo(address newFeeTo) external;
 
     /**
      * @notice Sweeps fees to the feeTo address if there is more than 1 wei for
      * feeBalance for a given token.
-     * @param tokens The tokens for which fees will be swept to the feeTo address.
+     * @param tokens An array of tokens to sweep fees for.
      */
     function sweepFees(address[] memory tokens) external;
 
@@ -449,7 +449,7 @@ interface IOptionSettlementEngine {
     function tokenURIGenerator() external view returns (ITokenURIGenerator uriGenerator);
 
     /**
-     * @notice Updates the contract address for generating token URIs for OptionSettlementEngine sub-tokens.
+     * @notice Updates the contract address for generating token URIs for tokens.
      * @param newTokenURIGenerator The address of the new ITokenURIGenerator contract.
      */
     function setTokenURIGenerator(address newTokenURIGenerator) external;

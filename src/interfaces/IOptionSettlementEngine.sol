@@ -11,15 +11,6 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Emitted when accrued protocol fees for a given token are swept to the
-     * feeTo address.
-     * @param token The token for which protocol fees are being swept.
-     * @param feeTo The account to which fees are being swept.
-     * @param amount The total amount being swept.
-     */
-    event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);
-
-    /**
      * @notice Emitted when a new unique options type is created.
      * @param optionId The id of the initial option created.
      * @param exerciseAsset The contract address of the exercise asset.
@@ -28,26 +19,16 @@ interface IOptionSettlementEngine {
      * @param underlyingAmount The amount of the underlying asset in the option.
      * @param exerciseTimestamp The timestamp after which this option can be exercised.
      * @param expiryTimestamp The timestamp before which this option can be exercised.
-     * @param nextClaimNum The next claim number.
      */
     event NewOptionType(
-        uint256 indexed optionId,
+        uint256 optionId,
         address indexed exerciseAsset,
         address indexed underlyingAsset,
         uint96 exerciseAmount,
         uint96 underlyingAmount,
         uint40 exerciseTimestamp,
-        uint40 expiryTimestamp,
-        uint96 nextClaimNum
+        uint40 indexed expiryTimestamp
     );
-
-    /**
-     * @notice Emitted when an option is exercised.
-     * @param optionId The id of the option being exercised.
-     * @param exercisee The contract address of the asset being exercised.
-     * @param amount The amount of the exercissee being exercised.
-     */
-    event OptionsExercised(uint256 indexed optionId, address indexed exercisee, uint112 amount);
 
     /**
      * @notice Emitted when a new option is written.
@@ -59,24 +40,14 @@ interface IOptionSettlementEngine {
     event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
 
     /**
-     * @notice Emitted when protocol fees are accrued for a given asset.
-     * @dev Emitted on write() when fees are accrued on the underlying asset,
-     * or exercise() when fees are accrued on the exercise asset.
-     * @param asset Asset for which fees are accrued.
-     * @param payor The address paying the fee.
-     * @param amount The amount of fees which are accrued.
-     */
-    event FeeAccrued(address indexed asset, address indexed payor, uint256 amount);
-
-    /**
      * @notice Emitted when a claim is redeemed.
+     * @param optionId The id of the option the claim is being redeemed against.
      * @param claimId The id of the claim being redeemed.
-     * @param optionId The option id associated with the redeeming claim.
      * @param redeemer The address redeeming the claim.
      * @param exerciseAsset The exercise asset of the option.
      * @param underlyingAsset The underlying asset of the option.
-     * @param exerciseAmount The amount of options being
-     * @param underlyingAmount The amount of underlying
+     * @param exerciseAmountRedeemed The amount of options being
+     * @param underlyingAmountRedeemed The amount of underlying
      */
     event ClaimRedeemed(
         uint256 indexed claimId,
@@ -84,17 +55,50 @@ interface IOptionSettlementEngine {
         address indexed redeemer,
         address exerciseAsset,
         address underlyingAsset,
-        uint96 exerciseAmount,
-        uint96 underlyingAmount
+        uint256 exerciseAmountRedeemed,
+        uint256 underlyingAmountRedeemed
     );
 
     /**
-     * @notice Emitted when an option id is exercised and assigned to a particular claim NFT.
-     * @param claimId The claim NFT id being assigned.
+     * @notice Emitted when an option is exercised.
      * @param optionId The id of the option being exercised.
-     * @param amountAssigned The total amount of options contracts assigned.
+     * @param exerciser The address exercising the option.
+     * @param amount The amount of options being exercised.
      */
-    event ExerciseAssigned(uint256 indexed claimId, uint256 indexed optionId, uint112 amountAssigned);
+    event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
+
+    /**
+     * @notice Emitted when protocol fees are accrued for a given asset.
+     * @dev Emitted on write() when fees are accrued on the underlying asset,
+     * or exercise() when fees are accrued on the exercise asset.
+     * @param optionId The id of the option being written or exercised.
+     * @param asset Asset for which fees are accrued.
+     * @param payer The address paying the fee.
+     * @param amount The amount of fees which are accrued.
+     */
+    event FeeAccrued(uint256 indexed optionId, address indexed asset, address indexed payer, uint256 amount);
+
+    /**
+     * @notice Emitted when accrued protocol fees for a given token are swept to the
+     * feeTo address.
+     * @param asset The token for which protocol fees are being swept.
+     * @param feeTo The account to which fees are being swept.
+     * @param amount The total amount being swept.
+     */
+    event FeeSwept(address indexed asset, address indexed feeTo, uint256 amount);
+
+    /**
+     * @notice Emitted when fee switch is updated.
+     * @param feeTo The address which altered the switch state.
+     * @param enabled Whether the fee switch is enabled or disabled.
+     */
+    event FeeSwitchUpdated(address feeTo, bool enabled);
+
+    /**
+     * @notice Emitted when feeTo address is updated.
+     * @param newFeeTo The new feeTo address.
+     */
+    event FeeToUpdated(address indexed newFeeTo);
 
     /*//////////////////////////////////////////////////////////////
     //  Errors
@@ -161,14 +165,6 @@ interface IOptionSettlementEngine {
      * @param token The supplied token.
      */
     error InvalidClaim(uint256 token);
-
-    /**
-     * @notice Provided claimId does not match provided option id in the upper 160b
-     * encoding the corresponding option ID for which the claim was written.
-     * @param claimId The provided claim ID.
-     * @param optionId The provided option ID.
-     */
-    error EncodedOptionIdInClaimIdDoesNotMatchProvidedOptionId(uint256 claimId, uint256 optionId);
 
     /**
      * @notice The optionId specified expired at expiry.
@@ -239,6 +235,40 @@ interface IOptionSettlementEngine {
         uint96 nextClaimNum;
     }
 
+    struct Claim {
+        /// @notice Option lot claim ticket details
+        OptionLotClaim claim; // replace with amountWritten and Flip's PR
+        /// @notice Claim Indices for a claim ID
+        OptionLotClaimIndex[] claimIndices;
+    }
+
+    struct BucketInfo {
+        /// @notice Buckets of claims grouped by period
+        /// @dev This is to enable O(constant) time options exercise. When options are written,
+        /// the Claim struct in this mapping is updated to reflect the cumulative amount written
+        /// on the day in question. write() will add unexercised options into the bucket
+        /// corresponding to the # of days after the option type's creation.
+        /// exercise() will randomly assign exercise to a bucket <= the current day.
+        Bucket[] buckets;
+        /// @notice An array of unexercised bucket indices.
+        uint16[] unexercisedBuckets;
+        /// @notice Maps a bucket's index (in _claimBucketByOption) to a boolean indicating
+        /// if the bucket has any unexercised options.
+        /// @dev Used to determine if a bucket index needs to be added to
+        /// unexercisedBuckets during write(). Set false if a bucket is fully
+        /// exercised.
+        mapping(uint16 => bool) doesBucketHaveUnexercisedOptions;
+    }
+
+    struct OptionEngineState {
+        /// @notice Information about the option type
+        Option option;
+        /// @notice Information about the option's claim buckets
+        BucketInfo bucketInfo;
+        /// @notice Information about the option's claims
+        mapping(uint96 => Claim) claims;
+    }
+
     /**
      * @dev This struct contains the data about a lot of options written for a particular option type.
      * When writing an amount of options of a particular type, the writer will be issued an ERC 1155 NFT
@@ -276,7 +306,7 @@ interface IOptionSettlementEngine {
      * claims bucketed by day. Used in fair assignement to calculate the ratio of
      * underlying to exercise assets to be transferred to claimants.
      */
-    struct OptionsDayBucket {
+    struct Bucket {
         /// @param amountWritten The number of options written in this bucket
         uint112 amountWritten;
         /// @param amountExercised The number of options exercised in this bucket
@@ -400,21 +430,10 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Writes a specified amount of the specified option, returning claim NFT id.
-     * @param optionId The desired option id to write.
+     * @param tokenId The desired token id to write against, set lower 96 bytes to zero to mint a new claim NFT
      * @param amount The desired number of options to write.
-     * @return claimId The claim NFT id for the option bundle.
      */
-    function write(uint256 optionId, uint112 amount) external returns (uint256 claimId);
-
-    /**
-     * @notice This override allows additional options to be written against a particular
-     * claim id.
-     * @param optionId The desired option id to write.
-     * @param amount The desired number of options to write.
-     * @param claimId The claimId for the options lot to which the caller will add options
-     * @return claimId The claim NFT id for the option bundle.
-     */
-    function write(uint256 optionId, uint112 amount, uint256 claimId) external returns (uint256);
+    function write(uint256 tokenId, uint112 amount) external returns (uint256 claimId);
 
     /*//////////////////////////////////////////////////////////////
     //  Exercise Options
@@ -444,6 +463,18 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /**
+     * @notice Check if the protocol fee switch is enabled.
+     * @return Whether or not the protocol fee switch is enabled.
+     */
+    function feeSwitch() external view returns (bool);
+
+    /**
+     * @notice Sets the protocol fee on / off.
+     * @param enabled Whether or not the protocol fee switch should be enabled.
+     */
+    function setFeeSwitch(bool enabled) external;
+
+    /**
      * @notice The protocol fee, expressed in basis points.
      * @return The fee in basis points.
      */
@@ -459,7 +490,7 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Returns the address to which protocol fees are swept.
-     * @return The address to which fees are swept
+     * @return The address to which fees are swept.
      */
     function feeTo() external view returns (address);
 

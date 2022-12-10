@@ -101,10 +101,15 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Approve test contract approval for all on settlement engine ERC1155 token balances
         engine.setApprovalForAll(address(this), true);
+
+        // Enable fee switch
+        vm.prank(FEE_TO);
+        engine.setFeeSwitch(true);
     }
 
     function testInitial() public {
         assertEq(engine.feeTo(), FEE_TO);
+        assertEq(engine.feeSwitch(), true);
     }
 
     // **********************************************************************
@@ -400,7 +405,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(2, engine.balanceOf(ALICE, testOptionId));
 
         // write some more options, adding to existing claim
-        uint256 claimId3 = engine.write(testOptionId, 1, claimId);
+        uint256 claimId3 = engine.write(claimId, 1);
         assertEq(claimId, claimId3);
         assertEq(1, engine.balanceOf(ALICE, claimId3));
         assertEq(3, engine.balanceOf(ALICE, testOptionId));
@@ -552,13 +557,173 @@ contract OptionSettlementTest is Test, NFTreceiver {
         _assertClaimAmountExercised(claimIds[6], 0);
     }
 
+    function testWriteRecordFees() public {
+        // Alice writes 2
+        vm.prank(ALICE);
+        engine.write(testOptionId, 2);
+
+        // Fee is recorded on underlying asset, not on exercise assset
+        uint256 writeAmount = 2 * testUnderlyingAmount;
+        uint256 writeFee = (writeAmount * engine.feeBps()) / 10_000;
+        assertEq(engine.feeBalance(address(WETH)), writeFee);
+        assertEq(engine.feeBalance(address(DAI)), 0);
+    }
+
+    function testWriteNoFeesRecordedWhenFeeSwitchIsDisabled() public {
+        // precondition check, fee is recorded and emitted on write
+        vm.prank(ALICE);
+        engine.write(testOptionId, 2);
+
+        uint256 writeAmount = 2 * testUnderlyingAmount;
+        uint256 writeFee = (writeAmount * engine.feeBps()) / 10_000;
+        assertEq(engine.feeBalance(address(WETH)), writeFee);
+
+        // Disable fee switch
+        vm.prank(FEE_TO);
+        engine.setFeeSwitch(false);
+
+        // Write 3 more, no fee is recorded or emitted
+        vm.prank(ALICE);
+        engine.write(testOptionId, 3);
+        assertEq(engine.feeBalance(address(WETH)), writeFee); // no change
+
+        // Re-enable
+        vm.prank(FEE_TO);
+        engine.setFeeSwitch(true);
+
+        // Write 5 more, fee is again recorded and emitted
+        vm.prank(ALICE);
+        engine.write(testOptionId, 5);
+        writeAmount = 5 * testUnderlyingAmount;
+        writeFee += (writeAmount * engine.feeBps()) / 10_000;
+        assertEq(engine.feeBalance(address(WETH)), writeFee); // includes fee on writing 5 more
+    }
+
+    function testExerciseRecordFees() public {
+        // Alice writes 2 and transfers to Bob
+        vm.startPrank(ALICE);
+        engine.write(testOptionId, 2);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 2, "");
+        vm.stopPrank();
+
+        // Bob exercises 2
+        vm.warp(testExerciseTimestamp + 1 seconds);
+        vm.prank(BOB);
+        engine.exercise(testOptionId, 2);
+
+        // Fee is recorded on exercise asset
+        uint256 exerciseAmount = 2 * testExerciseAmount;
+        uint256 exerciseFee = (exerciseAmount * engine.feeBps()) / 10_000;
+        assertEq(engine.feeBalance(address(DAI)), exerciseFee);
+    }
+
+    function testExerciseNoFeesRecordedWhenFeeSwitchIsDisabled() public {
+        // precondition check, fee is recorded and emitted on exercise
+        vm.startPrank(ALICE);
+        engine.write(testOptionId, 10);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 10, "");
+        vm.stopPrank();
+
+        vm.warp(testExerciseTimestamp + 1 seconds);
+        vm.prank(BOB);
+        engine.exercise(testOptionId, 2);
+
+        uint256 exerciseAmount = 2 * testExerciseAmount;
+        uint256 exerciseFee = (exerciseAmount * engine.feeBps()) / 10_000;
+        assertEq(engine.feeBalance(address(DAI)), exerciseFee);
+
+        // Disable fee switch
+        vm.prank(FEE_TO);
+        engine.setFeeSwitch(false);
+
+        // Exercise 3 more, no fee is recorded or emitted
+        vm.prank(BOB);
+        engine.exercise(testOptionId, 3);
+        assertEq(engine.feeBalance(address(DAI)), exerciseFee); // no change
+
+        // Re-enable
+        vm.prank(FEE_TO);
+        engine.setFeeSwitch(true);
+
+        // Exercise 5 more, fee is again recorded and emitted
+        vm.prank(BOB);
+        engine.exercise(testOptionId, 5);
+        exerciseAmount = 5 * testExerciseAmount;
+        exerciseFee += (exerciseAmount * engine.feeBps()) / 10_000;
+        assertEq(engine.feeBalance(address(DAI)), exerciseFee); // includes fee on exercising 5 more
+    }
+
     // **********************************************************************
     //                            PROTOCOL ADMIN
     // **********************************************************************
 
+    function testSetFeeSwitch() public {
+        // precondition check -- in test suite, fee switch is enabled by default
+        assertTrue(engine.feeSwitch());
+
+        // disable
+        vm.startPrank(FEE_TO);
+        engine.setFeeSwitch(false);
+
+        assertFalse(engine.feeSwitch());
+
+        // enable
+        engine.setFeeSwitch(true);
+
+        assertTrue(engine.feeSwitch());
+    }
+
+    function testEventSetFeeSwitch() public {
+        vm.expectEmit(true, true, true, true);
+        emit FeeSwitchUpdated(FEE_TO, false);
+
+        // disable
+        vm.startPrank(FEE_TO);
+        engine.setFeeSwitch(false);
+
+        vm.expectEmit(true, true, true, true);
+        emit FeeSwitchUpdated(FEE_TO, true);
+
+        // enable
+        engine.setFeeSwitch(true);
+    }
+
+    function testRevertSetFeeSwitchWhenNotFeeTo() public {
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
+
+        vm.prank(ALICE);
+        engine.setFeeSwitch(true);
+    }
+
+    function testRevertConstructorWhenFeeToIsZeroAddress() public {
+        TokenURIGenerator localGenerator = new TokenURIGenerator();
+
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidFeeToAddress.selector, address(0)));
+
+        new OptionSettlementEngine(address(0), address(localGenerator));
+    }
+
+    function testRevertConstructorWhenTokenURIGeneratorIsZeroAddress() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.InvalidTokenURIGeneratorAddress.selector, address(0))
+        );
+
+        new OptionSettlementEngine(FEE_TO, address(0));
+    }
+
     function testSetFeeTo() public {
         // precondition check
         assertEq(engine.feeTo(), FEE_TO);
+
+        vm.prank(FEE_TO);
+        engine.setFeeTo(address(0xCAFE));
+
+        assertEq(engine.feeTo(), address(0xCAFE));
+    }
+
+    function testEventSetFeeTo() public {
+        vm.expectEmit(true, true, true, true);
+        emit FeeToUpdated(address(0xCAFE));
 
         vm.prank(FEE_TO);
         engine.setFeeTo(address(0xCAFE));
@@ -740,8 +905,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             testExerciseAmount,
             testUnderlyingAmount,
             testExerciseTimestamp,
-            testExpiryTimestamp,
-            1
+            testExpiryTimestamp
             );
 
         engine.newOptionType(
@@ -753,7 +917,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
 
         vm.expectEmit(true, true, true, true);
-        emit FeeAccrued(WETH_A, ALICE, expectedFeeAccruedAmount);
+        emit FeeAccrued(testOptionId, WETH_A, ALICE, expectedFeeAccruedAmount);
 
         vm.expectEmit(true, true, true, true);
         emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, 1);
@@ -769,13 +933,13 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 claimId = engine.write(testOptionId, 1);
 
         vm.expectEmit(true, true, true, true);
-        emit FeeAccrued(WETH_A, ALICE, expectedFeeAccruedAmount);
+        emit FeeAccrued(testOptionId, WETH_A, ALICE, expectedFeeAccruedAmount);
 
         vm.expectEmit(true, true, true, true);
         emit OptionsWritten(testOptionId, ALICE, claimId, 1);
 
         vm.prank(ALICE);
-        engine.write(testOptionId, 1, claimId);
+        engine.write(claimId, 1);
     }
 
     function testEventExercise() public {
@@ -790,7 +954,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint256 expectedFeeAccruedAmount = (testExerciseAmount / 10_000) * engine.feeBps();
 
         vm.expectEmit(true, true, true, true);
-        emit FeeAccrued(DAI_A, BOB, expectedFeeAccruedAmount);
+        emit FeeAccrued(testOptionId, DAI_A, BOB, expectedFeeAccruedAmount);
 
         vm.expectEmit(true, true, true, true);
         emit OptionsExercised(testOptionId, BOB, 1);
@@ -803,7 +967,6 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.startPrank(ALICE);
         uint96 amountWritten = 7;
         uint256 claimId = engine.write(testOptionId, amountWritten);
-        (uint256 optionId,) = engine.decodeTokenId(claimId);
         uint96 expectedUnderlyingAmount = testUnderlyingAmount * amountWritten;
 
         vm.warp(testExpiryTimestamp + 1 seconds);
@@ -811,12 +974,12 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.expectEmit(true, true, true, true);
         emit ClaimRedeemed(
             claimId,
-            optionId,
+            testOptionId,
             ALICE,
             DAI_A,
             WETH_A,
-            uint96(0), // no one has exercised
-            uint96(expectedUnderlyingAmount)
+            0, // no one has exercised
+            expectedUnderlyingAmount
             );
 
         engine.redeem(claimId);
@@ -1123,28 +1286,10 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testRevertWriteWhenInvalidOption() public {
         // Option ID not 0 in lower 96 b
         uint256 invalidOptionId = testOptionId + 1;
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId));
-        engine.write(invalidOptionId, 1);
-
         // Option ID not initialized
         invalidOptionId = engine.encodeTokenId(0x1, 0x0);
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId >> 96));
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId));
         engine.write(invalidOptionId, 1);
-    }
-
-    function testRevertWriteWhenEncodedOptionIdInClaimIdDoesNotMatchProvidedOptionId() public {
-        uint256 option1Claim1 = engine.encodeTokenId(0xDEADBEEF1, 0xCAFECAFE1);
-        uint256 option2WithoutClaim = engine.encodeTokenId(0xDEADBEEF2, 0x0);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOptionSettlementEngine.EncodedOptionIdInClaimIdDoesNotMatchProvidedOptionId.selector,
-                option1Claim1,
-                option2WithoutClaim
-            )
-        );
-
-        engine.write(option2WithoutClaim, 1, option1Claim1);
     }
 
     function testRevertWriteWhenAmountWrittenCannotBeZero() public {
@@ -1189,7 +1334,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
 
         vm.prank(BOB);
-        engine.write(testOptionId, 1, claimId);
+        engine.write(claimId, 1);
     }
 
     function testRevertWriteWhenExpiredOption() public {
@@ -1204,7 +1349,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
         );
 
-        engine.write(testOptionId, 1, claimId);
+        engine.write(claimId, 1);
         vm.stopPrank();
     }
 
@@ -1645,7 +1790,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
                 } else {
                     uint256 claimId = claimIds[_randBetween(seed++, claimIdLength)];
                     emit log_named_uint("ADD EXISTING CLAIM", claimId);
-                    engine.write(optionId, toWrite, claimId);
+                    engine.write(claimId, toWrite);
                 }
 
                 // add to total written
@@ -1855,24 +2000,17 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(actual.nextClaimNum, expected.nextClaimNum);
     }
 
-    event FeeSwept(address indexed token, address indexed feeTo, uint256 amount);
-
     event NewOptionType(
-        uint256 indexed optionId,
+        uint256 optionId,
         address indexed exerciseAsset,
         address indexed underlyingAsset,
         uint96 exerciseAmount,
         uint96 underlyingAmount,
         uint40 exerciseTimestamp,
-        uint40 expiryTimestamp,
-        uint96 nextClaimNum
+        uint40 indexed expiryTimestamp
     );
 
-    event OptionsExercised(uint256 indexed optionId, address indexed exercisee, uint112 amount);
-
     event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
-
-    event FeeAccrued(address indexed asset, address indexed payor, uint256 amount);
 
     event ClaimRedeemed(
         uint256 indexed claimId,
@@ -1880,7 +2018,17 @@ contract OptionSettlementTest is Test, NFTreceiver {
         address indexed redeemer,
         address exerciseAsset,
         address underlyingAsset,
-        uint96 exerciseAmount,
-        uint96 underlyingAmount
+        uint256 exerciseAmountRedeemed,
+        uint256 underlyingAmountRedeemed
     );
+
+    event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
+
+    event FeeAccrued(uint256 indexed optionId, address indexed asset, address indexed payer, uint256 amount);
+
+    event FeeSwept(address indexed asset, address indexed feeTo, uint256 amount);
+
+    event FeeSwitchUpdated(address feeTo, bool enabled);
+
+    event FeeToUpdated(address indexed newFeeTo);
 }

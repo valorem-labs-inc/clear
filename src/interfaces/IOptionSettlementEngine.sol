@@ -239,7 +239,7 @@ interface IOptionSettlementEngine {
         /// @notice Option lot claim ticket details
         OptionLotClaim claim; // replace with amountWritten and Flip's PR
         /// @notice Claim Indices for a claim ID
-        OptionLotClaimIndex[] claimIndices;
+        ClaimIndex[] claimIndices;
     }
 
     struct BucketInfo {
@@ -294,7 +294,7 @@ interface IOptionSettlementEngine {
      * writing. This struct is used to keep track of how many options in a single lot
      * are written on each day, in order to correctly perform fair assignment.
      */
-    struct OptionLotClaimIndex {
+    struct ClaimIndex {
         /// @param amountWritten The amount of options written on a given day/bucket
         uint112 amountWritten;
         /// @param bucketIndex The index of the OptionsDayBucket in which the options are written

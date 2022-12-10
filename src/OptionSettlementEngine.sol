@@ -269,12 +269,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
 
         // Make sure that expiry is at least 24 hours from now
-        if (expiryTimestamp < (block.timestamp + 1 days)) {
+        if (expiryTimestamp < (block.timestamp + BUCKET_WINDOW)) {
             revert ExpiryWindowTooShort(expiryTimestamp);
         }
 
         // Ensure the exercise window is at least 24 hours
-        if (expiryTimestamp < (exerciseTimestamp + 1 days)) {
+        if (expiryTimestamp < (exerciseTimestamp + BUCKET_WINDOW)) {
             revert ExerciseWindowTooShort(exerciseTimestamp);
         }
 

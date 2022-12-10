@@ -839,7 +839,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseTimestamp: uint40(block.timestamp),
             expiryTimestamp: uint40(block.timestamp + 30 days),
             settlementSeed: 0,
-            nextClaimNum: 0
+            nextClaimKey: 0
         });
         uint256 optionId =
             engine.newOptionType(DAI_A, 1, USDC_A, 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
@@ -848,7 +848,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         uint160 optionKey = uint160(bytes20(keccak256(abi.encode(option))));
 
         option.settlementSeed = optionKey; // settlement seed is initially equal to option key
-        option.nextClaimNum = 1; // next claim num has been incremented
+        option.nextClaimKey = 1; // next claim num has been incremented
 
         assertEq(engine.option(optionId), option);
     }
@@ -888,7 +888,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
             settlementSeed: 0,
-            nextClaimNum: 0
+            nextClaimKey: 0
         });
 
         uint256 expectedOptionId = _createOptionIdFromStruct(optionInfo);
@@ -1208,7 +1208,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseTimestamp: uint40(block.timestamp),
             expiryTimestamp: tooSoonExpiryTimestamp,
             settlementSeed: 0, // default zero for settlement seed
-            nextClaimNum: 0 // default zero for next claim id
+            nextClaimKey: 0 // default zero for next claim id
         });
         _createOptionIdFromStruct(option);
 
@@ -1917,7 +1917,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
             exerciseTimestamp: exerciseTimestamp,
             expiryTimestamp: expiryTimestamp,
             settlementSeed: 0, // default zero for settlement seed
-            nextClaimNum: 0 // default zero for next claim id
+            nextClaimKey: 0 // default zero for next claim id
         });
         optionId = _createOptionIdFromStruct(option);
     }
@@ -1993,7 +1993,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertEq(actual.exerciseTimestamp, expected.exerciseTimestamp);
         assertEq(actual.expiryTimestamp, expected.expiryTimestamp);
         assertEq(actual.settlementSeed, expected.settlementSeed);
-        assertEq(actual.nextClaimNum, expected.nextClaimNum);
+        assertEq(actual.nextClaimKey, expected.nextClaimKey);
     }
 
     event NewOptionType(

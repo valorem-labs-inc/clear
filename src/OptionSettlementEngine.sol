@@ -343,6 +343,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert ExpiredOption(encodedOptionId, expiry);
         }
 
+        // Prevent writing in the last period
+        if (block.timestamp > expiry - BUCKET_WINDOW) {
+            revert CannotWriteOptionsInFinalPeriod(expiry - BUCKET_WINDOW);
+        }
+
         // create new claim
         if (claimNum == 0) {
             // Make encodedClaimId reflect the next available claim and increment the next

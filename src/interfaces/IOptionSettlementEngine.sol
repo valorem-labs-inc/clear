@@ -204,6 +204,13 @@ interface IOptionSettlementEngine {
     /// @notice The amount provided to write() must be > 0.
     error AmountWrittenCannotBeZero();
 
+    /**
+     * @notice You can't write options in the final time window before expiry.
+     * @param finalWindowStartTimestamp The timestamp of the beginning of the
+     * final time window.
+     */
+    error CannotWriteOptionsInFinalPeriod(uint256 finalWindowStartTimestamp);
+
     /*//////////////////////////////////////////////////////////////
     //  Data structures
     //////////////////////////////////////////////////////////////*/

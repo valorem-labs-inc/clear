@@ -208,23 +208,23 @@ interface IOptionSettlementEngine {
         Claim
     }
 
-    /// @dev This struct contains the data about an options type associated with an ERC-1155 token.
+    /// @notice Data comprising the unique tuple of an option type associated with an ERC-1155 option token.
     struct Option {
-        /// @param underlyingAsset The underlying asset to be received
+        /// @custom:member underlyingAsset The underlying ERC20 asset which the option is collateralized with.
         address underlyingAsset;
-        /// @param underlyingAmount The amount of the underlying asset contained within an option contract of this type
+        /// @custom:member underlyingAmount The amount of the underlying asset contained within an option contract of this type.
         uint96 underlyingAmount;
-        /// @param exerciseAsset The address of the asset needed for exercise
+        /// @custom:member exerciseAsset The ERC20 asset which the option can be exercised using.
         address exerciseAsset;
-        /// @param exerciseAmount The amount of the exercise asset required to exercise this option
+        /// @custom:member exerciseAmount The amount of the exercise asset required to exercise each option contract of this type.
         uint96 exerciseAmount;
-        /// @param exerciseTimestamp The timestamp after which this option can be exercised
+        /// @custom:member exerciseTimestamp The timestamp after which this option can be exercised.
         uint40 exerciseTimestamp;
-        /// @param expiryTimestamp The timestamp before which this option can be exercised
+        /// @custom:member expiryTimestamp The timestamp before which this option can be exercised.
         uint40 expiryTimestamp;
-        /// @param settlementSeed Random seed created at the time of option type creation
+        /// @custom:member settlementSeed Deterministic seed used for option fair exercise assignment.
         uint160 settlementSeed;
-        /// @param nextClaimNum Which option was written
+        /// @custom:member nextClaimKey The next claim key available for this option type.
         uint96 nextClaimKey;
     }
 

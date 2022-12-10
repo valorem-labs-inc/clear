@@ -25,7 +25,6 @@ import "./TokenURIGenerator.sol";
 /// @author 0xAlcibiades
 /// @author Flip-Liquid
 /// @author neodaoist
-/// @author Thal0x
 contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /*//////////////////////////////////////////////////////////////
     //  Immutable/Constant - Private

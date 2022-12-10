@@ -46,8 +46,8 @@ interface IOptionSettlementEngine {
      * @param redeemer The address redeeming the claim.
      * @param exerciseAsset The exercise asset of the option.
      * @param underlyingAsset The underlying asset of the option.
-     * @param exerciseAmountRedeemed The amount of options being
-     * @param underlyingAmountRedeemed The amount of underlying
+     * @param exerciseAmountRedeemed The amount of the exercise asset redeemed.
+     * @param underlyingAmountRedeemed The amount of underlying asset redeemed.
      */
     event ClaimRedeemed(
         uint256 indexed claimId,
@@ -231,7 +231,7 @@ interface IOptionSettlementEngine {
         /// @param settlementSeed Random seed created at the time of option type creation
         uint160 settlementSeed;
         /// @param nextClaimNum Which option was written
-        uint96 nextClaimNum;
+        uint96 nextClaimKey;
     }
 
     struct BucketInfo {
@@ -295,7 +295,7 @@ interface IOptionSettlementEngine {
 
     /**
      * @dev Represents the total amount of options written and exercised for a group of
-     * claims bucketed by day. Used in fair assignement to calculate the ratio of
+     * claims bucketed by day. Used in fair assignment to calculate the ratio of
      * underlying to exercise assets to be transferred to claimants.
      */
     struct Bucket {

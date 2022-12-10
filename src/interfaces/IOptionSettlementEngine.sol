@@ -330,15 +330,15 @@ interface IOptionSettlementEngine {
      * @notice Returns Option struct details about a given tokenID if that token is
      * an option.
      * @param tokenId The id of the option.
-     * @return optionInfo The Option struct for tokenId.
+     * @return option The Option struct for tokenId.
      */
-    function option(uint256 tokenId) external view returns (Option memory optionInfo);
+    function option(uint256 tokenId) external view returns (Option memory option);
 
     /**
      * @notice Returns information about the exercised and unexercised assets associated with
      * an options lot claim.
      * @param claimId The id of the claim
-     * @return claim The Claim struct reflecting information about the options lot.
+     * @return claim The Claim struct reflecting information about the claim.
      */
     function claim(uint256 claimId) external view returns (Claim memory claim);
 
@@ -457,27 +457,26 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Check if the protocol fee switch is enabled.
-     * @return Whether or not the protocol fee switch is enabled.
+     * @return enabled Whether or not the protocol fee switch is enabled.
      */
-    function feeSwitch() external view returns (bool);
+    function feesEnabled() external view returns (bool enabled);
 
     /**
-     * @notice Sets the protocol fee on / off.
+     * @notice Enable or disable protocol fees switch.
      * @param enabled Whether or not the protocol fee switch should be enabled.
      */
-    function setFeeSwitch(bool enabled) external;
+    function protocolFees(bool enabled) external;
 
     /**
-     * @notice The protocol fee, expressed in basis points.
-     * @return The fee in basis points.
+     * @return fee The protocol fee, expressed in basis points.
      */
-    function feeBps() external view returns (uint8);
+    function feeBps() external view returns (uint8 fee);
 
     /**
      * @notice The balance of protocol fees for a given token which have not yet
      * been swept.
-     * @param token The token for the unswept fee balance.
-     * @return The balance of unswept fees.
+     * @param token The token for the un-swept fee balance.
+     * @return The balance of un-swept fees.
      */
     function feeBalance(address token) external view returns (uint256);
 
@@ -489,19 +488,19 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Updates the address fees can be swept to.
-     * @param newFeeTo The new address to which fees will be swept.
+     * @param newFeeTo The new address to which fees can be swept.
      */
     function setFeeTo(address newFeeTo) external;
 
     /**
-     * @notice Sweeps fees to the feeTo address if there are more than 0 wei for
-     * each address in tokens.
+     * @notice Sweeps fees to the feeTo address if there is more than 1 wei for
+     * feeBalance for a given token.
      * @param tokens The tokens for which fees will be swept to the feeTo address.
      */
     function sweepFees(address[] memory tokens) external;
 
     /**
-     * @notice Updates the contract address for generating the token URI for claim NFTs.
+     * @notice Updates the contract address for generating token URIs for Valorem positions.
      * @param newTokenURIGenerator The address of the new ITokenURIGenerator contract.
      */
     function setTokenURIGenerator(address newTokenURIGenerator) external;

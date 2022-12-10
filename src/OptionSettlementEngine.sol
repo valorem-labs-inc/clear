@@ -40,31 +40,31 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //  Immutable/Constant - Public
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice The protocol fee
+    /// @inheritdoc IOptionSettlementEngine
     uint8 public immutable feeBps = 5;
 
     /*//////////////////////////////////////////////////////////////
     //  State variables - Internal
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Accessor for Option contract details
+    /// @notice
     mapping(uint160 => OptionEngineState) internal optionRecords;
 
     /*//////////////////////////////////////////////////////////////
     //  State variables - Public
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Fee balance for a given token
+    /// @inheritdoc IOptionSettlementEngine
     mapping(address => uint256) public feeBalance;
 
-    /// @notice The contract for token uri generation
+    /// @inheritdoc IOptionSettlementEngine
     ITokenURIGenerator public tokenURIGenerator;
 
-    /// @notice The address fees accrue to
+    /// @inheritdoc IOptionSettlementEngine
     address public feeTo;
 
-    /// @notice Whether or not the protocol fee switch is enabled
-    bool public feeSwitch;
+    /// @inheritdoc IOptionSettlementEngine
+    bool public feesEnabled;
 
     /*//////////////////////////////////////////////////////////////
     //  Modifiers
@@ -370,7 +370,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Assess fee (if fee switch enabled) and emit events
         uint256 fee = 0;
-        if (feeSwitch) {
+        if (feesEnabled) {
             fee = _calculateRecordAndEmitFee(encodedOptionId, underlyingAsset, rxAmount);
         }
         emit OptionsWritten(encodedOptionId, msg.sender, encodedClaimId, amount);
@@ -434,7 +434,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Assess fee (if fee switch enabled) and emit events
         uint256 fee = 0;
-        if (feeSwitch) {
+        if (feesEnabled) {
             fee = _calculateRecordAndEmitFee(optionId, exerciseAsset, rxAmount);
         }
         emit OptionsExercised(optionId, msg.sender, amount);
@@ -525,8 +525,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IOptionSettlementEngine
-    function setFeeSwitch(bool enabled) external onlyFeeTo {
-        feeSwitch = enabled;
+    function protocolFees(bool enabled) external onlyFeeTo {
+        feesEnabled = enabled;
 
         emit FeeSwitchUpdated(feeTo, enabled);
     }

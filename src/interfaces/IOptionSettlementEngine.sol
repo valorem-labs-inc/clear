@@ -32,20 +32,21 @@ interface IOptionSettlementEngine {
      * @notice Emitted when new options contracts are written.
      * @param optionId The token id of the option type written.
      * @param writer The address of the writer.
-     * @param claimId The claim id of the new or existing short position written against.
+     * @param claimId The claim token id of the new or existing short position written against.
      * @param amount The amount of options contracts written.
      */
     event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
 
+    // TODO(Do we need exercise and underlying asset here?)
     /**
      * @notice Emitted when a claim is redeemed.
-     * @param optionId The id of the option the claim is being redeemed against.
-     * @param claimId The id of the claim being redeemed.
+     * @param optionId The token id of the option type of the claim being redeemed.
+     * @param claimId The token id of the claim being redeemed.
      * @param redeemer The address redeeming the claim.
-     * @param exerciseAsset The exercise asset of the option.
-     * @param underlyingAsset The underlying asset of the option.
-     * @param exerciseAmountRedeemed The amount of the exercise asset redeemed.
-     * @param underlyingAmountRedeemed The amount of underlying asset redeemed.
+     * @param exerciseAsset The ERC20 exercise asset of the option.
+     * @param underlyingAsset The ERC20 underlying asset of the option.
+     * @param exerciseAmountRedeemed The amount of the exerciseAsset redeemed.
+     * @param underlyingAmountRedeemed The amount of underlyingAsset redeemed.
      */
     event ClaimRedeemed(
         uint256 indexed claimId,
@@ -58,10 +59,10 @@ interface IOptionSettlementEngine {
     );
 
     /**
-     * @notice Emitted when an option is exercised.
-     * @param optionId The id of the option being exercised.
-     * @param exerciser The address exercising the option.
-     * @param amount The amount of options being exercised.
+     * @notice Emitted when option contract(s) is(are) exercised.
+     * @param optionId The token id of the option type exercised.
+     * @param exerciser The address that exercised the option contract(s).
+     * @param amount The amount of option contracts exercised.
      */
     event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
 
@@ -69,26 +70,27 @@ interface IOptionSettlementEngine {
      * @notice Emitted when protocol fees are accrued for a given asset.
      * @dev Emitted on write() when fees are accrued on the underlying asset,
      * or exercise() when fees are accrued on the exercise asset.
-     * @param optionId The id of the option being written or exercised.
-     * @param asset Asset for which fees are accrued.
+     * Will not be emitted when feesEnabled is false.
+     * @param optionId The token id of the option type being written or exercised.
+     * @param asset The ERC20 asset in which fees were accrued.
      * @param payer The address paying the fee.
-     * @param amount The amount of fees which are accrued.
+     * @param amount The amount, in wei, of fees accrued.
      */
     event FeeAccrued(uint256 indexed optionId, address indexed asset, address indexed payer, uint256 amount);
 
     /**
-     * @notice Emitted when accrued protocol fees for a given token are swept to the
+     * @notice Emitted when accrued protocol fees for a given ERC20 asset are swept to the
      * feeTo address.
-     * @param asset The token for which protocol fees are being swept.
-     * @param feeTo The account to which fees are being swept.
-     * @param amount The total amount being swept.
+     * @param asset The ERC20 asset of the protocol fees swept.
+     * @param feeTo The account to which fees were swept.
+     * @param amount The total amount swept.
      */
     event FeeSwept(address indexed asset, address indexed feeTo, uint256 amount);
 
     /**
-     * @notice Emitted when fee switch is updated.
-     * @param feeTo The address which altered the switch state.
-     * @param enabled Whether the fee switch is enabled or disabled.
+     * @notice Emitted when protocol fees are enabled or disabled.
+     * @param feeTo The address which enabled or disabled fees.
+     * @param enabled Whether fees are enabled or disabled.
      */
     event FeeSwitchUpdated(address feeTo, bool enabled);
 
@@ -104,7 +106,7 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice The requested token is not found.
-     * @param token token requested.
+     * @param token The token requested.
      */
     error TokenNotFound(uint256 token);
 
@@ -116,65 +118,59 @@ interface IOptionSettlementEngine {
     error AccessControlViolation(address accessor, address permissioned);
 
     /**
-     * @notice Invalid fee to address.
-     * @param feeTo The feeTo address.
+     * @notice Invalid (zero) address.
+     * @param input The address input.
      */
-    error InvalidFeeToAddress(address feeTo);
+    error InvalidAddress(address input);
 
     /**
-     * @notice Invalid TokenURIGenerator address.
-     * @param tokenURIGenerator The tokenURIGenerator address.
-     */
-    error InvalidTokenURIGeneratorAddress(address tokenURIGenerator);
-
-    /**
-     * @notice This options chain already exists and thus cannot be created.
-     * @param optionId The id and hash of the options chain.
+     * @notice This option contract type already exists and thus cannot be created.
+     * @param optionId The token id of the option type which already exists.
      */
     error OptionsTypeExists(uint256 optionId);
 
     /**
-     * @notice The expiry timestamp is less than 24 hours from now.
-     * @param expiry Timestamp of expiry
+     * @notice The expiry timestamp is too soon.
+     * @param expiry Timestamp of expiry.
      */
     error ExpiryWindowTooShort(uint40 expiry);
 
     /**
-     * @notice The option exercise window is less than 24 hours long.
+     * @notice The option exercise window is too short.
      * @param exercise The timestamp supplied for exercise.
      */
     error ExerciseWindowTooShort(uint40 exercise);
 
     /**
      * @notice The assets specified are invalid or duplicate.
-     * @param asset1 Supplied asset.
-     * @param asset2 Supplied asset.
+     * @param asset1 Supplied ERC20 asset.
+     * @param asset2 Supplied ERC20 asset.
      */
     error InvalidAssets(address asset1, address asset2);
 
     /**
-     * @notice The token specified is not an option.
-     * @param token The supplied token.
+     * @notice The token specified is not an option token.
+     * @param token The supplied token id.
      */
     error InvalidOption(uint256 token);
 
     /**
-     * @notice The token specified is not a claim.
-     * @param token The supplied token.
+     * @notice The token specified is not a claim token.
+     * @param token The supplied token id.
      */
     error InvalidClaim(uint256 token);
 
     /**
-     * @notice The optionId specified expired at expiry.
+     * @notice The optionId specified expired has already expired.
      * @param optionId The id of the expired option.
-     * @param expiry The time of expiry of the supplied option Id.
+     * @param expiry The expiry time for the supplied option Id.
      */
     error ExpiredOption(uint256 optionId, uint40 expiry);
 
     /**
      * @notice This option cannot yet be exercised.
      * @param optionId Supplied option ID.
-     * @param exercise The time when the optionId can be exercised.
+     * @param exercise The time after which the option optionId be exercised.
      */
     error ExerciseTooEarly(uint256 optionId, uint40 exercise);
 
@@ -185,21 +181,21 @@ interface IOptionSettlementEngine {
     error CallerDoesNotOwnClaimId(uint256 claimId);
 
     /**
-     * @notice The caller does not have enough of the option to exercise the amount
+     * @notice The caller does not have enough options contracts to exercise the amount
      * specified.
      * @param optionId The supplied option id.
-     * @param amount The amount of the supplied option requested for exercise.
+     * @param amount The amount of options contracts which the caller attempted to exercise.
      */
     error CallerHoldsInsufficientOptions(uint256 optionId, uint112 amount);
 
     /**
-     * @notice You can't claim before expiry.
+     * @notice Claims cannot be redeemed before expiry.
      * @param claimId Supplied claim ID.
-     * @param expiry timestamp at which the options chain expires
+     * @param expiry timestamp at which the option type expires.
      */
     error ClaimTooSoon(uint256 claimId, uint40 expiry);
 
-    /// @notice The amount provided to write() must be > 0.
+    /// @notice The amount of options contracts written must be greater than zero.
     error AmountWrittenCannotBeZero();
 
     /*//////////////////////////////////////////////////////////////

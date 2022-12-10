@@ -694,15 +694,13 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testRevertConstructorWhenFeeToIsZeroAddress() public {
         TokenURIGenerator localGenerator = new TokenURIGenerator();
 
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidFeeToAddress.selector, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAddress.selector, address(0)));
 
         new OptionSettlementEngine(address(0), address(localGenerator));
     }
 
     function testRevertConstructorWhenTokenURIGeneratorIsZeroAddress() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.InvalidTokenURIGeneratorAddress.selector, address(0))
-        );
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAddress.selector, address(0)));
 
         new OptionSettlementEngine(FEE_TO, address(0));
     }
@@ -734,7 +732,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function testRevertSetFeeToWhenZeroAddress() public {
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidFeeToAddress.selector, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAddress.selector, address(0)));
         vm.prank(FEE_TO);
         engine.setFeeTo(address(0));
     }
@@ -752,9 +750,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     }
 
     function testRevertSetTokenURIGeneratorWhenZeroAddress() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.InvalidTokenURIGeneratorAddress.selector, address(0))
-        );
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAddress.selector, address(0)));
         vm.prank(FEE_TO);
         engine.setTokenURIGenerator(address(0));
     }

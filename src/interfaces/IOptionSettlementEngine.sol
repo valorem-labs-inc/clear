@@ -358,11 +358,11 @@ interface IOptionSettlementEngine {
     function tokenType(uint256 tokenId) external view returns (Type typeOfToken);
 
     /**
-     * @notice Check to see if an option is already initialized
-     * @param optionKey The option key to check
-     * @return Whether or not the option is initialized
+     * @notice Check to see if an option is already initialized.
+     * @param optionKey The option key to check.
+     * @return initialized Whether or not the option is initialized.
      */
-    function isOptionInitialized(uint160 optionKey) external view returns (bool);
+    function isOptionInitialized(uint160 optionKey) external view returns (bool initialized);
 
     /*//////////////////////////////////////////////////////////////
     //  Token ID Encoding

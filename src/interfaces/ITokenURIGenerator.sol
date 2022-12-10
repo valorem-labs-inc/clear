@@ -3,7 +3,7 @@ pragma solidity 0.8.11;
 
 import "./IOptionSettlementEngine.sol";
 
-/// @title A token URI geneartor for Claim NFTs
+/// @title A token URI generator for Claim NFTs
 /// @author 0xAlcibiades
 /// @author Flip-Liquid
 /// @author neodaoist

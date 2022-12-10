@@ -36,12 +36,17 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     // @dev The mask to mask out a claim number from a claimId
     uint96 internal constant CLAIM_NUMBER_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFF;
 
+
+
     /*//////////////////////////////////////////////////////////////
     //  Immutable/Constant - Public
     //////////////////////////////////////////////////////////////*/
 
     /// @notice The protocol fee
     uint8 public immutable feeBps = 5;
+
+    /// @notice The size of the bucket period in seconds
+    uint public constant BUCKET_WINDOW = 1 days;
 
     /*//////////////////////////////////////////////////////////////
     //  State variables - Internal
@@ -637,8 +642,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @dev Help find a given days bucket by calculating days after epoch
-    function _getDaysBucket() internal view returns (uint16) {
-        return uint16(block.timestamp / 1 days);
+    function _getPeriodBucket() internal view returns (uint16) {
+        return uint16(block.timestamp / BUCKET_WINDOW);
     }
 
     /// @dev Get the exercise and underlying amounts for a claim
@@ -698,19 +703,19 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         Bucket[] storage claimBucketsInfo = optionRecords[optionKey].bucketInfo.buckets;
         uint16[] storage unexercised = optionRecords[optionKey].bucketInfo.unexercisedBuckets;
         Bucket storage currentBucket;
-        uint16 daysAfterEpoch = _getDaysBucket();
+        uint16 periodsAfterEpoch = _getPeriodBucket();
         uint16 bucketIndex = uint16(claimBucketsInfo.length);
         if (claimBucketsInfo.length == 0) {
             // add a new bucket none exist
-            claimBucketsInfo.push(Bucket(amount, 0, daysAfterEpoch));
+            claimBucketsInfo.push(Bucket(amount, 0, periodsAfterEpoch));
             // update _unexercisedBucketsByOption and corresponding index mapping
             _updateUnexercisedBucketIndices(optionKey, bucketIndex, unexercised);
             return bucketIndex;
         }
 
         currentBucket = claimBucketsInfo[bucketIndex - 1];
-        if (currentBucket.daysAfterEpoch < daysAfterEpoch) {
-            claimBucketsInfo.push(Bucket(amount, 0, daysAfterEpoch));
+        if (currentBucket.periodsAfterEpoch < periodsAfterEpoch) {
+            claimBucketsInfo.push(Bucket(amount, 0, periodsAfterEpoch));
             _updateUnexercisedBucketIndices(optionKey, bucketIndex, unexercised);
         } else {
             // Update claim bucket for today

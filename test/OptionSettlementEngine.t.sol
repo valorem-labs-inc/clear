@@ -1955,7 +1955,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         stdstore.target(token).sig(IERC20(token).balanceOf.selector).with_key(who).checked_write(amt);
     }
 
-    function _getDaysBucket() internal view returns (uint16) {
+    function _getBucketPeriod() internal view returns (uint16) {
         return uint16(block.timestamp / 1 days);
     }
 

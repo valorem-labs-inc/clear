@@ -304,8 +304,9 @@ interface IOptionSettlementEngine {
         uint112 amountWritten;
         /// @param amountExercised The number of options exercised in this bucket
         uint112 amountExercised;
-        /// @param daysAfterEpoch Which day this bucket falls on, in offset from epoch
-        uint16 daysAfterEpoch;
+        /// @param periodsAfterEpoch Which period this bucket falls on, in offset from epoch.
+        /// The period duration is defined on OptionSettlementEngine.BUCKET_WINDOW.
+        uint16 periodsAfterEpoch;
     }
 
     /**

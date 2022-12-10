@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL 1.1
 pragma solidity 0.8.11;
 
+import "./ITokenURIGenerator.sol";
+
 /// @title A settlement engine for options
 /// @author 0xAlcibiades
 /// @author Flip-Liquid
@@ -46,8 +48,8 @@ interface IOptionSettlementEngine {
      * @param redeemer The address redeeming the claim.
      * @param exerciseAsset The exercise asset of the option.
      * @param underlyingAsset The underlying asset of the option.
-     * @param exerciseAmountRedeemed The amount of options being
-     * @param underlyingAmountRedeemed The amount of underlying
+     * @param exerciseAmountRedeemed The amount of the exercise asset redeemed.
+     * @param underlyingAmountRedeemed The amount of underlying asset redeemed.
      */
     event ClaimRedeemed(
         uint256 indexed claimId,
@@ -210,7 +212,6 @@ interface IOptionSettlementEngine {
 
     /// @dev This enumeration is used to determine the type of an ERC1155 subtoken in the engine.
     enum Type {
-        None,
         Option,
         Claim
     }
@@ -232,7 +233,7 @@ interface IOptionSettlementEngine {
         /// @param settlementSeed Random seed created at the time of option type creation
         uint160 settlementSeed;
         /// @param nextClaimNum Which option was written
-        uint96 nextClaimNum;
+        uint96 nextClaimKey;
     }
 
     struct BucketInfo {
@@ -253,7 +254,7 @@ interface IOptionSettlementEngine {
         mapping(uint16 => bool) doesBucketHaveUnexercisedOptions;
     }
 
-    struct OptionEngineState {
+    struct OptionTypeState {
         /// @notice Information about the option type
         Option option;
         /// @notice Information about the option's claim buckets
@@ -296,7 +297,7 @@ interface IOptionSettlementEngine {
 
     /**
      * @dev Represents the total amount of options written and exercised for a group of
-     * claims bucketed by day. Used in fair assignement to calculate the ratio of
+     * claims bucketed by day. Used in fair assignment to calculate the ratio of
      * underlying to exercise assets to be transferred to claimants.
      */
     struct Bucket {
@@ -354,16 +355,16 @@ interface IOptionSettlementEngine {
     /**
      * @notice Returns the token type (e.g. Option/Claim) for a given token Id
      * @param tokenId The id of the option or claim.
-     * @return The enum (uint8) Type of the tokenId
+     * @return typeOfToken The enum Type of the tokenId.
      */
-    function tokenType(uint256 tokenId) external view returns (Type);
+    function tokenType(uint256 tokenId) external view returns (Type typeOfToken);
 
     /**
-     * @notice Check to see if an option is already initialized
-     * @param optionKey The option key to check
-     * @return Whether or not the option is initialized
+     * @notice Check to see if an option is already initialized.
+     * @param optionKey The option key to check.
+     * @return initialized Whether or not the option is initialized.
      */
-    function isOptionInitialized(uint160 optionKey) external view returns (bool);
+    function isOptionInitialized(uint160 optionKey) external view returns (bool initialized);
 
     /*//////////////////////////////////////////////////////////////
     //  Token ID Encoding
@@ -498,6 +499,11 @@ interface IOptionSettlementEngine {
      * @param tokens The tokens for which fees will be swept to the feeTo address.
      */
     function sweepFees(address[] memory tokens) external;
+
+    /**
+     * @return uriGenerator the address of the URI generator contract.
+     */
+    function tokenURIGenerator() external view returns (ITokenURIGenerator uriGenerator);
 
     /**
      * @notice Updates the contract address for generating token URIs for Valorem positions.

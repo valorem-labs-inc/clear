@@ -8,6 +8,7 @@ import "./interfaces/IOptionSettlementEngine.sol";
 import "./interfaces/ITokenURIGenerator.sol";
 
 /// @title Library to dynamically generate Valorem token URIs
+/// @author Thal0x
 /// @author 0xAlcibiades
 /// @author Flip-Liquid
 /// @author neodaoist

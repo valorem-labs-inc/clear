@@ -210,7 +210,6 @@ interface IOptionSettlementEngine {
 
     /// @dev This enumeration is used to determine the type of an ERC1155 subtoken in the engine.
     enum Type {
-        None,
         Option,
         Claim
     }
@@ -253,7 +252,7 @@ interface IOptionSettlementEngine {
         mapping(uint16 => bool) doesBucketHaveUnexercisedOptions;
     }
 
-    struct OptionEngineState {
+    struct OptionTypeState {
         /// @notice Information about the option type
         Option option;
         /// @notice Information about the option's claim buckets
@@ -354,9 +353,9 @@ interface IOptionSettlementEngine {
     /**
      * @notice Returns the token type (e.g. Option/Claim) for a given token Id
      * @param tokenId The id of the option or claim.
-     * @return The enum (uint8) Type of the tokenId
+     * @return typeOfToken The enum Type of the tokenId.
      */
-    function tokenType(uint256 tokenId) external view returns (Type);
+    function tokenType(uint256 tokenId) external view returns (Type typeOfToken);
 
     /**
      * @notice Check to see if an option is already initialized

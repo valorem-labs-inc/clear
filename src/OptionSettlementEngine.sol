@@ -48,7 +48,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Accessor for Option contract details
-    mapping(uint160 => OptionEngineState) internal optionRecords;
+    mapping(uint160 => OptionTypeState) internal optionTypeState;
 
     /*//////////////////////////////////////////////////////////////
     //  State variables - Public
@@ -103,43 +103,43 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function option(uint256 tokenId) external view returns (Option memory optionInfo) {
-        (uint160 optionKey,) = decodeTokenId(tokenId);
-        optionInfo = optionRecords[optionKey].option;
+        (uint160 optionNum,) = decodeTokenId(tokenId);
+        optionInfo = optionTypeState[optionNum].option;
     }
 
     /// @inheritdoc IOptionSettlementEngine
     function claim(uint256 claimId) public view returns (Claim memory) {
-        (uint160 optionKey, uint96 claimNum) = decodeTokenId(claimId);
+        (uint160 optionNum, uint96 claimNum) = decodeTokenId(claimId);
 
-        if (!isOptionInitialized(optionKey)) {
+        if (!isOptionInitialized(optionNum)) {
             revert TokenNotFound(claimId);
         }
 
-        (uint256 amountExercised, uint256 amountUnexercised) = _getExercisedAmountsForClaim(optionKey, claimNum);
+        (uint256 amountExercised, uint256 amountUnexercised) = _getExercisedAmountsForClaim(optionNum, claimNum);
 
-        uint256 _amountWritten = amountExercised + amountUnexercised;
+        uint256 amountWritten = amountExercised + amountUnexercised;
 
         // This claim has either been redeemed, or does not exist.
-        if (_amountWritten == 0) {
+        if (amountWritten == 0) {
             revert TokenNotFound(claimId);
         }
         return Claim({
-            amountWritten: uint112(_amountWritten),
+            amountWritten: uint112(amountWritten),
             amountExercised: uint112(amountExercised),
-            optionId: uint256(optionKey) << OPTION_ID_PADDING,
-            unredeemed: _amountWritten != 0
+            optionId: uint256(optionNum) << OPTION_ID_PADDING,
+            unredeemed: amountWritten != 0
         });
     }
 
     /// @inheritdoc IOptionSettlementEngine
     function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions) {
-        (uint160 optionKey, uint96 claimNum) = decodeTokenId(tokenId);
+        (uint160 optionNum, uint96 claimNum) = decodeTokenId(tokenId);
 
-        if (!isOptionInitialized(optionKey)) {
+        if (!isOptionInitialized(optionNum)) {
             revert TokenNotFound(tokenId);
         }
 
-        Option storage optionRecord = optionRecords[optionKey].option;
+        Option storage optionRecord = optionTypeState[optionNum].option;
 
         // token ID is an option
         if (claimNum == 0) {
@@ -152,7 +152,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             });
         } else {
             // token ID is a claim
-            (uint256 amountExercised, uint256 amountUnexercised) = _getExercisedAmountsForClaim(optionKey, claimNum);
+            (uint256 amountExercised, uint256 amountUnexercised) = _getExercisedAmountsForClaim(optionNum, claimNum);
 
             underlyingPositions = Underlying({
                 underlyingAsset: optionRecord.underlyingAsset,
@@ -173,8 +173,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @inheritdoc IOptionSettlementEngine
-    function isOptionInitialized(uint160 optionKey) public view returns (bool) {
-        return optionRecords[optionKey].option.underlyingAsset != address(0);
+    function isOptionInitialized(uint160 optionNum) public view returns (bool) {
+        return optionTypeState[optionNum].option.underlyingAsset != address(0);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -183,8 +183,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     function uri(uint256 tokenId) public view virtual override returns (string memory) {
         Option memory optionInfo;
-        (uint160 optionKey, uint96 claimNum) = decodeTokenId(tokenId);
-        optionInfo = optionRecords[optionKey].option;
+        (uint160 optionNum, uint96 claimNum) = decodeTokenId(tokenId);
+        optionInfo = optionTypeState[optionNum].option;
 
         if (optionInfo.underlyingAsset == address(0x0)) {
             revert TokenNotFound(tokenId);
@@ -212,15 +212,15 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IOptionSettlementEngine
-    function encodeTokenId(uint160 optionKey, uint96 claimNum) public pure returns (uint256 tokenId) {
-        tokenId |= uint256(optionKey) << OPTION_ID_PADDING;
+    function encodeTokenId(uint160 optionNum, uint96 claimNum) public pure returns (uint256 tokenId) {
+        tokenId |= uint256(optionNum) << OPTION_ID_PADDING;
         tokenId |= uint256(claimNum);
     }
 
     /// @inheritdoc IOptionSettlementEngine
-    function decodeTokenId(uint256 tokenId) public pure returns (uint160 optionKey, uint96 claimNum) {
+    function decodeTokenId(uint256 tokenId) public pure returns (uint160 optionNum, uint96 claimNum) {
         // move key to lsb to fit into uint160
-        optionKey = uint160(tokenId >> OPTION_ID_PADDING);
+        optionNum = uint160(tokenId >> OPTION_ID_PADDING);
 
         // grab lower 96b of id for claim number
         claimNum = uint96(tokenId & CLAIM_NUMBER_MASK);
@@ -240,7 +240,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint40 expiryTimestamp
     ) external returns (uint256 optionId) {
         // Check that a duplicate option type doesn't exist
-        uint160 optionKey = uint160(
+        uint160 optionNum = uint160(
             bytes20(
                 keccak256(
                     abi.encode(
@@ -256,10 +256,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 )
             )
         );
-        optionId = uint256(optionKey) << OPTION_ID_PADDING;
+        optionId = uint256(optionNum) << OPTION_ID_PADDING;
 
         // If it does, revert
-        if (isOptionInitialized(optionKey)) {
+        if (isOptionInitialized(optionNum)) {
             revert OptionsTypeExists(optionId);
         }
 
@@ -287,14 +287,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert InvalidAssets(underlyingAsset, exerciseAsset);
         }
 
-        optionRecords[optionKey].option = Option({
+        optionTypeState[optionNum].option = Option({
             underlyingAsset: underlyingAsset,
             underlyingAmount: underlyingAmount,
             exerciseAsset: exerciseAsset,
             exerciseAmount: exerciseAmount,
             exerciseTimestamp: exerciseTimestamp,
             expiryTimestamp: expiryTimestamp,
-            settlementSeed: optionKey,
+            settlementSeed: optionNum,
             nextClaimNum: 1
         });
 
@@ -316,18 +316,18 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert AmountWrittenCannotBeZero();
         }
 
-        // Get the optionKey and claimNum from the tokenId
-        (uint160 optionKey, uint96 claimNum) = decodeTokenId(tokenId);
+        // Get the optionNum and claimNum from the tokenId
+        (uint160 optionNum, uint96 claimNum) = decodeTokenId(tokenId);
 
         // Pass through the tokenId as the encodedClaimId, which will be
         // overwritten in the case of a new claim.
         uint256 encodedClaimId = tokenId;
 
-        // Sanitize a zeroed encodedOptionId from the optionKey
-        uint256 encodedOptionId = uint256(optionKey) << OPTION_ID_PADDING;
+        // Sanitize a zeroed encodedOptionId from the optionNum
+        uint256 encodedOptionId = uint256(optionNum) << OPTION_ID_PADDING;
 
         // Get the option record and check that it's valid to write against
-        OptionEngineState storage optionState = optionRecords[optionKey];
+        OptionTypeState storage optionState = optionTypeState[optionNum];
 
         // Make sure the option exists, and hasn't expired
         uint40 expiry = optionState.option.expiryTimestamp;
@@ -343,11 +343,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // Make encodedClaimId reflect the next available claim and increment the next
             // available claim in storage.
             uint96 nextClaimNum = optionState.option.nextClaimNum++;
-            encodedClaimId = encodeTokenId(optionKey, nextClaimNum);
+            encodedClaimId = encodeTokenId(optionNum, nextClaimNum);
 
             // Handle internal claim bucket accounting
-            uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
-            _addOrUpdateClaimIndex(optionKey, nextClaimNum, bucketIndex, amount);
+            uint16 bucketIndex = _addOrUpdateClaimBucket(optionNum, amount);
+            _addOrUpdateClaimIndex(optionNum, nextClaimNum, bucketIndex, amount);
         }
         // Add to existing claim
         else {
@@ -358,8 +358,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             }
 
             // Handle internal claim bucket accounting
-            uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
-            _addOrUpdateClaimIndex(optionKey, claimNum, bucketIndex, amount);
+            uint16 bucketIndex = _addOrUpdateClaimBucket(optionNum, amount);
+            _addOrUpdateClaimIndex(optionNum, claimNum, bucketIndex, amount);
         }
 
         // Calculate amount to receive
@@ -403,14 +403,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function exercise(uint256 optionId, uint112 amount) external {
-        (uint160 optionKey, uint96 claimNum) = decodeTokenId(optionId);
+        (uint160 optionNum, uint96 claimNum) = decodeTokenId(optionId);
 
         // option ID should be specified without claim in lower 96b
         if (claimNum != 0) {
             revert InvalidOption(optionId);
         }
 
-        Option storage optionRecord = optionRecords[optionKey].option;
+        Option storage optionRecord = optionTypeState[optionNum].option;
 
         if (optionRecord.expiryTimestamp <= block.timestamp) {
             revert ExpiredOption(optionId, optionRecord.expiryTimestamp);
@@ -430,7 +430,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         address exerciseAsset = optionRecord.exerciseAsset;
         address underlyingAsset = optionRecord.underlyingAsset;
 
-        _assignExercise(optionKey, optionRecord, amount);
+        _assignExercise(optionNum, optionRecord, amount);
 
         // Assess fee (if fee switch enabled) and emit events
         uint256 fee = 0;
@@ -459,7 +459,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// the ClaimIndex data structions) weighted by the ratio of exercised to
     /// unexercised options on each of those days.
     function redeem(uint256 claimId) external {
-        (uint160 optionKey, uint96 claimNum) = decodeTokenId(claimId);
+        (uint160 optionNum, uint96 claimNum) = decodeTokenId(claimId);
 
         if (claimNum == 0) {
             revert InvalidClaim(claimId);
@@ -471,23 +471,23 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert CallerDoesNotOwnClaimId(claimId);
         }
 
-        Option storage optionRecord = optionRecords[optionKey].option;
+        Option storage optionRecord = optionTypeState[optionNum].option;
 
         if (optionRecord.expiryTimestamp > block.timestamp) {
             revert ClaimTooSoon(claimId, optionRecord.expiryTimestamp);
         }
 
         (uint256 exerciseAmountRedeemed, uint256 underlyingAmountRedeemed) =
-            _getPositionsForClaim(optionKey, claimNum, optionRecord);
+            _getPositionsForClaim(optionNum, claimNum, optionRecord);
 
-        ClaimIndex[] storage claimIndexArray = optionRecords[optionKey].claimIndices[claimNum];
+        ClaimIndex[] storage claimIndexArray = optionTypeState[optionNum].claimIndices[claimNum];
         uint256 claimIndexArrayLength = claimIndexArray.length;
         uint256 totalExerciseAssetAmount;
         uint256 totalUnderlyingAssetAmount;
 
         for (uint256 i = 0; i < claimIndexArrayLength; i++) {
             (uint256 _amountExercisedInBucket, uint256 _amountUnexercisedInBucket) =
-                _getExercisedAmountsForClaimIndex(optionKey, claimIndexArray, claimIndexArray.length - 1);
+                _getExercisedAmountsForClaimIndex(optionNum, claimIndexArray, claimIndexArray.length - 1);
             // accumulate the amount exercised and unexercised in these variables for later mul by
             // optionRecord.exerciseAmount/underlyingAmount
             totalExerciseAssetAmount += _amountExercisedInBucket;
@@ -501,7 +501,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         emit ClaimRedeemed(
             claimId,
-            uint256(optionKey) << OPTION_ID_PADDING,
+            uint256(optionNum) << OPTION_ID_PADDING,
             msg.sender,
             optionRecord.exerciseAsset,
             optionRecord.underlyingAsset,
@@ -596,11 +596,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// are then iterated from oldest to newest (looping if we reach "today") if the
     /// exercise amount overflows into another bucket. The seed for the pseudorandom
     /// index is updated accordingly on the option type.
-    function _assignExercise(uint160 optionKey, Option storage optionRecord, uint112 amount) internal {
+    function _assignExercise(uint160 optionNum, Option storage optionRecord, uint112 amount) internal {
         // A bucket of the overall amounts written and exercised for all claims
         // on a given day
-        Bucket[] storage claimBucketArray = optionRecords[optionKey].bucketInfo.buckets;
-        uint16[] storage unexercisedBucketIndices = optionRecords[optionKey].bucketInfo.unexercisedBuckets;
+        Bucket[] storage claimBucketArray = optionTypeState[optionNum].bucketInfo.buckets;
+        uint16[] storage unexercisedBucketIndices = optionTypeState[optionNum].bucketInfo.unexercisedBuckets;
         uint16 unexercisedBucketsMod = uint16(unexercisedBucketIndices.length);
         uint16 unexercisedBucketsIndex = uint16(optionRecord.settlementSeed % unexercisedBucketsMod);
         while (amount > 0) {
@@ -619,7 +619,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 unexercisedBucketIndices.pop();
                 unexercisedBucketsMod -= 1;
 
-                optionRecords[optionKey].bucketInfo.doesBucketHaveUnexercisedOptions[bucketIndex] = false;
+                optionTypeState[optionNum].bucketInfo.doesBucketHaveUnexercisedOptions[bucketIndex] = false;
             } else {
                 amountPresentlyExercised = amount;
                 amount = 0;
@@ -642,27 +642,27 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @dev Get the exercise and underlying amounts for a claim
-    function _getExercisedAmountsForClaim(uint160 optionKey, uint96 claimNum)
+    function _getExercisedAmountsForClaim(uint160 optionNum, uint96 claimNum)
         internal
         view
         returns (uint256 amountExercised, uint256 amountUnexercised)
     {
-        ClaimIndex[] storage claimIndexArray = optionRecords[optionKey].claimIndices[claimNum];
+        ClaimIndex[] storage claimIndexArray = optionTypeState[optionNum].claimIndices[claimNum];
         for (uint256 i = 0; i < claimIndexArray.length; i++) {
             (uint256 _amountExercisedInBucket, uint256 _amountUnexercisedInBucket) =
-                _getExercisedAmountsForClaimIndex(optionKey, claimIndexArray, i);
+                _getExercisedAmountsForClaimIndex(optionNum, claimIndexArray, i);
             amountExercised += _amountExercisedInBucket;
             amountUnexercised += _amountUnexercisedInBucket;
         }
     }
 
-    function _getExercisedAmountsForClaimIndex(uint160 optionKey, ClaimIndex[] storage claimIndexArray, uint256 index)
+    function _getExercisedAmountsForClaimIndex(uint160 optionNum, ClaimIndex[] storage claimIndexArray, uint256 index)
         internal
         view
         returns (uint256 amountExercised, uint256 amountUnexercised)
     {
         ClaimIndex storage claimIndex = claimIndexArray[index];
-        Bucket storage claimBucketInfo = optionRecords[optionKey].bucketInfo.buckets[claimIndex.bucketIndex];
+        Bucket storage claimBucketInfo = optionTypeState[optionNum].bucketInfo.buckets[claimIndex.bucketIndex];
         // The ratio of exercised to written options in the bucket multiplied by the
         // number of options actaully written in the claim.
         amountExercised = FixedPointMathLib.mulDivDown(
@@ -679,24 +679,24 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @dev Get the exercise and underlying amounts for a claim
-    function _getPositionsForClaim(uint160 optionKey, uint96 claimNum, Option storage optionRecord)
+    function _getPositionsForClaim(uint160 optionNum, uint96 claimNum, Option storage optionRecord)
         internal
         view
         returns (uint256 exerciseAmount, uint256 underlyingAmount)
     {
-        ClaimIndex[] storage claimIndexArray = optionRecords[optionKey].claimIndices[claimNum];
+        ClaimIndex[] storage claimIndexArray = optionTypeState[optionNum].claimIndices[claimNum];
         for (uint256 i = 0; i < claimIndexArray.length; i++) {
             (uint256 amountExercised, uint256 amountUnexercised) =
-                _getExercisedAmountsForClaimIndex(optionKey, claimIndexArray, i);
+                _getExercisedAmountsForClaimIndex(optionNum, claimIndexArray, i);
             exerciseAmount += optionRecord.exerciseAmount * amountExercised;
             underlyingAmount += optionRecord.underlyingAmount * amountUnexercised;
         }
     }
 
     /// @dev Help with internal options bucket accounting
-    function _addOrUpdateClaimBucket(uint160 optionKey, uint112 amount) internal returns (uint16) {
-        Bucket[] storage claimBucketsInfo = optionRecords[optionKey].bucketInfo.buckets;
-        uint16[] storage unexercised = optionRecords[optionKey].bucketInfo.unexercisedBuckets;
+    function _addOrUpdateClaimBucket(uint160 optionNum, uint112 amount) internal returns (uint16) {
+        Bucket[] storage claimBucketsInfo = optionTypeState[optionNum].bucketInfo.buckets;
+        uint16[] storage unexercised = optionTypeState[optionNum].bucketInfo.unexercisedBuckets;
         Bucket storage currentBucket;
         uint16 daysAfterEpoch = _getDaysBucket();
         uint16 bucketIndex = uint16(claimBucketsInfo.length);
@@ -704,14 +704,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // add a new bucket none exist
             claimBucketsInfo.push(Bucket(amount, 0, daysAfterEpoch));
             // update _unexercisedBucketsByOption and corresponding index mapping
-            _updateUnexercisedBucketIndices(optionKey, bucketIndex, unexercised);
+            _updateUnexercisedBucketIndices(optionNum, bucketIndex, unexercised);
             return bucketIndex;
         }
 
         currentBucket = claimBucketsInfo[bucketIndex - 1];
         if (currentBucket.daysAfterEpoch < daysAfterEpoch) {
             claimBucketsInfo.push(Bucket(amount, 0, daysAfterEpoch));
-            _updateUnexercisedBucketIndices(optionKey, bucketIndex, unexercised);
+            _updateUnexercisedBucketIndices(optionNum, bucketIndex, unexercised);
         } else {
             // Update claim bucket for today
             currentBucket.amountWritten += amount;
@@ -719,8 +719,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
             // This block is executed if a bucket has been previously fully exercised
             // and now more options are being written into it
-            if (!optionRecords[optionKey].bucketInfo.doesBucketHaveUnexercisedOptions[bucketIndex]) {
-                _updateUnexercisedBucketIndices(optionKey, bucketIndex, unexercised);
+            if (!optionTypeState[optionNum].bucketInfo.doesBucketHaveUnexercisedOptions[bucketIndex]) {
+                _updateUnexercisedBucketIndices(optionNum, bucketIndex, unexercised);
             }
         }
 
@@ -729,18 +729,18 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @dev Help with internal claim bucket accounting
     function _updateUnexercisedBucketIndices(
-        uint160 optionKey,
+        uint160 optionNum,
         uint16 bucketIndex,
         uint16[] storage unexercisedBucketIndices
     ) internal {
         unexercisedBucketIndices.push(bucketIndex);
-        optionRecords[optionKey].bucketInfo.doesBucketHaveUnexercisedOptions[bucketIndex] = true;
+        optionTypeState[optionNum].bucketInfo.doesBucketHaveUnexercisedOptions[bucketIndex] = true;
     }
 
     /// @dev Help with internal claim bucket accounting
-    function _addOrUpdateClaimIndex(uint160 optionKey, uint96 claimNum, uint16 bucketIndex, uint112 amount) internal {
+    function _addOrUpdateClaimIndex(uint160 optionNum, uint96 claimNum, uint16 bucketIndex, uint112 amount) internal {
         ClaimIndex storage lastIndex;
-        ClaimIndex[] storage claimIndexArray = optionRecords[optionKey].claimIndices[claimNum];
+        ClaimIndex[] storage claimIndexArray = optionTypeState[optionNum].claimIndices[claimNum];
         uint256 arrayLength = claimIndexArray.length;
 
         // if no indices have been created previously, create one

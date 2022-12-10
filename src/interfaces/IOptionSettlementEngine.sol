@@ -212,7 +212,7 @@ interface IOptionSettlementEngine {
     enum Type {
         None,
         Option,
-        OptionLotClaim
+        Claim
     }
 
     /// @dev This struct contains the data about an options type associated with an ERC-1155 token.
@@ -270,7 +270,7 @@ interface IOptionSettlementEngine {
      * redeeming their claim NFT depends on the option type, the amount of options written in their options lot
      * (represented in this struct) and what portion of their lot was exercised before expiry.
      */
-    struct OptionLotClaim {
+    struct Claim {
         /// @param amountWritten The number of options written in this option lot claim
         uint112 amountWritten;
         /// @param amountExercised The amount of options that have been exercised in this lot
@@ -338,9 +338,9 @@ interface IOptionSettlementEngine {
      * @notice Returns information about the exercised and unexercised assets associated with
      * an options lot claim.
      * @param claimId The id of the claim
-     * @return claim The OptionLotClaim struct reflecting information about the options lot.
+     * @return claim The Claim struct reflecting information about the options lot.
      */
-    function claim(uint256 claimId) external view returns (OptionLotClaim memory claim);
+    function claim(uint256 claimId) external view returns (Claim memory claim);
 
     /**
      * @notice Information about the position underlying a token, useful for determining value.
@@ -352,7 +352,7 @@ interface IOptionSettlementEngine {
     function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions);
 
     /**
-     * @notice Returns the token type (e.g. Option/OptionLotClaim) for a given token Id
+     * @notice Returns the token type (e.g. Option/Claim) for a given token Id
      * @param tokenId The id of the option or claim.
      * @return The enum (uint8) Type of the tokenId
      */

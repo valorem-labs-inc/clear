@@ -108,7 +108,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @inheritdoc IOptionSettlementEngine
-    function claim(uint256 claimId) public view returns (OptionLotClaim memory) {
+    function claim(uint256 claimId) public view returns (Claim memory) {
         (uint160 optionKey, uint96 claimNum) = decodeTokenId(claimId);
 
         if (!isOptionInitialized(optionKey)) {
@@ -118,7 +118,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         (uint256 amountExercised, uint256 amountUnexercised) = _getExercisedAmountsForClaim(optionKey, claimNum);
 
         uint256 _amountWritten = amountExercised + amountUnexercised;
-        return OptionLotClaim({
+        return Claim({
             amountWritten: uint112(_amountWritten),
             amountExercised: uint112(amountExercised),
             optionId: uint256(optionKey) << 96,
@@ -164,7 +164,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         if (claimNum == 0) {
             return Type.Option;
         }
-        return Type.OptionLotClaim;
+        return Type.Claim;
     }
 
     /// @inheritdoc IOptionSettlementEngine
@@ -185,7 +185,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert TokenNotFound(tokenId);
         }
 
-        Type _type = claimNum == 0 ? Type.Option : Type.OptionLotClaim;
+        Type _type = claimNum == 0 ? Type.Option : Type.Claim;
 
         ITokenURIGenerator.TokenURIParams memory params = ITokenURIGenerator.TokenURIParams({
             underlyingAsset: optionInfo.underlyingAsset,

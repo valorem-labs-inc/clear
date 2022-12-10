@@ -137,7 +137,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     function testClaimAccessor() public {
         vm.startPrank(ALICE);
         uint256 claimId1 = engine.write(testOptionId, 69);
-        IOptionSettlementEngine.OptionLotClaim memory claimLot = engine.claim(claimId1);
+        IOptionSettlementEngine.Claim memory claimLot = engine.claim(claimId1);
 
         assertEq(claimLot.amountExercised, 0);
         assertEq(claimLot.amountWritten, 69);
@@ -1835,13 +1835,13 @@ contract OptionSettlementTest is Test, NFTreceiver {
     // **********************************************************************
 
     function _assertTokenIsClaim(uint256 tokenId) internal {
-        if (engine.tokenType(tokenId) != IOptionSettlementEngine.Type.OptionLotClaim) {
+        if (engine.tokenType(tokenId) != IOptionSettlementEngine.Type.Claim) {
             assertTrue(false);
         }
     }
 
     function _assertTokenIsOption(uint256 tokenId) internal {
-        if (engine.tokenType(tokenId) == IOptionSettlementEngine.Type.OptionLotClaim) {
+        if (engine.tokenType(tokenId) == IOptionSettlementEngine.Type.Claim) {
             assertTrue(false);
         }
     }

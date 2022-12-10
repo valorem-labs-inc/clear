@@ -340,8 +340,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             uint96 nextClaimNum = optionState.option.nextClaimNum++;
             encodedClaimId = encodeTokenId(optionKey, nextClaimNum);
 
-            // Store info about the claim.
-            optionState.claims[nextClaimNum].claim = OptionLotClaim({amountWritten: amount, amountExercised:0, optionId: tokenId, unredeemed: false});
             // Handle internal claim bucket accounting
             uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
             _addOrUpdateClaimIndex(optionKey, nextClaimNum, bucketIndex, amount);
@@ -354,8 +352,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 revert CallerDoesNotOwnClaimId(encodedClaimId);
             }
 
-            // Increment balance
-            optionState.claims[claimNum].claim.amountWritten += amount;
             // Handle internal claim bucket accounting
             uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
             _addOrUpdateClaimIndex(optionKey, claimNum, bucketIndex, amount);
@@ -479,7 +475,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         (uint256 exerciseAmountRedeemed, uint256 underlyingAmountRedeemed) =
             _getPositionsForClaim(optionKey, claimNum, optionRecord);
 
-        ClaimIndex[] storage claimIndexArray =  optionRecords[optionKey].claims[claimNum].claimIndices;
+        ClaimIndex[] storage claimIndexArray = optionRecords[optionKey].claimIndices[claimNum];
         uint256 claimIndexArrayLength = claimIndexArray.length;
         uint256 totalExerciseAssetAmount;
         uint256 totalUnderlyingAssetAmount;
@@ -646,7 +642,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         view
         returns (uint256 amountExercised, uint256 amountUnexercised)
     {
-        ClaimIndex[] storage claimIndexArray = optionRecords[optionKey].claims[claimNum].claimIndices;
+        ClaimIndex[] storage claimIndexArray = optionRecords[optionKey].claimIndices[claimNum];
         for (uint256 i = 0; i < claimIndexArray.length; i++) {
             (uint256 _amountExercisedInBucket, uint256 _amountUnexercisedInBucket) =
                 _getExercisedAmountsForClaimIndex(optionKey, claimIndexArray, i);
@@ -655,11 +651,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
     }
 
-    function _getExercisedAmountsForClaimIndex(
-        uint160 optionKey,
-        ClaimIndex[] storage claimIndexArray,
-        uint256 index
-    ) internal view returns (uint256 amountExercised, uint256 amountUnexercised) {
+    function _getExercisedAmountsForClaimIndex(uint160 optionKey, ClaimIndex[] storage claimIndexArray, uint256 index)
+        internal
+        view
+        returns (uint256 amountExercised, uint256 amountUnexercised)
+    {
         ClaimIndex storage claimIndex = claimIndexArray[index];
         Bucket storage claimBucketInfo = optionRecords[optionKey].bucketInfo.buckets[claimIndex.bucketIndex];
         // The ratio of exercised to written options in the bucket multiplied by the
@@ -683,9 +679,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         view
         returns (uint256 exerciseAmount, uint256 underlyingAmount)
     {
-        ClaimIndex[] storage claimIndexArray = optionRecords[optionKey].claims[claimNum].claimIndices;
+        ClaimIndex[] storage claimIndexArray = optionRecords[optionKey].claimIndices[claimNum];
         for (uint256 i = 0; i < claimIndexArray.length; i++) {
-            (uint256 amountExercised, uint256 amountUnexercised) = _getExercisedAmountsForClaimIndex(optionKey, claimIndexArray, i);
+            (uint256 amountExercised, uint256 amountUnexercised) =
+                _getExercisedAmountsForClaimIndex(optionKey, claimIndexArray, i);
             exerciseAmount += optionRecord.exerciseAmount * amountExercised;
             underlyingAmount += optionRecord.underlyingAmount * amountUnexercised;
         }
@@ -738,7 +735,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @dev Help with internal claim bucket accounting
     function _addOrUpdateClaimIndex(uint160 optionKey, uint96 claimNum, uint16 bucketIndex, uint112 amount) internal {
         ClaimIndex storage lastIndex;
-        ClaimIndex[] storage claimIndexArray = optionRecords[optionKey].claims[claimNum].claimIndices;
+        ClaimIndex[] storage claimIndexArray = optionRecords[optionKey].claimIndices[claimNum];
         uint256 arrayLength = claimIndexArray.length;
 
         // if no indices have been created previously, create one

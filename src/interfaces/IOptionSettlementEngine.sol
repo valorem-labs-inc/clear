@@ -235,13 +235,6 @@ interface IOptionSettlementEngine {
         uint96 nextClaimNum;
     }
 
-    struct Claim {
-        /// @notice Option lot claim ticket details
-        OptionLotClaim claim; // replace with amountWritten and Flip's PR
-        /// @notice Claim Indices for a claim ID
-        ClaimIndex[] claimIndices;
-    }
-
     struct BucketInfo {
         /// @notice Buckets of claims grouped by period
         /// @dev This is to enable O(constant) time options exercise. When options are written,
@@ -266,7 +259,7 @@ interface IOptionSettlementEngine {
         /// @notice Information about the option's claim buckets
         BucketInfo bucketInfo;
         /// @notice Information about the option's claims
-        mapping(uint96 => Claim) claims;
+        mapping(uint96 => ClaimIndex[]) claimIndices;
     }
 
     /**

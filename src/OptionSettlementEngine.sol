@@ -36,8 +36,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     // @dev The mask to mask out a claim number from a claimId
     uint96 internal constant CLAIM_NUMBER_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFF;
 
-
-
     /*//////////////////////////////////////////////////////////////
     //  Immutable/Constant - Public
     //////////////////////////////////////////////////////////////*/
@@ -46,7 +44,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     uint8 public immutable feeBps = 5;
 
     /// @notice The size of the bucket period in seconds
-    uint public constant BUCKET_WINDOW = 1 days;
+    uint256 public constant BUCKET_WINDOW = 1 days;
 
     /*//////////////////////////////////////////////////////////////
     //  State variables - Internal
@@ -617,6 +615,15 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // get the claim bucket to assign
             uint16 bucketIndex = unexercisedBucketIndices[unexercisedBucketsIndex];
             Bucket storage claimBucketInfo = claimBucketArray[bucketIndex];
+
+            // skip bucket if it happens to be in the current window
+            if (_getPeriodBucket() == claimBucketInfo.periodsAfterEpoch) {
+                if (unexercisedBucketIndices.length == 1) {
+                    revert InsufficientExercisableOptions(BUCKET_WINDOW * (claimBucketInfo.periodsAfterEpoch + 1));
+                }
+                unexercisedBucketsIndex = (unexercisedBucketsIndex + 1) % unexercisedBucketsMod;
+                continue;
+            }
 
             uint112 amountAvailable = claimBucketInfo.amountWritten - claimBucketInfo.amountExercised;
             uint112 amountPresentlyExercised;

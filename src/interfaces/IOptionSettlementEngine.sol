@@ -211,6 +211,15 @@ interface IOptionSettlementEngine {
      */
     error CannotWriteOptionsInFinalPeriod(uint256 finalWindowStartTimestamp);
 
+    /**
+     * @notice The only options available for exercise are in the current
+     * BUCKET_WINDOW, which is not allowed. Caller must wait until the next
+     * window elapses.
+     * @param nextExerciseTimestamp The next timestamp at which the options will
+     * be available for exercise, at time of call.
+     */
+    error InsufficientExercisableOptions(uint256 nextExerciseTimestamp);
+
     /*//////////////////////////////////////////////////////////////
     //  Data structures
     //////////////////////////////////////////////////////////////*/

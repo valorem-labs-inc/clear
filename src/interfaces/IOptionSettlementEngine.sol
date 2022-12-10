@@ -212,7 +212,7 @@ interface IOptionSettlementEngine {
     enum Type {
         None,
         Option,
-        OptionLotClaim
+        Claim
     }
 
     /// @dev This struct contains the data about an options type associated with an ERC-1155 token.
@@ -233,13 +233,6 @@ interface IOptionSettlementEngine {
         uint160 settlementSeed;
         /// @param nextClaimNum Which option was written
         uint96 nextClaimNum;
-    }
-
-    struct Claim {
-        /// @notice Option lot claim ticket details
-        OptionLotClaim claim; // replace with amountWritten and Flip's PR
-        /// @notice Claim Indices for a claim ID
-        OptionLotClaimIndex[] claimIndices;
     }
 
     struct BucketInfo {
@@ -266,7 +259,7 @@ interface IOptionSettlementEngine {
         /// @notice Information about the option's claim buckets
         BucketInfo bucketInfo;
         /// @notice Information about the option's claims
-        mapping(uint96 => Claim) claims;
+        mapping(uint96 => ClaimIndex[]) claimIndices;
     }
 
     /**
@@ -277,11 +270,16 @@ interface IOptionSettlementEngine {
      * redeeming their claim NFT depends on the option type, the amount of options written in their options lot
      * (represented in this struct) and what portion of their lot was exercised before expiry.
      */
-    struct OptionLotClaim {
+    struct Claim {
         /// @param amountWritten The number of options written in this option lot claim
         uint112 amountWritten;
-        /// @param claimed Whether or not this option lot has been claimed by the writer
-        bool claimed;
+        /// @param amountExercised The amount of options that have been exercised in this lot
+        uint112 amountExercised;
+        /// @param optionId The option ID corresponding to the option type for which this lot is
+        /// written.
+        uint256 optionId;
+        /// @param unredeemed Whether or not this option lot has been claimed by the writer
+        bool unredeemed;
     }
 
     /**
@@ -289,7 +287,7 @@ interface IOptionSettlementEngine {
      * writing. This struct is used to keep track of how many options in a single lot
      * are written on each day, in order to correctly perform fair assignment.
      */
-    struct OptionLotClaimIndex {
+    struct ClaimIndex {
         /// @param amountWritten The amount of options written on a given day/bucket
         uint112 amountWritten;
         /// @param bucketIndex The index of the OptionsDayBucket in which the options are written
@@ -337,12 +335,12 @@ interface IOptionSettlementEngine {
     function option(uint256 tokenId) external view returns (Option memory optionInfo);
 
     /**
-     * @notice Returns OptionLotClaim struct details about a given tokenId if that token is a
-     * claim NFT.
-     * @param tokenId The id of the claim.
-     * @return claimInfo The Claim struct for tokenId.
+     * @notice Returns information about the exercised and unexercised assets associated with
+     * an options lot claim.
+     * @param claimId The id of the claim
+     * @return claim The Claim struct reflecting information about the options lot.
      */
-    function claim(uint256 tokenId) external view returns (OptionLotClaim memory claimInfo);
+    function claim(uint256 claimId) external view returns (Claim memory claim);
 
     /**
      * @notice Information about the position underlying a token, useful for determining value.
@@ -354,7 +352,7 @@ interface IOptionSettlementEngine {
     function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions);
 
     /**
-     * @notice Returns the token type (e.g. Option/OptionLotClaim) for a given token Id
+     * @notice Returns the token type (e.g. Option/Claim) for a given token Id
      * @param tokenId The id of the option or claim.
      * @return The enum (uint8) Type of the tokenId
      */

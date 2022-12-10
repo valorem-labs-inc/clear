@@ -147,7 +147,7 @@ interface IOptionSettlementEngine {
     error ClaimTooSoon(uint256 claimId, uint40 expiry);
 
     /**
- * @notice This option cannot yet be exercised.
+     * @notice This option cannot yet be exercised.
      * @param optionId Supplied option ID.
      * @param exercise The time after which the option optionId be exercised.
      */
@@ -198,7 +198,7 @@ interface IOptionSettlementEngine {
     error InvalidOption(uint256 token);
 
     /**
-    * @notice This option contract type already exists and thus cannot be created.
+     * @notice This option contract type already exists and thus cannot be created.
      * @param optionId The token id of the option type which already exists.
      */
     error OptionsTypeExists(uint256 optionId);

@@ -585,7 +585,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // A bucket of the overall amounts written and exercised for all claims
         // on a given day
         Bucket[] storage claimBuckets = optionTypeStates[optionKey].bucketInfo.buckets;
-        uint16[] storage unexercisedBucketIndices = optionTypeStates[optionKey].bucketInfo.unexercisedBuckets;
+        uint16[] storage unexercisedBucketIndices = optionTypeStates[optionKey].bucketInfo.bucketsWithCollateral;
         uint16 unexercisedBucketsMod = uint16(unexercisedBucketIndices.length);
         uint16 unexercisedBucketsIndex = uint16(optionRecord.settlementSeed % unexercisedBucketsMod);
         while (amount > 0) {
@@ -604,7 +604,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 unexercisedBucketIndices.pop();
                 unexercisedBucketsMod -= 1;
 
-                optionTypeStates[optionKey].bucketInfo.doesBucketHaveUnexercisedOptions[bucketIndex] = false;
+                optionTypeStates[optionKey].bucketInfo.bucketHasCollateral[bucketIndex] = false;
             } else {
                 amountPresentlyExercised = amount;
                 amount = 0;
@@ -684,7 +684,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @dev Help with internal options bucket accounting
     function _addOrUpdateClaimBucket(uint160 optionKey, uint112 amount) internal returns (uint16) {
         Bucket[] storage claimBuckets = optionTypeStates[optionKey].bucketInfo.buckets;
-        uint16[] storage unexercised = optionTypeStates[optionKey].bucketInfo.unexercisedBuckets;
+        uint16[] storage unexercised = optionTypeStates[optionKey].bucketInfo.bucketsWithCollateral;
         Bucket storage currentBucket;
         uint16 daysAfterEpoch = _getDaysBucket();
         uint16 bucketIndex = uint16(claimBuckets.length);
@@ -707,7 +707,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
             // This block is executed if a bucket has been previously fully exercised
             // and now more options are being written into it
-            if (!optionTypeStates[optionKey].bucketInfo.doesBucketHaveUnexercisedOptions[bucketIndex]) {
+            if (!optionTypeStates[optionKey].bucketInfo.bucketHasCollateral[bucketIndex]) {
                 _updateUnexercisedBucketIndices(optionKey, bucketIndex, unexercised);
             }
         }
@@ -722,7 +722,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint16[] storage unexercisedBucketIndices
     ) internal {
         unexercisedBucketIndices.push(bucketIndex);
-        optionTypeStates[optionKey].bucketInfo.doesBucketHaveUnexercisedOptions[bucketIndex] = true;
+        optionTypeStates[optionKey].bucketInfo.bucketHasCollateral[bucketIndex] = true;
     }
 
     /// @dev Help with internal claim bucket accounting

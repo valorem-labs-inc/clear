@@ -228,90 +228,83 @@ interface IOptionSettlementEngine {
         uint96 nextClaimKey;
     }
 
+    /// @notice The claim bucket information for a given option type.
     struct BucketInfo {
-        /// @notice Buckets of claims grouped by period
-        /// @dev This is to enable O(constant) time options exercise. When options are written,
-        /// the Claim struct in this mapping is updated to reflect the cumulative amount written
-        /// on the day in question. write() will add unexercised options into the bucket
-        /// corresponding to the # of days after the option type's creation.
-        /// exercise() will randomly assign exercise to a bucket <= the current day.
+        /// @custom:member An array of buckets for a given option type.
         Bucket[] buckets;
-        /// @notice An array of unexercised bucket indices.
-        uint16[] unexercisedBuckets;
-        /// @notice Maps a bucket's index (in _claimBucketByOption) to a boolean indicating
-        /// if the bucket has any unexercised options.
-        /// @dev Used to determine if a bucket index needs to be added to
-        /// unexercisedBuckets during write(). Set false if a bucket is fully
-        /// exercised.
-        mapping(uint16 => bool) doesBucketHaveUnexercisedOptions;
+        /// @custom:member An array of bucket indices with collateral available for exercise.
+        uint16[] bucketsWithCollateral;
+        /// @custom:member A mapping of bucket indices to a boolean indicating if the bucket has any collateral available for exercise.
+        mapping(uint16 => bool) bucketHasCollateral;
     }
 
+    /// @notice A storage container for the engine state of a given option type.
     struct OptionTypeState {
-        /// @notice Information about the option type
+        /// @custom:member State for this option type.
         Option option;
-        /// @notice Information about the option's claim buckets
+        /// @custom:member State for assignment buckets on this option type.
         BucketInfo bucketInfo;
-        /// @notice Information about the option's claims
+        /// @custom:member A mapping to an array of bucket indices per claim token for this option type.
         mapping(uint96 => ClaimIndex[]) claimIndices;
     }
 
     /**
-     * @dev This struct contains the data about a lot of options written for a particular option type.
+     * @notice This struct contains the data about a claim to a short position written on an option type.
      * When writing an amount of options of a particular type, the writer will be issued an ERC 1155 NFT
-     * that represents a claim to the underlying and exercise assets of the options lot, to be claimed after
+     * that represents a claim to the underlying and exercise assets, to be claimed after
      * expiry of the option. The amount of each (underlying asset and exercise asset) paid to the claimant upon
-     * redeeming their claim NFT depends on the option type, the amount of options written in their options lot
-     * (represented in this struct) and what portion of their lot was exercised before expiry.
+     * redeeming their claim NFT depends on the option type, the amount of options written, represented in this struct,
+     * and what portion of this claim was assigned exercise, if any, before expiry.
      */
     struct Claim {
-        /// @param amountWritten The number of options written in this option lot claim
+        /// @custom:member amountWritten The number of option contracts written against this claim.
         uint112 amountWritten;
-        /// @param amountExercised The amount of options that have been exercised in this lot
+        /// @custom:member amountExercised The amount of option contracts exercised against this claim.
         uint112 amountExercised;
-        /// @param optionId The option ID corresponding to the option type for which this lot is
-        /// written.
+        /// @custom:member optionId The option ID of the option type this claim is for.
         uint256 optionId;
-        /// @param unredeemed Whether or not this option lot has been claimed by the writer
+        /// @custom:member unredeemed Whether or not this claim has been redeemed.
         bool unredeemed;
     }
 
     /**
-     * @dev Options lots are able to have options added to them on after the initial
-     * writing. This struct is used to keep track of how many options in a single lot
-     * are written on each day, in order to correctly perform fair assignment.
+     * @notice Claims can be used to write multiple times. This struct is used to keep track
+     * of how many options are written against a claim in each period, in order to
+     * correctly perform fair exercise assignment.
      */
     struct ClaimIndex {
-        /// @param amountWritten The amount of options written on a given day/bucket
+        /// @custom:member amountWritten The amount of option contracts written into claim for given period/bucket.
         uint112 amountWritten;
-        /// @param bucketIndex The index of the OptionsDayBucket in which the options are written
+        /// @custom:member bucketIndex The index of the Bucket into which the options collateral was deposited.
         uint16 bucketIndex;
     }
 
     /**
-     * @dev Represents the total amount of options written and exercised for a group of
-     * claims bucketed by day. Used in fair assignment to calculate the ratio of
+     * @notice Represents the total amount of options written and exercised for a group of
+     * claims bucketed by period. Used in fair assignment to calculate the ratio of
      * underlying to exercise assets to be transferred to claimants.
      */
     struct Bucket {
-        /// @param amountWritten The number of options written in this bucket
+        /// @custom:member amountWritten The number of option contracts written into this bucket.
         uint112 amountWritten;
-        /// @param amountExercised The number of options exercised in this bucket
+        /// @custom:member amountExercised The number of option contracts exercised from this bucket.
         uint112 amountExercised;
-        /// @param daysAfterEpoch Which day this bucket falls on, in offset from epoch
+        /// @custom:member daysAfterEpoch Which period this bucket falls on, in offset from epoch.
         uint16 daysAfterEpoch;
     }
 
     /**
-     * @dev Struct used in returning data regarding positions underlying a claim or option.
+     * @notice Data about the ERC20 assets and liabilities for a given option (long) or claim (short) token,
+     * in terms of the underlying and exercise ERC20 tokens.
      */
     struct Underlying {
-        /// @param underlyingAsset address of the underlying asset erc20
+        /// @param underlyingAsset The address of the ERC20 underlying asset.
         address underlyingAsset;
-        /// @param underlyingPosition position on the underlying asset
+        /// @param underlyingPosition The amount, in wei, of the underlying asset represented by this position.
         int256 underlyingPosition;
-        /// @param exerciseAsset address of the exercise asset erc20
+        /// @param exerciseAsset The address of the ERC20 exercise asset.
         address exerciseAsset;
-        /// @param exercisePosition position on the exercise asset
+        /// @param exercisePosition The amount, in wei, of the exercise asset represented by this position.
         int256 exercisePosition;
     }
 
@@ -320,10 +313,9 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Returns Option struct details about a given tokenID if that token is
-     * an option.
+     * @notice Returns the option type information for a given option token id.
      * @param tokenId The id of the option.
-     * @return option The Option struct for tokenId.
+     * @return option The Option struct for tokenId if the tokenId is Type.option.
      */
     function option(uint256 tokenId) external view returns (Option memory option);
 

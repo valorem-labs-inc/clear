@@ -96,8 +96,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IOptionSettlementEngine
-    function option(uint256 optionId) external view returns (Option memory optionInfo) {
-        (uint160 optionKey,) = decodeTokenId(optionId);
+    function option(uint256 tokenId) external view returns (Option memory optionInfo) {
+        (uint160 optionKey,) = decodeTokenId(tokenId);
+        if (!isOptionInitialized(optionKey)) {
+            revert TokenNotFound(tokenId);
+        }
         optionInfo = optionTypeStates[optionKey].option;
     }
 
@@ -105,7 +108,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function claim(uint256 claimId) public view returns (Claim memory) {
         (uint160 optionKey, uint96 claimKey) = decodeTokenId(claimId);
 
-        if (!isOptionInitialized(optionKey)) {
+        if (!isClaimInitialized(optionKey, claimKey)) {
             revert TokenNotFound(claimId);
         }
 
@@ -113,10 +116,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         uint256 amountWritten = amountExercised + amountUnexercised;
 
-        // This claim has either been redeemed, or does not exist.
-        if (amountWritten == 0) {
-            revert TokenNotFound(claimId);
-        }
         return Claim({
             amountWritten: uint112(amountWritten),
             amountExercised: uint112(amountExercised),

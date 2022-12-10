@@ -332,11 +332,11 @@ interface IOptionSettlementEngine {
     function claim(uint256 claimId) external view returns (Claim memory claim);
 
     /**
-     * @notice Gets option type information for a given optionId.
-     * @param optionId The id of the option.
-     * @return option The Option struct for optionId if the tokenId is Type.Option.
+     * @notice Gets option type information for a given tokenId.
+     * @param tokenId The token id for which to get option inf.
+     * @return option The Option struct for tokenId if the optionKey for tokenId is initialized.
      */
-    function option(uint256 optionId) external view returns (Option memory option);
+    function option(uint256 tokenId) external view returns (Option memory option);
 
     /**
      * @notice Gets the TokenType for a given tokenId.

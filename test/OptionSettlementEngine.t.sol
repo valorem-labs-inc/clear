@@ -165,12 +165,8 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         vm.warp(testExpiryTimestamp + 1);
         engine.redeem(claimId1);
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, claimId1));
         claimLot = engine.claim(claimId1);
-
-        assertEq(claimLot.amountExercised, 0);
-        assertEq(claimLot.amountWritten, 0);
-        assertEq(claimLot.optionId, testOptionId);
-        assertTrue(!claimLot.unredeemed);
     }
 
     function testWriteMultipleWriteSameOptionType() public {

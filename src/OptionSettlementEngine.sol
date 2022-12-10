@@ -118,10 +118,15 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         (uint256 amountExercised, uint256 amountUnexercised) = _getExercisedAmountsForClaim(optionKey, claimNum);
 
         uint256 _amountWritten = amountExercised + amountUnexercised;
+
+        // This claim has either been redeemed, or does not exist.
+        if (_amountWritten == 0) {
+            revert TokenNotFound(claimId);
+        }
         return Claim({
             amountWritten: uint112(_amountWritten),
             amountExercised: uint112(amountExercised),
-            optionId: uint256(optionKey) << 96,
+            optionId: uint256(optionKey) << OPTION_ID_PADDING,
             unredeemed: _amountWritten != 0
         });
     }

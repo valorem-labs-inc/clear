@@ -340,6 +340,20 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Gets the TokenType for a given tokenId.
+     * @dev Option and claim token ids are encoded as follows:
+     *
+     *   MSb
+     *   0000 0000   0000 0000   0000 0000   0000 0000 ┐
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │ 160b option key, created from hash of Option struct
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │
+     *   0000 0000   0000 0000   0000 0000   0000 0000 ┘
+     *   0000 0000   0000 0000   0000 0000   0000 0000 ┐
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │ 96b auto-incrementing option lot claim number
+     *   0000 0000   0000 0000   0000 0000   0000 0000 ┘
+     *                                             LSb
+     * This function accounts for that, and whether or not tokenId has been initialized/decommissioned yet.
      * @param tokenId The token id to get the TokenType of.
      * @return typeOfToken The enum TokenType of the tokenId.
      */
@@ -389,6 +403,25 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Creates a new option contract type if it doesn't already exist.
+     * @dev optionId can be precomputed using
+     *  uint160 optionKey = uint160(
+     *      bytes20(
+     *          keccak256(
+     *              abi.encode(
+     *                  underlyingAsset,
+     *                  underlyingAmount,
+     *                  exerciseAsset,
+     *                  exerciseAmount,
+     *                  exerciseTimestamp,
+     *                  expiryTimestamp,
+     *                  uint160(0),
+     *                  uint96(0)
+     *              )
+     *          )
+     *      )
+     *  );
+     *  optionId = uint256(optionKey) << OPTION_ID_PADDING;
+     * and then tokenType(optionId) == TokenType.Option if the option already exists.
      * @param underlyingAsset The contract address of the ERC20 underlying asset.
      * @param underlyingAmount The amount of underlyingAsset, in wei, collateralizing each option contract.
      * @param exerciseAsset The contract address of the ERC20 exercise asset.

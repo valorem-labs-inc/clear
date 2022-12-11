@@ -7,7 +7,7 @@ import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import "../src/OptionSettlementEngine.sol";
 
 /// @notice Receiver hook utility for NFT 'safe' transfers
-abstract contract NFTreceiver {
+abstract contract NftReceiver {
     function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
         return 0x150b7a02;
     }
@@ -25,7 +25,7 @@ abstract contract NFTreceiver {
     }
 }
 
-contract OptionSettlementTest is Test, NFTreceiver {
+contract OptionSettlementTest is Test, NftReceiver {
     using stdStorage for StdStorage;
 
     OptionSettlementEngine public engine;
@@ -575,7 +575,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         vm.prank(ALICE);
         engine.write(testOptionId, 2);
 
-        // Fee is recorded on underlying asset, not on exercise assset
+        // Fee is recorded on underlying asset, not on exercise asset
         uint256 writeAmount = 2 * testUnderlyingAmount;
         uint256 writeFee = (writeAmount * engine.feeBps()) / 10_000;
         assertEq(engine.feeBalance(address(WETH)), writeFee);
@@ -670,7 +670,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
     //                            PROTOCOL ADMIN
     // **********************************************************************
 
-    function testsetFeesEnabled() public {
+    function testSetFeesEnabled() public {
         // precondition check -- in test suite, fee switch is enabled by default
         assertTrue(engine.feesEnabled());
 
@@ -686,7 +686,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         assertTrue(engine.feesEnabled());
     }
 
-    function testEventsetFeesEnabled() public {
+    function testEventSetFeesEnabled() public {
         vm.expectEmit(true, true, true, true);
         emit FeeSwitchUpdated(FEE_TO, false);
 
@@ -701,7 +701,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
         engine.setFeesEnabled(true);
     }
 
-    function testRevertsetFeesEnabledWhenNotFeeTo() public {
+    function testRevertSetFeesEnabledWhenNotFeeTo() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
 
         vm.prank(ALICE);

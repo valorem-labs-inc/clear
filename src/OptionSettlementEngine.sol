@@ -97,7 +97,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function option(uint256 tokenId) external view returns (Option memory optionInfo) {
-        (uint160 optionKey,) = decodeTokenId(tokenId);
+        (uint160 optionKey,) = _decodeTokenId(tokenId);
         if (!isOptionInitialized(optionKey)) {
             revert TokenNotFound(tokenId);
         }
@@ -106,7 +106,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function claim(uint256 claimId) public view returns (Claim memory) {
-        (uint160 optionKey, uint96 claimKey) = decodeTokenId(claimId);
+        (uint160 optionKey, uint96 claimKey) = _decodeTokenId(claimId);
 
         if (!isClaimInitialized(optionKey, claimKey)) {
             revert TokenNotFound(claimId);
@@ -126,7 +126,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions) {
-        (uint160 optionKey, uint96 claimKey) = decodeTokenId(tokenId);
+        (uint160 optionKey, uint96 claimKey) = _decodeTokenId(tokenId);
 
         if (!isOptionInitialized(optionKey)) {
             revert TokenNotFound(tokenId);
@@ -158,8 +158,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function tokenType(uint256 tokenId) public view returns (TokenType typeOfToken) {
-        (uint160 optionKey, uint96 claimKey) = decodeTokenId(tokenId);
+        // Get claim and option keys
+        (uint160 optionKey, uint96 claimKey) = _decodeTokenId(tokenId);
+
         typeOfToken = TokenType.None;
+
+        // Check if the token is an initialized option or claim and update accordingly.
         if (isOptionInitialized(optionKey)) {
             if ((tokenId & CLAIM_NUMBER_MASK) == 0) {
                 typeOfToken = TokenType.Option;
@@ -292,7 +296,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint256 encodedClaimId = tokenId;
 
         // Get the optionKey and claimKey from the tokenId
-        (uint160 optionKey, uint96 claimKey) = decodeTokenId(tokenId);
+        (uint160 optionKey, uint96 claimKey) = _decodeTokenId(tokenId);
 
         // Sanitize a zeroed encodedOptionId from the optionKey
         uint256 encodedOptionId = uint256(optionKey) << OPTION_ID_PADDING;
@@ -314,7 +318,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // Make encodedClaimId reflect the next available claim and increment the next
             // available claim in storage.
             uint96 nextClaimKey = optionTypeState.option.nextClaimKey++;
-            encodedClaimId = encodeTokenId(optionKey, nextClaimKey);
+            encodedClaimId = _encodeTokenId(optionKey, nextClaimKey);
 
             // Handle internal claim bucket accounting
             uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
@@ -374,7 +378,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function exercise(uint256 optionId, uint112 amount) external {
-        (uint160 optionKey, uint96 claimKey) = decodeTokenId(optionId);
+        (uint160 optionKey, uint96 claimKey) = _decodeTokenId(optionId);
 
         // option ID should be specified without claim in lower 96b
         if (claimKey != 0) {
@@ -430,7 +434,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// the ClaimIndex data structions) weighted by the ratio of exercised to
     /// unexercised options on each of those days.
     function redeem(uint256 claimId) external {
-        (uint160 optionKey, uint96 claimKey) = decodeTokenId(claimId);
+        (uint160 optionKey, uint96 claimKey) = _decodeTokenId(claimId);
 
         if (claimKey == 0) {
             revert InvalidClaim(claimId);
@@ -555,18 +559,18 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * @param claimKey The claimKey to encode.
      * @return tokenId The encoded token id.
      */
-    function encodeTokenId(uint160 optionKey, uint96 claimKey) internal pure returns (uint256 tokenId) {
+    function _encodeTokenId(uint160 optionKey, uint96 claimKey) internal pure returns (uint256 tokenId) {
         tokenId |= uint256(optionKey) << OPTION_ID_PADDING;
         tokenId |= uint256(claimKey);
     }
 
     /**
      * @notice Decode the supplied token id
-     * @dev See encodeTokenId() for encoding scheme
+     * @dev See tokenType() for encoding scheme
      * @param tokenId The token id to decode
      * @return optionKey claimNum The decoded components of the id as described above, padded as required
      */
-    function decodeTokenId(uint256 tokenId) internal pure returns (uint160 optionKey, uint96 claimKey) {
+    function _decodeTokenId(uint256 tokenId) internal pure returns (uint160 optionKey, uint96 claimKey) {
         // move key to lsb to fit into uint160
         optionKey = uint160(tokenId >> OPTION_ID_PADDING);
 

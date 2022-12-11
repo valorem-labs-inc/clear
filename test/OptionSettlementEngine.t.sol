@@ -121,7 +121,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Enable fee switch
         vm.prank(FEE_TO);
-        engine.protocolFees(true);
+        engine.setFeesEnabled(true);
     }
 
     function testInitial() public {
@@ -593,7 +593,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Disable fee switch
         vm.prank(FEE_TO);
-        engine.protocolFees(false);
+        engine.setFeesEnabled(false);
 
         // Write 3 more, no fee is recorded or emitted
         vm.prank(ALICE);
@@ -602,7 +602,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Re-enable
         vm.prank(FEE_TO);
-        engine.protocolFees(true);
+        engine.setFeesEnabled(true);
 
         // Write 5 more, fee is again recorded and emitted
         vm.prank(ALICE);
@@ -647,7 +647,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Disable fee switch
         vm.prank(FEE_TO);
-        engine.protocolFees(false);
+        engine.setFeesEnabled(false);
 
         // Exercise 3 more, no fee is recorded or emitted
         vm.prank(BOB);
@@ -656,7 +656,7 @@ contract OptionSettlementTest is Test, NFTreceiver {
 
         // Re-enable
         vm.prank(FEE_TO);
-        engine.protocolFees(true);
+        engine.setFeesEnabled(true);
 
         // Exercise 5 more, fee is again recorded and emitted
         vm.prank(BOB);
@@ -670,42 +670,42 @@ contract OptionSettlementTest is Test, NFTreceiver {
     //                            PROTOCOL ADMIN
     // **********************************************************************
 
-    function testprotocolFees() public {
+    function testsetFeesEnabled() public {
         // precondition check -- in test suite, fee switch is enabled by default
         assertTrue(engine.feesEnabled());
 
         // disable
         vm.startPrank(FEE_TO);
-        engine.protocolFees(false);
+        engine.setFeesEnabled(false);
 
         assertFalse(engine.feesEnabled());
 
         // enable
-        engine.protocolFees(true);
+        engine.setFeesEnabled(true);
 
         assertTrue(engine.feesEnabled());
     }
 
-    function testEventprotocolFees() public {
+    function testEventsetFeesEnabled() public {
         vm.expectEmit(true, true, true, true);
         emit FeeSwitchUpdated(FEE_TO, false);
 
         // disable
         vm.startPrank(FEE_TO);
-        engine.protocolFees(false);
+        engine.setFeesEnabled(false);
 
         vm.expectEmit(true, true, true, true);
         emit FeeSwitchUpdated(FEE_TO, true);
 
         // enable
-        engine.protocolFees(true);
+        engine.setFeesEnabled(true);
     }
 
-    function testRevertprotocolFeesWhenNotFeeTo() public {
+    function testRevertsetFeesEnabledWhenNotFeeTo() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
 
         vm.prank(ALICE);
-        engine.protocolFees(true);
+        engine.setFeesEnabled(true);
     }
 
     function testRevertConstructorWhenFeeToIsZeroAddress() public {

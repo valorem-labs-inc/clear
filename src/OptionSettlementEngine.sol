@@ -496,7 +496,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IOptionSettlementEngine
-    function protocolFees(bool enabled) external onlyFeeTo {
+    function setFeesEnabled(bool enabled) external onlyFeeTo {
         feesEnabled = enabled;
 
         emit FeeSwitchUpdated(feeTo, enabled);

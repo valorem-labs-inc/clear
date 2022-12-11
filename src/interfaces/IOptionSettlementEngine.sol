@@ -478,7 +478,7 @@ interface IOptionSettlementEngine {
      * @notice Enables or disables protocol fees.
      * @param enabled Whether or not protocol fees should be enabled.
      */
-    function protocolFees(bool enabled) external;
+    function setFeesEnabled(bool enabled) external;
 
     /**
      * @notice Updates the address fees are swept to.

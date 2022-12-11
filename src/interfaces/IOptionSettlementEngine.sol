@@ -1,53 +1,26 @@
 // SPDX-License-Identifier: BUSL 1.1
-pragma solidity 0.8.11;
+// Valorem Labs Inc. (c) 2022
+pragma solidity 0.8.16;
 
-/// @title A settlement engine for options
-/// @author 0xAlcibiades
-/// @author Flip-Liquid
-/// @author neodaoist
+import "./ITokenURIGenerator.sol";
+
 interface IOptionSettlementEngine {
     /*//////////////////////////////////////////////////////////////
     //  Events
     //////////////////////////////////////////////////////////////*/
 
-    /**
-     * @notice Emitted when a new unique options type is created.
-     * @param optionId The id of the initial option created.
-     * @param exerciseAsset The contract address of the exercise asset.
-     * @param underlyingAsset The contract address of the underlying asset.
-     * @param exerciseAmount The amount of the exercise asset to be exercised.
-     * @param underlyingAmount The amount of the underlying asset in the option.
-     * @param exerciseTimestamp The timestamp after which this option can be exercised.
-     * @param expiryTimestamp The timestamp before which this option can be exercised.
-     */
-    event NewOptionType(
-        uint256 optionId,
-        address indexed exerciseAsset,
-        address indexed underlyingAsset,
-        uint96 exerciseAmount,
-        uint96 underlyingAmount,
-        uint40 exerciseTimestamp,
-        uint40 indexed expiryTimestamp
-    );
+    // Write/Redeem events
 
-    /**
-     * @notice Emitted when a new option is written.
-     * @param optionId The id of the newly written option.
-     * @param writer The address of the writer of the new option.
-     * @param claimId The claim ID for the option.
-     * @param amount The amount of options written.
-     */
-    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
-
+    // TODO(Do we need exercise and underlying asset here?)
     /**
      * @notice Emitted when a claim is redeemed.
-     * @param optionId The id of the option the claim is being redeemed against.
-     * @param claimId The id of the claim being redeemed.
+     * @param optionId The token id of the option type of the claim being redeemed.
+     * @param claimId The token id of the claim being redeemed.
      * @param redeemer The address redeeming the claim.
-     * @param exerciseAsset The exercise asset of the option.
-     * @param underlyingAsset The underlying asset of the option.
-     * @param exerciseAmountRedeemed The amount of the exercise asset redeemed.
-     * @param underlyingAmountRedeemed The amount of underlying asset redeemed.
+     * @param exerciseAsset The ERC20 exercise asset of the option.
+     * @param underlyingAsset The ERC20 underlying asset of the option.
+     * @param exerciseAmountRedeemed The amount of the exerciseAsset redeemed.
+     * @param underlyingAmountRedeemed The amount of underlyingAsset redeemed.
      */
     event ClaimRedeemed(
         uint256 indexed claimId,
@@ -60,37 +33,71 @@ interface IOptionSettlementEngine {
     );
 
     /**
-     * @notice Emitted when an option is exercised.
-     * @param optionId The id of the option being exercised.
-     * @param exerciser The address exercising the option.
-     * @param amount The amount of options being exercised.
+     * @notice Emitted when a new option type is created.
+     * @param optionId The token id of the new option type created.
+     * @param exerciseAsset The ERC20 contract address of the exercise asset.
+     * @param underlyingAsset The ERC20 contract address of the underlying asset.
+     * @param exerciseAmount The amount, in wei, of the exercise asset required to exercise each contract.
+     * @param underlyingAmount The amount, in wei of the underlying asset in each contract.
+     * @param exerciseTimestamp The timestamp after which this option type can be exercised.
+     * @param expiryTimestamp The timestamp before which this option type can be exercised.
+     */
+    event NewOptionType(
+        uint256 optionId,
+        address indexed exerciseAsset,
+        address indexed underlyingAsset,
+        uint96 exerciseAmount,
+        uint96 underlyingAmount,
+        uint40 exerciseTimestamp,
+        uint40 indexed expiryTimestamp
+    );
+
+    // Exercise events
+
+    /**
+     * @notice Emitted when option contract(s) is(are) exercised.
+     * @param optionId The token id of the option type exercised.
+     * @param exerciser The address that exercised the option contract(s).
+     * @param amount The amount of option contracts exercised.
      */
     event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
+
+    /**
+     * @notice Emitted when new options contracts are written.
+     * @param optionId The token id of the option type written.
+     * @param writer The address of the writer.
+     * @param claimId The claim token id of the new or existing short position written against.
+     * @param amount The amount of options contracts written.
+     */
+    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
+
+    // Fee events
 
     /**
      * @notice Emitted when protocol fees are accrued for a given asset.
      * @dev Emitted on write() when fees are accrued on the underlying asset,
      * or exercise() when fees are accrued on the exercise asset.
-     * @param optionId The id of the option being written or exercised.
-     * @param asset Asset for which fees are accrued.
+     * Will not be emitted when feesEnabled is false.
+     * @param optionId The token id of the option type being written or exercised.
+     * @param asset The ERC20 asset in which fees were accrued.
      * @param payer The address paying the fee.
-     * @param amount The amount of fees which are accrued.
+     * @param amount The amount, in wei, of fees accrued.
      */
     event FeeAccrued(uint256 indexed optionId, address indexed asset, address indexed payer, uint256 amount);
 
     /**
-     * @notice Emitted when accrued protocol fees for a given token are swept to the
+     * @notice Emitted when accrued protocol fees for a given ERC20 asset are swept to the
      * feeTo address.
-     * @param asset The token for which protocol fees are being swept.
-     * @param feeTo The account to which fees are being swept.
-     * @param amount The total amount being swept.
+     * @param asset The ERC20 asset of the protocol fees swept.
+     * @param feeTo The account to which fees were swept.
+     * @param amount The total amount swept.
      */
     event FeeSwept(address indexed asset, address indexed feeTo, uint256 amount);
 
     /**
-     * @notice Emitted when fee switch is updated.
-     * @param feeTo The address which altered the switch state.
-     * @param enabled Whether the fee switch is enabled or disabled.
+     * @notice Emitted when protocol fees are enabled or disabled.
+     * @param feeTo The address which enabled or disabled fees.
+     * @param enabled Whether fees are enabled or disabled.
      */
     event FeeSwitchUpdated(address feeTo, bool enabled);
 
@@ -104,11 +111,7 @@ interface IOptionSettlementEngine {
     //  Errors
     //////////////////////////////////////////////////////////////*/
 
-    /**
-     * @notice The requested token is not found.
-     * @param token token requested.
-     */
-    error TokenNotFound(uint256 token);
+    // Access control errors
 
     /**
      * @notice The caller doesn't have permission to access that function.
@@ -117,68 +120,10 @@ interface IOptionSettlementEngine {
      */
     error AccessControlViolation(address accessor, address permissioned);
 
-    /**
-     * @notice Invalid fee to address.
-     * @param feeTo The feeTo address.
-     */
-    error InvalidFeeToAddress(address feeTo);
+    // Input Errors
 
-    /**
-     * @notice Invalid TokenURIGenerator address.
-     * @param tokenURIGenerator The tokenURIGenerator address.
-     */
-    error InvalidTokenURIGeneratorAddress(address tokenURIGenerator);
-
-    /**
-     * @notice This options chain already exists and thus cannot be created.
-     * @param optionId The id and hash of the options chain.
-     */
-    error OptionsTypeExists(uint256 optionId);
-
-    /**
-     * @notice The expiry timestamp is less than 24 hours from now.
-     * @param expiry Timestamp of expiry
-     */
-    error ExpiryWindowTooShort(uint40 expiry);
-
-    /**
-     * @notice The option exercise window is less than 24 hours long.
-     * @param exercise The timestamp supplied for exercise.
-     */
-    error ExerciseWindowTooShort(uint40 exercise);
-
-    /**
-     * @notice The assets specified are invalid or duplicate.
-     * @param asset1 Supplied asset.
-     * @param asset2 Supplied asset.
-     */
-    error InvalidAssets(address asset1, address asset2);
-
-    /**
-     * @notice The token specified is not an option.
-     * @param token The supplied token.
-     */
-    error InvalidOption(uint256 token);
-
-    /**
-     * @notice The token specified is not a claim.
-     * @param token The supplied token.
-     */
-    error InvalidClaim(uint256 token);
-
-    /**
-     * @notice The optionId specified expired at expiry.
-     * @param optionId The id of the expired option.
-     * @param expiry The time of expiry of the supplied option Id.
-     */
-    error ExpiredOption(uint256 optionId, uint40 expiry);
-
-    /**
-     * @notice This option cannot yet be exercised.
-     * @param optionId Supplied option ID.
-     * @param exercise The time when the optionId can be exercised.
-     */
-    error ExerciseTooEarly(uint256 optionId, uint40 exercise);
+    /// @notice The amount of options contracts written must be greater than zero.
+    error AmountWrittenCannotBeZero();
 
     /**
      * @notice This claim is not owned by the caller.
@@ -187,137 +132,191 @@ interface IOptionSettlementEngine {
     error CallerDoesNotOwnClaimId(uint256 claimId);
 
     /**
-     * @notice The caller does not have enough of the option to exercise the amount
+     * @notice The caller does not have enough options contracts to exercise the amount
      * specified.
      * @param optionId The supplied option id.
-     * @param amount The amount of the supplied option requested for exercise.
+     * @param amount The amount of options contracts which the caller attempted to exercise.
      */
     error CallerHoldsInsufficientOptions(uint256 optionId, uint112 amount);
 
     /**
-     * @notice You can't claim before expiry.
+     * @notice Claims cannot be redeemed before expiry.
      * @param claimId Supplied claim ID.
-     * @param expiry timestamp at which the options chain expires
+     * @param expiry timestamp at which the option type expires.
      */
     error ClaimTooSoon(uint256 claimId, uint40 expiry);
 
-    /// @notice The amount provided to write() must be > 0.
-    error AmountWrittenCannotBeZero();
+    /**
+     * @notice This option cannot yet be exercised.
+     * @param optionId Supplied option ID.
+     * @param exercise The time after which the option optionId be exercised.
+     */
+    error ExerciseTooEarly(uint256 optionId, uint40 exercise);
+
+    /**
+     * @notice The option exercise window is too short.
+     * @param exercise The timestamp supplied for exercise.
+     */
+    error ExerciseWindowTooShort(uint40 exercise);
+
+    /**
+     * @notice The optionId specified expired has already expired.
+     * @param optionId The id of the expired option.
+     * @param expiry The expiry time for the supplied option Id.
+     */
+    error ExpiredOption(uint256 optionId, uint40 expiry);
+
+    /**
+     * @notice The expiry timestamp is too soon.
+     * @param expiry Timestamp of expiry.
+     */
+    error ExpiryWindowTooShort(uint40 expiry);
+
+    /**
+     * @notice Invalid (zero) address.
+     * @param input The address input.
+     */
+    error InvalidAddress(address input);
+
+    /**
+     * @notice The assets specified are invalid or duplicate.
+     * @param asset1 Supplied ERC20 asset.
+     * @param asset2 Supplied ERC20 asset.
+     */
+    error InvalidAssets(address asset1, address asset2);
+
+    /**
+     * @notice The token specified is not a claim token.
+     * @param token The supplied token id.
+     */
+    error InvalidClaim(uint256 token);
+
+    /**
+     * @notice The token specified is not an option token.
+     * @param token The supplied token id.
+     */
+    error InvalidOption(uint256 token);
+
+    /**
+     * @notice This option contract type already exists and thus cannot be created.
+     * @param optionId The token id of the option type which already exists.
+     */
+    error OptionsTypeExists(uint256 optionId);
+
+    /**
+     * @notice The requested token is not found.
+     * @param token The token requested.
+     */
+    error TokenNotFound(uint256 token);
 
     /*//////////////////////////////////////////////////////////////
     //  Data structures
     //////////////////////////////////////////////////////////////*/
 
     /// @dev This enumeration is used to determine the type of an ERC1155 subtoken in the engine.
-    enum Type {
+    enum TokenType {
+        None,
         Option,
         Claim
     }
 
-    /// @dev This struct contains the data about an options type associated with an ERC-1155 token.
+    /// @notice Data comprising the unique tuple of an option type associated with an ERC-1155 option token.
     struct Option {
-        /// @param underlyingAsset The underlying asset to be received
+        /// @custom:member underlyingAsset The underlying ERC20 asset which the option is collateralized with.
         address underlyingAsset;
-        /// @param underlyingAmount The amount of the underlying asset contained within an option contract of this type
+        /// @custom:member underlyingAmount The amount of the underlying asset contained within an option contract of this type.
         uint96 underlyingAmount;
-        /// @param exerciseAsset The address of the asset needed for exercise
+        /// @custom:member exerciseAsset The ERC20 asset which the option can be exercised using.
         address exerciseAsset;
-        /// @param exerciseAmount The amount of the exercise asset required to exercise this option
+        /// @custom:member exerciseAmount The amount of the exercise asset required to exercise each option contract of this type.
         uint96 exerciseAmount;
-        /// @param exerciseTimestamp The timestamp after which this option can be exercised
+        /// @custom:member exerciseTimestamp The timestamp after which this option can be exercised.
         uint40 exerciseTimestamp;
-        /// @param expiryTimestamp The timestamp before which this option can be exercised
+        /// @custom:member expiryTimestamp The timestamp before which this option can be exercised.
         uint40 expiryTimestamp;
-        /// @param settlementSeed Random seed created at the time of option type creation
+        /// @custom:member settlementSeed Deterministic seed used for option fair exercise assignment.
         uint160 settlementSeed;
-        /// @param nextClaimNum Which option was written
+        /// @custom:member nextClaimKey The next claim key available for this option type.
         uint96 nextClaimKey;
     }
 
+    /// @notice The claim bucket information for a given option type.
     struct BucketInfo {
-        /// @notice Buckets of claims grouped by period
-        /// @dev This is to enable O(constant) time options exercise. When options are written,
-        /// the Claim struct in this mapping is updated to reflect the cumulative amount written
-        /// on the day in question. write() will add unexercised options into the bucket
-        /// corresponding to the # of days after the option type's creation.
-        /// exercise() will randomly assign exercise to a bucket <= the current day.
+        /// @custom:member An array of buckets for a given option type.
         Bucket[] buckets;
-        /// @notice An array of unexercised bucket indices.
-        uint16[] unexercisedBuckets;
-        /// @notice Maps a bucket's index (in _claimBucketByOption) to a boolean indicating
-        /// if the bucket has any unexercised options.
-        /// @dev Used to determine if a bucket index needs to be added to
-        /// unexercisedBuckets during write(). Set false if a bucket is fully
-        /// exercised.
-        mapping(uint16 => bool) doesBucketHaveUnexercisedOptions;
+        /// @custom:member An array of bucket indices with collateral available for exercise.
+        uint16[] bucketsWithCollateral;
+        /// @custom:member A mapping of bucket indices to a boolean indicating if the bucket has any collateral available for exercise.
+        mapping(uint16 => bool) bucketHasCollateral;
     }
 
+    /// @notice A storage container for the engine state of a given option type.
     struct OptionTypeState {
-        /// @notice Information about the option type
+        /// @custom:member State for this option type.
         Option option;
-        /// @notice Information about the option's claim buckets
+        /// @custom:member State for assignment buckets on this option type.
         BucketInfo bucketInfo;
-        /// @notice Information about the option's claims
+        /// @custom:member A mapping to an array of bucket indices per claim token for this option type.
         mapping(uint96 => ClaimIndex[]) claimIndices;
     }
 
     /**
-     * @dev This struct contains the data about a lot of options written for a particular option type.
+     * @notice This struct contains the data about a claim to a short position written on an option type.
      * When writing an amount of options of a particular type, the writer will be issued an ERC 1155 NFT
-     * that represents a claim to the underlying and exercise assets of the options lot, to be claimed after
+     * that represents a claim to the underlying and exercise assets, to be claimed after
      * expiry of the option. The amount of each (underlying asset and exercise asset) paid to the claimant upon
-     * redeeming their claim NFT depends on the option type, the amount of options written in their options lot
-     * (represented in this struct) and what portion of their lot was exercised before expiry.
+     * redeeming their claim NFT depends on the option type, the amount of options written, represented in this struct,
+     * and what portion of this claim was assigned exercise, if any, before expiry.
      */
     struct Claim {
-        /// @param amountWritten The number of options written in this option lot claim
+        /// @custom:member amountWritten The number of option contracts written against this claim.
         uint112 amountWritten;
-        /// @param amountExercised The amount of options that have been exercised in this lot
+        /// @custom:member amountExercised The amount of option contracts exercised against this claim.
         uint112 amountExercised;
-        /// @param optionId The option ID corresponding to the option type for which this lot is
-        /// written.
+        /// @custom:member optionId The option ID of the option type this claim is for.
         uint256 optionId;
-        /// @param unredeemed Whether or not this option lot has been claimed by the writer
+        /// @custom:member unredeemed Whether or not this claim has been redeemed.
         bool unredeemed;
     }
 
     /**
-     * @dev Options lots are able to have options added to them on after the initial
-     * writing. This struct is used to keep track of how many options in a single lot
-     * are written on each day, in order to correctly perform fair assignment.
+     * @notice Claims can be used to write multiple times. This struct is used to keep track
+     * of how many options are written against a claim in each period, in order to
+     * correctly perform fair exercise assignment.
      */
     struct ClaimIndex {
-        /// @param amountWritten The amount of options written on a given day/bucket
+        /// @custom:member amountWritten The amount of option contracts written into claim for given period/bucket.
         uint112 amountWritten;
-        /// @param bucketIndex The index of the OptionsDayBucket in which the options are written
+        /// @custom:member bucketIndex The index of the Bucket into which the options collateral was deposited.
         uint16 bucketIndex;
     }
 
     /**
-     * @dev Represents the total amount of options written and exercised for a group of
-     * claims bucketed by day. Used in fair assignment to calculate the ratio of
+     * @notice Represents the total amount of options written and exercised for a group of
+     * claims bucketed by period. Used in fair assignment to calculate the ratio of
      * underlying to exercise assets to be transferred to claimants.
      */
     struct Bucket {
-        /// @param amountWritten The number of options written in this bucket
+        /// @custom:member amountWritten The number of option contracts written into this bucket.
         uint112 amountWritten;
-        /// @param amountExercised The number of options exercised in this bucket
+        /// @custom:member amountExercised The number of option contracts exercised from this bucket.
         uint112 amountExercised;
-        /// @param daysAfterEpoch Which day this bucket falls on, in offset from epoch
+        /// @custom:member daysAfterEpoch Which period this bucket falls on, in offset from epoch.
         uint16 daysAfterEpoch;
     }
 
     /**
-     * @dev Struct used in returning data regarding positions underlying a claim or option.
+     * @notice Data about the ERC20 assets and liabilities for a given option (long) or claim (short) token,
+     * in terms of the underlying and exercise ERC20 tokens.
      */
     struct Underlying {
-        /// @param underlyingAsset address of the underlying asset erc20
+        /// @custom:member underlyingAsset The address of the ERC20 underlying asset.
         address underlyingAsset;
-        /// @param underlyingPosition position on the underlying asset
+        /// @custom:member underlyingPosition The amount, in wei, of the underlying asset represented by this position.
         int256 underlyingPosition;
-        /// @param exerciseAsset address of the exercise asset erc20
+        /// @custom:member exerciseAsset The address of the ERC20 exercise asset.
         address exerciseAsset;
-        /// @param exercisePosition position on the exercise asset
+        /// @custom:member exercisePosition The amount, in wei, of the exercise asset represented by this position.
         int256 exercisePosition;
     }
 
@@ -326,50 +325,21 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Returns Option struct details about a given tokenID if that token is
-     * an option.
-     * @param tokenId The id of the option.
-     * @return optionInfo The Option struct for tokenId.
-     */
-    function option(uint256 tokenId) external view returns (Option memory optionInfo);
-
-    /**
-     * @notice Returns information about the exercised and unexercised assets associated with
-     * an options lot claim.
+     * @notice Gets information for a given claim token id.
      * @param claimId The id of the claim
-     * @return claim The Claim struct reflecting information about the options lot.
+     * @return claim The Claim struct for claimId if the tokenId is Type.Claim.
      */
     function claim(uint256 claimId) external view returns (Claim memory claim);
 
     /**
-     * @notice Information about the position underlying a token, useful for determining value.
-     * When supplied an Option Lot Claim id, this function returns the total amounts of underlying
-     * and exercise assets currently associated with a given options lot.
-     * @param tokenId The token id for which to retrieve the Underlying position.
-     * @return underlyingPositions The Underlying struct for the supplied tokenId.
+     * @notice Gets option type information for a given tokenId.
+     * @param tokenId The token id for which to get option inf.
+     * @return option The Option struct for tokenId if the optionKey for tokenId is initialized.
      */
-    function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions);
+    function option(uint256 tokenId) external view returns (Option memory option);
 
     /**
-     * @notice Returns the token type (e.g. Option/Claim) for a given token Id
-     * @param tokenId The id of the option or claim.
-     * @return typeOfToken The enum Type of the tokenId.
-     */
-    function tokenType(uint256 tokenId) external view returns (Type typeOfToken);
-
-    /**
-     * @notice Check to see if an option is already initialized.
-     * @param optionKey The option key to check.
-     * @return initialized Whether or not the option is initialized.
-     */
-    function isOptionInitialized(uint160 optionKey) external view returns (bool initialized);
-
-    /*//////////////////////////////////////////////////////////////
-    //  Token ID Encoding
-    //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Encode the supplied option id and claim id
+     * @notice Gets the TokenType for a given tokenId.
      * @dev Option and claim token ids are encoded as follows:
      *
      *   MSb
@@ -383,33 +353,82 @@ interface IOptionSettlementEngine {
      *   0000 0000   0000 0000   0000 0000   0000 0000 │ 96b auto-incrementing option lot claim number
      *   0000 0000   0000 0000   0000 0000   0000 0000 ┘
      *                                             LSb
-     * @param optionKey The optionKey to encode
-     * @param claimNum The claimNum to encode
-     * @return tokenId The encoded token id
+     * This function accounts for that, and whether or not tokenId has been initialized/decommissioned yet.
+     * @param tokenId The token id to get the TokenType of.
+     * @return typeOfToken The enum TokenType of the tokenId.
      */
-    function encodeTokenId(uint160 optionKey, uint96 claimNum) external pure returns (uint256 tokenId);
+    function tokenType(uint256 tokenId) external view returns (TokenType typeOfToken);
 
     /**
-     * @notice Decode the supplied token id
-     * @dev See encodeTokenId() for encoding scheme
-     * @param tokenId The token id to decode
-     * @return optionKey claimNum The decoded components of the id as described above, padded as required
+     * @return uriGenerator the address of the URI generator contract.
      */
-    function decodeTokenId(uint256 tokenId) external pure returns (uint160 optionKey, uint96 claimNum);
+    function tokenURIGenerator() external view returns (ITokenURIGenerator uriGenerator);
+
+    /**
+     * @notice Gets information about the ERC20 token positions represented by a tokenId.
+     * @param tokenId The token id for which to retrieve the Underlying position.
+     * @return underlyingPositions The Underlying struct for the supplied tokenId.
+     */
+    function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions);
+
+    // Fee Information
+
+    /**
+     * @notice Gets the balance of protocol fees for a given token which have not been swept yet.
+     * @param token The token for the un-swept fee balance.
+     * @return The balance of un-swept fees.
+     */
+    function feeBalance(address token) external view returns (uint256);
+
+    /**
+     * @return fee The protocol fee, expressed in basis points.
+     */
+    function feeBps() external view returns (uint8 fee);
+
+    /**
+     * @notice Checks if protocol fees are enabled.
+     * @return enabled Whether or not protocol fees are enabled.
+     */
+    function feesEnabled() external view returns (bool enabled);
+
+    /**
+     * @notice Returns the address which protocol fees are swept to.
+     * @return The address which fees are swept to.
+     */
+    function feeTo() external view returns (address);
 
     /*//////////////////////////////////////////////////////////////
-    //  Write Options
+    //  Write Options/Claims
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Create a new option type if it doesn't already exist
-     * @param underlyingAsset The contract address of the underlying asset.
-     * @param underlyingAmount The amount of the underlying asset in the option.
-     * @param exerciseAsset The contract address of the exercise asset.
-     * @param exerciseAmount The amount of the exercise asset to be exercised.
+     * @notice Creates a new option contract type if it doesn't already exist.
+     * @dev optionId can be precomputed using
+     *  uint160 optionKey = uint160(
+     *      bytes20(
+     *          keccak256(
+     *              abi.encode(
+     *                  underlyingAsset,
+     *                  underlyingAmount,
+     *                  exerciseAsset,
+     *                  exerciseAmount,
+     *                  exerciseTimestamp,
+     *                  expiryTimestamp,
+     *                  uint160(0),
+     *                  uint96(0)
+     *              )
+     *          )
+     *      )
+     *  );
+     *  optionId = uint256(optionKey) << OPTION_ID_PADDING;
+     * and then tokenType(optionId) == TokenType.Option if the option already exists.
+     * @param underlyingAsset The contract address of the ERC20 underlying asset.
+     * @param underlyingAmount The amount of underlyingAsset, in wei, collateralizing each option contract.
+     * @param exerciseAsset The contract address of the ERC20 exercise asset.
+     * @param exerciseAmount The amount of exerciseAsset, in wei, required to exercise each option contract.
      * @param exerciseTimestamp The timestamp after which this option can be exercised.
      * @param expiryTimestamp The timestamp before which this option can be exercised.
-     * @return optionId The optionId for the option.
+     * @return optionId The token id for the new option type created by this call.
      */
     function newOptionType(
         address underlyingAsset,
@@ -422,10 +441,22 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Writes a specified amount of the specified option, returning claim NFT id.
-     * @param tokenId The desired token id to write against, set lower 96 bytes to zero to mint a new claim NFT
-     * @param amount The desired number of options to write.
+     * @param tokenId The desired token id to write against, input an optionId to get a new claim, or a claimId
+     * to add to an existing claim.
+     * @param amount The desired number of option contracts to write.
+     * @return claimId The token id of the claim NFT which was input or created.
      */
     function write(uint256 tokenId, uint112 amount) external returns (uint256 claimId);
+
+    /*//////////////////////////////////////////////////////////////
+    //  Redeem Claims
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Redeems a claim NFT, transfers the underlying/exercise tokens to the caller.
+     * @param claimId The ID of the claim to redeem.
+     */
+    function redeem(uint256 claimId) external;
 
     /*//////////////////////////////////////////////////////////////
     //  Exercise Options
@@ -433,75 +464,38 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Exercises specified amount of optionId, transferring in the exercise asset,
-     * and transferring out the underlying asset if requirements are met. Will revert with
-     * an underflow/overflow if the user does not have the required assets.
-     * @param optionId The option id to exercise.
-     * @param amount The amount of option id to exercise.
+     * and transferring out the underlying asset if requirements are met.
+     * @param optionId The option token id of the option type to exercise.
+     * @param amount The amount of option contracts to exercise.
      */
     function exercise(uint256 optionId, uint112 amount) external;
 
     /*//////////////////////////////////////////////////////////////
-    //  Redeem Claims
+    //  Privileged Functions
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Redeem a claim NFT, transfers the underlying tokens.
-     * @param claimId The ID of the claim to redeem.
+     * @notice Enables or disables protocol fees.
+     * @param enabled Whether or not protocol fees should be enabled.
      */
-    function redeem(uint256 claimId) external;
-
-    /*//////////////////////////////////////////////////////////////
-    //  Protocol Admin
-    //////////////////////////////////////////////////////////////*/
+    function setFeesEnabled(bool enabled) external;
 
     /**
-     * @notice Check if the protocol fee switch is enabled.
-     * @return Whether or not the protocol fee switch is enabled.
-     */
-    function feeSwitch() external view returns (bool);
-
-    /**
-     * @notice Sets the protocol fee on / off.
-     * @param enabled Whether or not the protocol fee switch should be enabled.
-     */
-    function setFeeSwitch(bool enabled) external;
-
-    /**
-     * @notice The protocol fee, expressed in basis points.
-     * @return The fee in basis points.
-     */
-    function feeBps() external view returns (uint8);
-
-    /**
-     * @notice The balance of protocol fees for a given token which have not yet
-     * been swept.
-     * @param token The token for the unswept fee balance.
-     * @return The balance of unswept fees.
-     */
-    function feeBalance(address token) external view returns (uint256);
-
-    /**
-     * @notice Returns the address to which protocol fees are swept.
-     * @return The address to which fees are swept.
-     */
-    function feeTo() external view returns (address);
-
-    /**
-     * @notice Updates the address fees can be swept to.
-     * @param newFeeTo The new address to which fees will be swept.
+     * @notice Updates the address fees are swept to.
+     * @param newFeeTo The new address which fees are swept to.
      */
     function setFeeTo(address newFeeTo) external;
 
     /**
-     * @notice Sweeps fees to the feeTo address if there are more than 0 wei for
-     * each address in tokens.
-     * @param tokens The tokens for which fees will be swept to the feeTo address.
-     */
-    function sweepFees(address[] memory tokens) external;
-
-    /**
-     * @notice Updates the contract address for generating the token URI for claim NFTs.
+     * @notice Updates the contract address for generating token URIs for tokens.
      * @param newTokenURIGenerator The address of the new ITokenURIGenerator contract.
      */
     function setTokenURIGenerator(address newTokenURIGenerator) external;
+
+    /**
+     * @notice Sweeps fees to the feeTo address if there is more than 1 wei for
+     * feeBalance for a given token.
+     * @param tokens An array of tokens to sweep fees for.
+     */
+    function sweepFees(address[] memory tokens) external;
 }

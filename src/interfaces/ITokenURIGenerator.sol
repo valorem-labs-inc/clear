@@ -30,7 +30,10 @@ interface ITokenURIGenerator {
      * @param params Parameters for the token URI.
      * @return A string with the SVG encoded in Base64.
      */
-    function constructTokenURI(TokenURIParams memory params) external view returns (string memory);
+    function constructTokenURI(TokenURIParams memory params)
+        external
+        view
+        returns (string memory);
 
     /**
      * @notice Generates a name for the NFT based on the supplied params.
@@ -44,7 +47,10 @@ interface ITokenURIGenerator {
      * @param params Parameters for the token URI.
      * @return A generated description for the NFT.
      */
-    function generateDescription(TokenURIParams memory params) external pure returns (string memory);
+    function generateDescription(TokenURIParams memory params)
+        external
+        pure
+        returns (string memory);
 
     /**
      * @notice Generates a svg for the NFT based on the supplied params.

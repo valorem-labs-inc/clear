@@ -6,3 +6,6 @@ remappings = ['forge-std/=lib/forge-std/src/', 'solmate/=lib/solmate/src/']
 
 [fuzz]
 max_test_rejects = 100000
+
+[fmt]
+line_length = 100

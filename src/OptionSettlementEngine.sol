@@ -18,8 +18,8 @@ import "./TokenURIGenerator.sol";
  * @author neodaoist
  * @notice Valorem Options V1 is a DeFi money lego for writing physically
  * settled covered call and covered put options. All Valorem options are fully
- * collateralized against an ERC-20 underlying asset and exercised with an
- * ERC-20 exercise asset using a fair settlement process. Options contracts, or
+ * collateralized with an ERC-20 underlying asset and exercised with an
+ * ERC-20 exercise asset using a fair assignment process. Options contracts, or
  * long positions, are issued as fungible ERC-1155 tokens, with each token
  * representing a contract. Option writers are additionally issued an ERC-1155
  * NFT claim, or short position, which is used to claim collateral and for
@@ -86,8 +86,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //  Constructor
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice OptionSettlementEngine constructor
-    /// @param _feeTo The address fees accrue to
+    /**
+     * @notice Constructs the OptionSettlementEngine.
+     * @param _feeTo The address fees accrue to.
+     * @param _tokenURIGenerator The contract address of the token URI generator.
+     */
     constructor(address _feeTo, address _tokenURIGenerator) {
         if (_feeTo == address(0) || _tokenURIGenerator == address(0)) {
             revert InvalidAddress(address(0));
@@ -104,9 +107,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @inheritdoc IOptionSettlementEngine
     function option(uint256 tokenId) external view returns (Option memory optionInfo) {
         (uint160 optionKey,) = _decodeTokenId(tokenId);
+
         if (!isOptionInitialized(optionKey)) {
             revert TokenNotFound(tokenId);
         }
+
         optionInfo = optionTypeStates[optionKey].option;
     }
 
@@ -127,7 +132,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             amountWritten: uint112(amountWritten),
             amountExercised: uint112(amountExercised),
             optionId: uint256(optionKey) << OPTION_ID_PADDING,
-            unredeemed: amountWritten != 0
+            // If the claim is initialized, it is unredeemed.
+            unredeemed: true
         });
     }
 
@@ -145,8 +151,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         Option storage optionRecord = optionTypeStates[optionKey].option;
 
-        // token ID is an option
         if (claimKey == 0) {
+            // Then tokenId is an option.
             bool expired = (optionRecord.expiryTimestamp <= block.timestamp);
             underlyingPositions = Underlying({
                 underlyingAsset: optionRecord.underlyingAsset,
@@ -155,7 +161,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 exercisePosition: expired ? int256(0) : -int256(uint256(optionRecord.exerciseAmount))
             });
         } else {
-            // token ID is a claim
+            // Then tokenId is a claim.
             (uint256 amountExercised, uint256 amountUnexercised) =
                 _getExercisedAmountsForClaim(optionKey, claimKey);
 

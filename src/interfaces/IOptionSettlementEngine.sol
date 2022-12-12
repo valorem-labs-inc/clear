@@ -9,7 +9,9 @@ interface IOptionSettlementEngine {
     //  Events
     //////////////////////////////////////////////////////////////*/
 
+    //
     // Write/Redeem events
+    //
 
     // TODO(Do we need exercise and underlying asset here?)
     /**
@@ -52,7 +54,9 @@ interface IOptionSettlementEngine {
         uint40 indexed expiryTimestamp
     );
 
+    //
     // Exercise events
+    //
 
     /**
      * @notice Emitted when option contract(s) is(are) exercised.
@@ -73,7 +77,9 @@ interface IOptionSettlementEngine {
         uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount
     );
 
+    //
     // Fee events
+    //
 
     /**
      * @notice Emitted when protocol fees are accrued for a given asset.
@@ -115,7 +121,9 @@ interface IOptionSettlementEngine {
     //  Errors
     //////////////////////////////////////////////////////////////*/
 
+    //
     // Access control errors
+    //
 
     /**
      * @notice The caller doesn't have permission to access that function.
@@ -371,14 +379,16 @@ interface IOptionSettlementEngine {
     /**
      * @notice Gets information about the ERC20 token positions represented by a tokenId.
      * @param tokenId The token id for which to retrieve the Underlying position.
-     * @return underlyingPositions The Underlying struct for the supplied tokenId.
+     * @return underlyingPosition The Underlying struct for the supplied tokenId.
      */
     function underlying(uint256 tokenId)
         external
         view
-        returns (Underlying memory underlyingPositions);
+        returns (Underlying memory underlyingPosition);
 
+    //
     // Fee Information
+    //
 
     /**
      * @notice Gets the balance of protocol fees for a given token which have not been swept yet.

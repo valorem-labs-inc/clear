@@ -316,8 +316,10 @@ contract OptionSettlementTest is Test, NftReceiver {
         assertTrue(claimUnderlying.underlyingPosition != 0);
 
         engine.redeem(claimId);
-        claimUnderlying = engine.underlying(claimId);
-        assertEq(claimUnderlying.underlyingPosition, 0);
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, claimId)
+        );
+        engine.underlying(claimId);
 
         // Fees
         uint256 writeAmount = 7 * testUnderlyingAmount;
@@ -1782,7 +1784,10 @@ contract OptionSettlementTest is Test, NftReceiver {
 
         engine.redeem(claimId);
 
-        IOptionSettlementEngine.Underlying memory claimUnderlying = engine.underlying(claimId);
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, claimId)
+        );
+        engine.underlying(claimId);
 
         assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + writeFee);
         assertEq(WETH.balanceOf(ALICE), wethBalance - writeFee);
@@ -1790,8 +1795,6 @@ contract OptionSettlementTest is Test, NftReceiver {
         assertEq(DAI.balanceOf(ALICE), daiBalance - exerciseFee);
         assertEq(engine.balanceOf(ALICE, testOptionId), amountWrite - amountExercise);
         assertEq(engine.balanceOf(ALICE, claimId), 0);
-        assertEq(claimUnderlying.underlyingPosition, 0);
-        assertEq(claimUnderlying.exercisePosition, 0);
 
         _assertTokenIsNone(claimId);
     }

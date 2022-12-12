@@ -144,31 +144,33 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function underlying(uint256 tokenId)
         external
         view
-        returns (Underlying memory underlyingPositions)
+        returns (Underlying memory underlyingPosition)
     {
         (uint160 optionKey, uint96 claimKey) = _decodeTokenId(tokenId);
-
-        if (!isOptionInitialized(optionKey)) {
-            revert TokenNotFound(tokenId);
-        }
 
         Option storage optionRecord = optionTypeStates[optionKey].option;
 
         if (claimKey == 0) {
+            if (!isOptionInitialized(optionKey)) {
+                revert TokenNotFound(tokenId);
+            }
             // Then tokenId is an option.
             bool expired = (optionRecord.expiryTimestamp <= block.timestamp);
-            underlyingPositions = Underlying({
+            underlyingPosition = Underlying({
                 underlyingAsset: optionRecord.underlyingAsset,
                 underlyingPosition: expired ? int256(0) : int256(uint256(optionRecord.underlyingAmount)),
                 exerciseAsset: optionRecord.exerciseAsset,
                 exercisePosition: expired ? int256(0) : -int256(uint256(optionRecord.exerciseAmount))
             });
         } else {
+            if (!isClaimInitialized(optionKey, claimKey)) {
+                revert TokenNotFound(tokenId);
+            }
             // Then tokenId is a claim.
             (uint256 amountExercised, uint256 amountUnexercised) =
                 _getExercisedAmountsForClaim(optionKey, claimKey);
 
-            underlyingPositions = Underlying({
+            underlyingPosition = Underlying({
                 underlyingAsset: optionRecord.underlyingAsset,
                 underlyingPosition: int256(amountUnexercised * optionRecord.underlyingAmount),
                 exerciseAsset: optionRecord.exerciseAsset,

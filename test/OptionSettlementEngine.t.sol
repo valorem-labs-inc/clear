@@ -738,8 +738,6 @@ contract OptionSettlementTest is Test, NftReceiver {
 
         vm.prank(FEE_TO);
         engine.setFeeTo(address(0xCAFE));
-
-        assertEq(engine.feeTo(), address(0xCAFE));
     }
 
     function testRevertSetFeeToWhenNotCurrentFeeTo() public {
@@ -755,9 +753,22 @@ contract OptionSettlementTest is Test, NftReceiver {
     }
 
     function testSetTokenURIGenerator() public {
+        TokenURIGenerator newTokenURIGenerator = new TokenURIGenerator();
+
         vm.prank(FEE_TO);
-        engine.setTokenURIGenerator(address(0xCAFE));
-        assertEq(address(engine.tokenURIGenerator()), address(0xCAFE));
+        engine.setTokenURIGenerator(address(newTokenURIGenerator));
+
+        assertEq(address(engine.tokenURIGenerator()), address(newTokenURIGenerator));
+    }
+
+    function testEventSetTokenURIGenerator() public {
+        TokenURIGenerator newTokenURIGenerator = new TokenURIGenerator();
+
+        vm.expectEmit(true, true, true, true);
+        emit TokenURIGeneratorUpdated(address(newTokenURIGenerator));
+
+        vm.prank(FEE_TO);
+        engine.setTokenURIGenerator(address(newTokenURIGenerator));
     }
 
     function testRevertSetTokenURIGeneratorWhenNotCurrentFeeTo() public {
@@ -2045,4 +2056,6 @@ contract OptionSettlementTest is Test, NftReceiver {
     event FeeSwitchUpdated(address feeTo, bool enabled);
 
     event FeeToUpdated(address indexed newFeeTo);
+
+    event TokenURIGeneratorUpdated(address indexed newTokenURIGenerator);
 }

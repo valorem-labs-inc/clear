@@ -9,6 +9,7 @@ interface IOptionSettlementEngine {
     //  Events
     //////////////////////////////////////////////////////////////*/
 
+    // TODO decide how to handle "subheader" section divider
     // Write/Redeem events
 
     // TODO(Do we need exercise and underlying asset here?)
@@ -94,6 +95,8 @@ interface IOptionSettlementEngine {
      */
     event FeeSwept(address indexed asset, address indexed feeTo, uint256 amount);
 
+    // Privileged functionality events
+
     /**
      * @notice Emitted when protocol fees are enabled or disabled.
      * @param feeTo The address which enabled or disabled fees.
@@ -106,6 +109,12 @@ interface IOptionSettlementEngine {
      * @param newFeeTo The new feeTo address.
      */
     event FeeToUpdated(address indexed newFeeTo);
+
+    /**
+     * @notice Emitted when TokenURIGenerator is updated.
+     * @param newTokenURIGenerator The new TokenURIGenerator address.
+     */
+    event TokenURIGeneratorUpdated(address indexed newTokenURIGenerator);
 
     /*//////////////////////////////////////////////////////////////
     //  Errors

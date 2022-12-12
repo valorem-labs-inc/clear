@@ -545,8 +545,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         if (newTokenURIGenerator == address(0)) {
             revert InvalidAddress(address(0));
         }
-
         tokenURIGenerator = ITokenURIGenerator(newTokenURIGenerator);
+
+        emit TokenURIGeneratorUpdated(newTokenURIGenerator);
     }
 
     /*//////////////////////////////////////////////////////////////

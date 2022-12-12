@@ -115,6 +115,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         optionInfo = optionTypeStates[optionKey].option;
     }
 
+    // TODO(Verify/add fuzz assertions)
     /// @inheritdoc IOptionSettlementEngine
     function claim(uint256 claimId) public view returns (Claim memory claimInfo) {
         (uint160 optionKey, uint96 claimKey) = _decodeTokenId(claimId);
@@ -123,14 +124,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert TokenNotFound(claimId);
         }
 
+        // This sums up all the claim indices comprising the claim.
         (uint256 amountExercised, uint256 amountUnexercised) =
             _getExercisedAmountsForClaim(optionKey, claimKey);
 
+        // The sum of exercised and unexercised is the amount written.
         uint256 amountWritten = amountExercised + amountUnexercised;
 
         claimInfo = Claim({
-            amountWritten: uint112(amountWritten),
-            amountExercised: uint112(amountExercised),
+            amountWritten: amountWritten,
+            amountExercised: amountExercised,
             optionId: uint256(optionKey) << OPTION_ID_PADDING,
             // If the claim is initialized, it is unredeemed.
             unredeemed: true

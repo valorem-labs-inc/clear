@@ -274,9 +274,9 @@ interface IOptionSettlementEngine {
      */
     struct Claim {
         /// @custom:member amountWritten The number of option contracts written against this claim.
-        uint112 amountWritten;
+        uint256 amountWritten;
         /// @custom:member amountExercised The amount of option contracts exercised against this claim.
-        uint112 amountExercised;
+        uint256 amountExercised;
         /// @custom:member optionId The option ID of the option type this claim is for.
         uint256 optionId;
         /// @custom:member unredeemed Whether or not this claim has been redeemed.

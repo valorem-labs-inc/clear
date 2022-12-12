@@ -1522,6 +1522,20 @@ contract OptionSettlementTest is Test, NftReceiver {
         vm.expectRevert(abi.encodeWithSelector(
             IOptionSettlementEngine.InsufficientExercisableOptions.selector, nextWindowStartTs));
         engine.exercise(testOptionId, 1);
+
+        vm.warp(nextWindowStartTs + 1);
+        // should pass now that we're in the next bucket window
+        engine.exercise(testOptionId, 1);
+    }
+
+    function testRevertWriteWhenCannotWriteOptionsInFinalPeriod() public {
+        uint256 bucketWindow = 12 hours;
+        uint256 lastWriteableTs = testExpiryTimestamp - bucketWindow;
+        vm.warp(lastWriteableTs + 1);
+        vm.startPrank(ALICE);
+        vm.expectRevert(abi.encodeWithSelector(
+            IOptionSettlementEngine.CannotWriteOptionsInFinalPeriod.selector, lastWriteableTs));
+        engine.write(testOptionId, 1);
     }
 
     // **********************************************************************

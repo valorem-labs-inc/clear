@@ -459,7 +459,7 @@ interface IOptionSettlementEngine {
      * seeking to redeem their claim for the underlying and exercise assets will claim
      * amounts proportional to the per-period amounts written on their options lot (i.e.
      * the ClaimIndex data structs) weighted by the ratio of exercised to
-     * un-exercised options on each of those periodsu.
+     * un-exercised options on each of those periods.
      */
     function redeem(uint256 claimId) external;
 

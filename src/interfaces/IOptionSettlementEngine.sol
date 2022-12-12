@@ -69,9 +69,7 @@ interface IOptionSettlementEngine {
      * @param claimId The claim token id of the new or existing short position written against.
      * @param amount The amount of options contracts written.
      */
-    event OptionsWritten(
-        uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount
-    );
+    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
 
     //
     // Fee events
@@ -87,9 +85,7 @@ interface IOptionSettlementEngine {
      * @param payer The address paying the fee.
      * @param amount The amount, in wei, of fees accrued.
      */
-    event FeeAccrued(
-        uint256 indexed optionId, address indexed asset, address indexed payer, uint256 amount
-    );
+    event FeeAccrued(uint256 indexed optionId, address indexed asset, address indexed payer, uint256 amount);
 
     /**
      * @notice Emitted when accrued protocol fees for a given ERC20 asset are swept to the
@@ -377,10 +373,7 @@ interface IOptionSettlementEngine {
      * @param tokenId The token id for which to retrieve the Underlying position.
      * @return underlyingPosition The Underlying struct for the supplied tokenId.
      */
-    function underlying(uint256 tokenId)
-        external
-        view
-        returns (Underlying memory underlyingPosition);
+    function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPosition);
 
     //
     // Fee Information

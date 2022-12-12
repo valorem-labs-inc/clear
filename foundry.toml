@@ -8,4 +8,4 @@ remappings = ['forge-std/=lib/forge-std/src/', 'solmate/=lib/solmate/src/']
 max_test_rejects = 100000
 
 [fmt]
-line_length = 100
+line_length = 120

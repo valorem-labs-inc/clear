@@ -61,11 +61,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
     }
 
     /// @inheritdoc ITokenURIGenerator
-    function generateDescription(TokenURIParams memory params)
-        public
-        pure
-        returns (string memory)
-    {
+    function generateDescription(TokenURIParams memory params) public pure returns (string memory) {
         return string(
             abi.encodePacked(
                 "NFT representing a Valorem options contract. ",
@@ -93,9 +89,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
                 "<g transform='scale(5), translate(25, 18)' fill-opacity='0.15'>",
                 "<path xmlns='http://www.w3.org/2000/svg' d='M69.3577 14.5031H29.7265L39.6312 0H0L19.8156 29L29.7265 14.5031L39.6312 29H19.8156H0L19.8156 58L39.6312 29L49.5421 43.5031L69.3577 14.5031Z' fill='white'/>",
                 "</g>",
-                _generateHeaderSection(
-                    params.underlyingSymbol, params.exerciseSymbol, params.tokenType
-                ),
+                _generateHeaderSection(params.underlyingSymbol, params.exerciseSymbol, params.tokenType),
                 _generateAmountsSection(
                     params.underlyingAmount,
                     params.underlyingSymbol,
@@ -144,20 +138,14 @@ contract TokenURIGenerator is ITokenURIGenerator {
         return string(
             abi.encodePacked(
                 "<text x='16px' y='116px' font-size='14' letter-spacing='0.01em' fill='#fff' font-family='Helvetica'>UNDERLYING ASSET</text>",
-                _generateAmountString(
-                    _underlyingAmount, _underlyingDecimals, _underlyingSymbol, 16, 140
-                ),
+                _generateAmountString(_underlyingAmount, _underlyingDecimals, _underlyingSymbol, 16, 140),
                 "<text x='16px' y='176px' font-size='14' letter-spacing='0.01em' fill='#fff' font-family='Helvetica'>EXERCISE ASSET</text>",
                 _generateAmountString(_exerciseAmount, _exerciseDecimals, _exerciseSymbol, 16, 200)
             )
         );
     }
 
-    function _generateDateSection(TokenURIParams memory params)
-        internal
-        pure
-        returns (string memory)
-    {
+    function _generateDateSection(TokenURIParams memory params) internal pure returns (string memory) {
         return string(
             abi.encodePacked(
                 "<text x='16px' y='236px' font-size='14' letter-spacing='0.01em' fill='#fff' font-family='Helvetica'>EXERCISE DATE</text>",
@@ -168,13 +156,11 @@ contract TokenURIGenerator is ITokenURIGenerator {
         );
     }
 
-    function _generateAmountString(
-        uint256 _amount,
-        uint8 _decimals,
-        string memory _symbol,
-        uint256 _x,
-        uint256 _y
-    ) internal pure returns (string memory) {
+    function _generateAmountString(uint256 _amount, uint8 _decimals, string memory _symbol, uint256 _x, uint256 _y)
+        internal
+        pure
+        returns (string memory)
+    {
         return string(
             abi.encodePacked(
                 "<text x='",
@@ -228,11 +214,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
         bool isPercent;
     }
 
-    function _generateDecimalString(DecimalStringParams memory params)
-        internal
-        pure
-        returns (string memory)
-    {
+    function _generateDecimalString(DecimalStringParams memory params) internal pure returns (string memory) {
         bytes memory buffer = new bytes(params.bufferLength);
         if (params.isPercent) {
             buffer[buffer.length - 1] = "%";
@@ -243,11 +225,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
         }
 
         // add leading/trailing 0's
-        for (
-            uint256 zerosCursor = params.zerosStartIndex;
-            zerosCursor < params.zerosEndIndex;
-            zerosCursor++
-        ) {
+        for (uint256 zerosCursor = params.zerosStartIndex; zerosCursor < params.zerosEndIndex; zerosCursor++) {
             buffer[zerosCursor] = bytes1(uint8(48));
         }
         // add sigfigs
@@ -261,11 +239,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
         return string(buffer);
     }
 
-    function _decimalString(uint256 number, uint8 decimals, bool isPercent)
-        internal
-        pure
-        returns (string memory)
-    {
+    function _decimalString(uint256 number, uint8 decimals, bool isPercent) internal pure returns (string memory) {
         uint8 percentBufferOffset = isPercent ? 1 : 0;
         uint256 tenPowDecimals = 10 ** decimals;
 
@@ -325,11 +299,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
         return _generateDecimalString(params);
     }
 
-    function _getDateUnits(uint256 _timestamp)
-        internal
-        pure
-        returns (uint256 month, uint256 day, uint256 year)
-    {
+    function _getDateUnits(uint256 _timestamp) internal pure returns (uint256 month, uint256 day, uint256 year) {
         int256 z = int256(_timestamp) / 86400 + 719468;
         int256 era = (z >= 0 ? z : z - 146096) / 146097;
         int256 doe = z - era * 146097;

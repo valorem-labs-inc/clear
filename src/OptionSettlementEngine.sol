@@ -150,6 +150,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         // Check the type of token and if it exists.
         TokenType typeOfToken = tokenType(tokenId);
+
         if (typeOfToken == TokenType.None) {
             revert TokenNotFound(tokenId);
         }
@@ -187,9 +188,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function tokenType(uint256 tokenId) public view returns (TokenType typeOfToken) {
-        // Get claim and option keys
         (uint160 optionKey, uint96 claimKey) = _decodeTokenId(tokenId);
 
+        // Default to None if option or claim is uninitialized or redeemed.
         typeOfToken = TokenType.None;
 
         // Check if the token is an initialized option or claim and update accordingly.
@@ -246,7 +247,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint40 exerciseTimestamp,
         uint40 expiryTimestamp
     ) external returns (uint256 optionId) {
-        // Check that a duplicate option type doesn't exist
+        // @dev This is how to precalculate the option key and id.
         uint160 optionKey = uint160(
             bytes20(
                 keccak256(
@@ -265,31 +266,27 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         );
         optionId = uint256(optionKey) << OPTION_ID_PADDING;
 
-        // If it does, revert
         if (isOptionInitialized(optionKey)) {
             revert OptionsTypeExists(optionId);
         }
 
-        // Make sure that expiry is at least 24 hours from now
         if (expiryTimestamp < (block.timestamp + 1 days)) {
             revert ExpiryWindowTooShort(expiryTimestamp);
         }
 
-        // Ensure the exercise window is at least 24 hours
         if (expiryTimestamp < (exerciseTimestamp + 1 days)) {
             revert ExerciseWindowTooShort(exerciseTimestamp);
         }
 
-        // The exercise and underlying assets can't be the same
+        // The exercise and underlying assets can't be the same.
         if (exerciseAsset == underlyingAsset) {
             revert InvalidAssets(exerciseAsset, underlyingAsset);
         }
 
-        // Check that both tokens are ERC20 by instantiating them and checking supply
+        // Check that both tokens are ERC20 and will be redeemable by
+        // instantiating them and checking supply.
         ERC20 underlyingToken = ERC20(underlyingAsset);
         ERC20 exerciseToken = ERC20(exerciseAsset);
-
-        // Check total supplies and ensure the option will be exercisable
         if (
             underlyingToken.totalSupply() < underlyingAmount
                 || exerciseToken.totalSupply() < exerciseAmount
@@ -321,25 +318,21 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     function write(uint256 tokenId, uint112 amount) public returns (uint256) {
-        // You need to write some amount
+        // Amount written must be greater than zero.
         if (amount == 0) {
             revert AmountWrittenCannotBeZero();
         }
 
-        // Pass through the tokenId as the encodedClaimId, which will be
-        // overwritten in the case of a new claim.
-        uint256 encodedClaimId = tokenId;
-
-        // Get the optionKey and claimKey from the tokenId
+        // Get the optionKey and claimKey from the tokenId.
         (uint160 optionKey, uint96 claimKey) = _decodeTokenId(tokenId);
 
-        // Sanitize a zeroed encodedOptionId from the optionKey
+        // Sanitize a zeroed encodedOptionId from the optionKey.
         uint256 encodedOptionId = uint256(optionKey) << OPTION_ID_PADDING;
 
         // Get the option record and check that it's valid to write against
         OptionTypeState storage optionTypeState = optionTypeStates[optionKey];
 
-        // Make sure the option exists, and hasn't expired
+        // by making sure the option exists, and hasn't expired.
         uint40 expiry = optionTypeState.option.expiryTimestamp;
         if (expiry == 0) {
             revert InvalidOption(encodedOptionId);
@@ -348,48 +341,49 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert ExpiredOption(encodedOptionId, expiry);
         }
 
-        // create new claim
         if (claimKey == 0) {
-            // Make encodedClaimId reflect the next available claim and increment the next
+            // Then create a new claim.
+
+            // Make encodedClaimId reflect the next available claim, and increment the next
             // available claim in storage.
             uint96 nextClaimKey = optionTypeState.option.nextClaimKey++;
-            encodedClaimId = _encodeTokenId(optionKey, nextClaimKey);
+            tokenId = _encodeTokenId(optionKey, nextClaimKey);
 
-            // Handle internal claim bucket accounting
+            // Handle internal claim bucket accounting.
             uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
             _addOrUpdateClaimIndex(optionKey, nextClaimKey, bucketIndex, amount);
         }
-        // Add to existing claim
         else {
-            // Check ownership of claim
-            uint256 balance = balanceOf[msg.sender][encodedClaimId];
+            // Then add to an existing claim.
+
+            // The user must own the existing claim.
+            uint256 balance = balanceOf[msg.sender][tokenId];
             if (balance != 1) {
-                revert CallerDoesNotOwnClaimId(encodedClaimId);
+                revert CallerDoesNotOwnClaimId(tokenId);
             }
 
-            // Handle internal claim bucket accounting
+            // Handle internal claim bucket accounting.
             uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
             _addOrUpdateClaimIndex(optionKey, claimKey, bucketIndex, amount);
         }
 
-        // Calculate amount to receive
+        // Calculate the amount to transfer in.
         uint256 rxAmount = optionTypeState.option.underlyingAmount * amount;
 
-        // Add underlying asset to stack
         address underlyingAsset = optionTypeState.option.underlyingAsset;
 
-        // Assess fee (if fee switch enabled) and emit events
+        // Handle fee accounting.
         uint256 fee = 0;
         if (feesEnabled) {
             fee = _calculateRecordAndEmitFee(encodedOptionId, underlyingAsset, rxAmount);
         }
-        emit OptionsWritten(encodedOptionId, msg.sender, encodedClaimId, amount);
+        emit OptionsWritten(encodedOptionId, msg.sender, tokenId, amount);
 
         if (claimKey == 0) {
-            // Mint options and claim token to writer
+            // Then we need to mint a new claim token and transfer option tokens.
             uint256[] memory tokens = new uint256[](2);
             tokens[0] = encodedOptionId;
-            tokens[1] = encodedClaimId;
+            tokens[1] = tokenId;
 
             uint256[] memory amounts = new uint256[](2);
             amounts[0] = amount;
@@ -397,16 +391,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
             _batchMint(msg.sender, tokens, amounts, "");
         } else {
-            // Mint more options on existing claim to writer
+            // Mint more options on existing claim to writer.
             _mint(msg.sender, encodedOptionId, amount, "");
         }
 
-        // Transfer the requisite underlying asset
+        // Transfer in the requisite underlying asset amount.
         SafeTransferLib.safeTransferFrom(
             ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee)
         );
 
-        return encodedClaimId;
+        return tokenId;
     }
 
     //

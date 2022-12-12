@@ -414,11 +414,13 @@ contract OptionSettlementTest is Test, NftReceiver {
         assertEq(testUnderlyingAsset, underlying.underlyingAsset);
 
         vm.warp(testOption.expiryTimestamp);
+        // The token is now expired/worthless, and this should revert.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp
+            )
+        );
         underlying = engine.underlying(testOptionId);
-        _assertPosition(underlying.underlyingPosition, 0);
-        _assertPosition(underlying.exercisePosition, 0);
-        assertEq(testExerciseAsset, underlying.exerciseAsset);
-        assertEq(testUnderlyingAsset, underlying.underlyingAsset);
     }
 
     function testAddOptionsToExistingClaim() public {

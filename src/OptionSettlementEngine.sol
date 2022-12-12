@@ -148,25 +148,31 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     {
         (uint160 optionKey, uint96 claimKey) = _decodeTokenId(tokenId);
 
+        // Check the type of token and if it exists.
+        TokenType typeOfToken = tokenType(tokenId);
+        if (typeOfToken == TokenType.None) {
+            revert TokenNotFound(tokenId);
+        }
+
         Option storage optionRecord = optionTypeStates[optionKey].option;
 
-        if (claimKey == 0) {
-            if (!isOptionInitialized(optionKey)) {
-                revert TokenNotFound(tokenId);
+        if (typeOfToken == TokenType.Option) {
+            // Then tokenId is an initialized option type.
+
+            // If the option type is expired, then it has no underlying position.
+            uint40 expiry = optionRecord.expiryTimestamp;
+            if (expiry <= block.timestamp) {
+                revert ExpiredOption(tokenId, expiry);
             }
-            // Then tokenId is an option.
-            bool expired = (optionRecord.expiryTimestamp <= block.timestamp);
+
             underlyingPosition = Underlying({
                 underlyingAsset: optionRecord.underlyingAsset,
-                underlyingPosition: expired ? int256(0) : int256(uint256(optionRecord.underlyingAmount)),
+                underlyingPosition: int256(uint256(optionRecord.underlyingAmount)),
                 exerciseAsset: optionRecord.exerciseAsset,
-                exercisePosition: expired ? int256(0) : -int256(uint256(optionRecord.exerciseAmount))
+                exercisePosition: -int256(uint256(optionRecord.exerciseAmount))
             });
         } else {
-            if (!isClaimInitialized(optionKey, claimKey)) {
-                revert TokenNotFound(tokenId);
-            }
-            // Then tokenId is a claim.
+            // Then tokenId is an initialized/unredeemed claim.
             (uint256 amountExercised, uint256 amountUnexercised) =
                 _getExercisedAmountsForClaim(optionKey, claimKey);
 

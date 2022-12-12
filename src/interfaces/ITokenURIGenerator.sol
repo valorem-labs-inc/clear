@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL 1.1
-pragma solidity 0.8.11;
+pragma solidity 0.8.16;
 
 import "./IOptionSettlementEngine.sol";
 
-/// @title A token URI geneartor for Claim NFTs
+/// @title A token URI generator for Claim NFTs
 /// @author 0xAlcibiades
 /// @author Flip-Liquid
 /// @author neodaoist
@@ -26,7 +26,7 @@ interface ITokenURIGenerator {
         /// @param exerciseAmount The amount of the exercise asset required to exercise this option
         uint96 exerciseAmount;
         /// @param tokenType Option or Claim
-        IOptionSettlementEngine.Type tokenType;
+        IOptionSettlementEngine.TokenType tokenType;
     }
 
     /**

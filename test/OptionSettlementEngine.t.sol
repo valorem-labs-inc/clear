@@ -1048,8 +1048,6 @@ contract OptionSettlementTest is Test, NftReceiver {
             claimId,
             testOptionId,
             ALICE,
-            DAI_A,
-            WETH_A,
             0, // no one has exercised
             expectedUnderlyingAmount
             );
@@ -2174,8 +2172,6 @@ contract OptionSettlementTest is Test, NftReceiver {
         uint256 indexed claimId,
         uint256 indexed optionId,
         address indexed redeemer,
-        address exerciseAsset,
-        address underlyingAsset,
         uint256 exerciseAmountRedeemed,
         uint256 underlyingAmountRedeemed
     );

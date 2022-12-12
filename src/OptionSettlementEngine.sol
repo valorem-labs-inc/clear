@@ -352,8 +352,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // Handle internal claim bucket accounting.
             uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
             _addOrUpdateClaimIndex(optionKey, nextClaimKey, bucketIndex, amount);
-        }
-        else {
+        } else {
             // Then add to an existing claim.
 
             // The user must own the existing claim.
@@ -411,41 +410,45 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function redeem(uint256 claimId) external {
         (uint160 optionKey, uint96 claimKey) = _decodeTokenId(claimId);
 
+        // You can't redeem an option.
         if (claimKey == 0) {
             revert InvalidClaim(claimId);
         }
 
-        uint256 balance = this.balanceOf(msg.sender, claimId);
-
+        // If the user has a claim, we already know the claim exists and is initialized.
+        uint256 balance = balanceOf[msg.sender][claimId];
         if (balance != 1) {
             revert CallerDoesNotOwnClaimId(claimId);
         }
 
-        Option storage optionRecord = optionTypeStates[optionKey].option;
+        // Setup pointers to the option and info.
+        OptionTypeState storage optionTypeState = optionTypeStates[optionKey];
+        Option memory optionRecord = optionTypeState.option;
 
+        // Can't redeem until after expiry
         if (optionRecord.expiryTimestamp > block.timestamp) {
             revert ClaimTooSoon(claimId, optionRecord.expiryTimestamp);
         }
 
-        (uint256 exerciseAmountRedeemed, uint256 underlyingAmountRedeemed) =
-            _getPositionsForClaim(optionKey, claimKey, optionRecord);
-
-        ClaimIndex[] storage claimIndices = optionTypeStates[optionKey].claimIndices[claimKey];
+        // Set up accumulators.
+        ClaimIndex[] storage claimIndices = optionTypeState.claimIndices[claimKey];
         uint256 claimIndexArrayLength = claimIndices.length;
         uint256 totalExerciseAssetAmount;
         uint256 totalUnderlyingAssetAmount;
 
-        for (uint256 i = 0; i < claimIndexArrayLength; i++) {
+        // @dev This isn't dry with _getPositionsForClaim because this mutates.
+        for (uint256 i = claimIndexArrayLength; i > 0; i--) {
             (uint256 _amountExercisedInBucket, uint256 _amountUnexercisedInBucket) =
-                _getExercisedAmountsForClaimIndex(optionKey, claimIndices, claimIndices.length - 1);
-            // accumulate the amount exercised and unexercised in these variables for later mul by
-            // optionRecord.exerciseAmount/underlyingAmount
+                _getExercisedAmountsForClaimIndex(optionKey, claimIndices, i - 1);
+            // Accumulate the amount exercised and unexercised in these variables
+            // for later multiplication by optionRecord.exerciseAmount/underlyingAmount.
             totalExerciseAssetAmount += _amountExercisedInBucket;
             totalUnderlyingAssetAmount += _amountUnexercisedInBucket;
-            // zeroes out the array during the redemption process
+            // This zeroes out the array during the redemption process for a gas refund.
             claimIndices.pop();
         }
 
+        // Calculate the amounts to transfer out.
         totalExerciseAssetAmount *= optionRecord.exerciseAmount;
         totalUnderlyingAssetAmount *= optionRecord.underlyingAmount;
 
@@ -453,23 +456,22 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             claimId,
             uint256(optionKey) << OPTION_ID_PADDING,
             msg.sender,
-            optionRecord.exerciseAsset,
-            optionRecord.underlyingAsset,
-            exerciseAmountRedeemed,
-            underlyingAmountRedeemed
+            totalExerciseAssetAmount,
+            totalUnderlyingAssetAmount
             );
 
+        // Make transfers.
         _burn(msg.sender, claimId, 1);
 
-        if (exerciseAmountRedeemed > 0) {
+        if (totalExerciseAssetAmount > 0) {
             SafeTransferLib.safeTransfer(
-                ERC20(optionRecord.exerciseAsset), msg.sender, exerciseAmountRedeemed
+                ERC20(optionRecord.exerciseAsset), msg.sender, totalExerciseAssetAmount
             );
         }
 
-        if (underlyingAmountRedeemed > 0) {
+        if (totalUnderlyingAssetAmount > 0) {
             SafeTransferLib.safeTransfer(
-                ERC20(optionRecord.underlyingAsset), msg.sender, underlyingAmountRedeemed
+                ERC20(optionRecord.underlyingAsset), msg.sender, totalUnderlyingAssetAmount
             );
         }
     }
@@ -694,7 +696,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         internal
         returns (uint256 fee)
     {
-        fee = ((assetAmount * feeBps) / 10_000);
+        fee = (assetAmount * feeBps) / 10_000;
         feeBalance[assetAddress] += fee;
 
         emit FeeAccrued(optionId, assetAddress, msg.sender, fee);

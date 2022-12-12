@@ -19,17 +19,13 @@ interface IOptionSettlementEngine {
      * @param optionId The token id of the option type of the claim being redeemed.
      * @param claimId The token id of the claim being redeemed.
      * @param redeemer The address redeeming the claim.
-     * @param exerciseAsset The ERC20 exercise asset of the option.
-     * @param underlyingAsset The ERC20 underlying asset of the option.
-     * @param exerciseAmountRedeemed The amount of the exerciseAsset redeemed.
-     * @param underlyingAmountRedeemed The amount of underlyingAsset redeemed.
+     * @param exerciseAmountRedeemed The amount of the option.exerciseAsset redeemed.
+     * @param underlyingAmountRedeemed The amount of option.underlyingAsset redeemed.
      */
     event ClaimRedeemed(
         uint256 indexed claimId,
         uint256 indexed optionId,
         address indexed redeemer,
-        address exerciseAsset,
-        address underlyingAsset,
         uint256 exerciseAmountRedeemed,
         uint256 underlyingAmountRedeemed
     );

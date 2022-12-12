@@ -414,7 +414,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         OptionTypeState storage optionTypeState = optionTypeStates[optionKey];
         Option memory optionRecord = optionTypeState.option;
 
-        // Can't redeem until after expiry
+        // Can't redeem until expiry.
         if (optionRecord.expiryTimestamp > block.timestamp) {
             revert ClaimTooSoon(claimId, optionRecord.expiryTimestamp);
         }
@@ -476,11 +476,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         Option storage optionRecord = optionTypeStates[optionKey].option;
 
+        // Can't exercise an option at or after expiry
         if (optionRecord.expiryTimestamp <= block.timestamp) {
             revert ExpiredOption(optionId, optionRecord.expiryTimestamp);
         }
-        // Require that we have reached the exercise timestamp
-        if (optionRecord.exerciseTimestamp >= block.timestamp) {
+
+        // Can't exercise an option before the exercise timestamp
+        if (optionRecord.exerciseTimestamp > block.timestamp) {
             revert ExerciseTooEarly(optionId, optionRecord.exerciseTimestamp);
         }
 
@@ -624,6 +626,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         view
         returns (uint256 amountExercised, uint256 amountUnexercised)
     {
+        // TODO(Possible rounding error)
         ClaimIndex storage claimIndex = claimIndexArray[index];
         Bucket storage bucket = optionTypeStates[optionKey].bucketInfo.buckets[claimIndex.bucketIndex];
         // The ratio of exercised to written options in the bucket multiplied by the

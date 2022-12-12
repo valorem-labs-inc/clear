@@ -1374,6 +1374,7 @@ contract OptionSettlementTest is Test, NftReceiver {
 
         // Bob immediately exercises before exerciseTimestamp
         vm.startPrank(BOB);
+        vm.warp(testExerciseTimestamp - 1 seconds);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IOptionSettlementEngine.ExerciseTooEarly.selector, testOptionId, testExerciseTimestamp

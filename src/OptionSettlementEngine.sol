@@ -362,7 +362,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         address underlyingAsset = optionTypeState.option.underlyingAsset;
 
-        // Handle fee accounting.
+        // Assess a fee (if fee switch enabled) and emit events.
         uint256 fee = 0;
         if (feesEnabled) {
             fee = _calculateRecordAndEmitFee(encodedOptionId, underlyingAsset, rxAmount);
@@ -468,12 +468,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function exercise(uint256 optionId, uint112 amount) external {
         (uint160 optionKey, uint96 claimKey) = _decodeTokenId(optionId);
 
-        // option ID should be specified without claim in lower 96b
+        // Must be an optionId.
         if (claimKey != 0) {
             revert InvalidOption(optionId);
         }
 
         Option storage optionRecord = optionTypeStates[optionKey].option;
+
+        // These will implicitly check that the option type is initialized.
 
         // Can't exercise an option at or after expiry
         if (optionRecord.expiryTimestamp <= block.timestamp) {
@@ -485,19 +487,20 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert ExerciseTooEarly(optionId, optionRecord.exerciseTimestamp);
         }
 
-        if (this.balanceOf(msg.sender, optionId) < amount) {
+        if (balanceOf[msg.sender][optionId] < amount) {
             revert CallerHoldsInsufficientOptions(optionId, amount);
         }
 
-        // Calculate, record, and emit event for fee accrual on exercise asset
+        // Calculate the amount to transfer in/out.
         uint256 rxAmount = optionRecord.exerciseAmount * amount;
         uint256 txAmount = optionRecord.underlyingAmount * amount;
         address exerciseAsset = optionRecord.exerciseAsset;
         address underlyingAsset = optionRecord.underlyingAsset;
 
+        // Assign exercise to writers.
         _assignExercise(optionKey, optionRecord, amount);
 
-        // Assess fee (if fee switch enabled) and emit events
+        // Assess a fee (if fee switch enabled) and emit events.
         uint256 fee = 0;
         if (feesEnabled) {
             fee = _calculateRecordAndEmitFee(optionId, exerciseAsset, rxAmount);
@@ -506,10 +509,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         _burn(msg.sender, optionId, amount);
 
-        // Transfer in the requisite exercise asset
+        // Transfer in the required amount of the exercise asset.
         SafeTransferLib.safeTransferFrom(ERC20(exerciseAsset), msg.sender, address(this), (rxAmount + fee));
 
-        // Transfer out the underlying
+        // Transfer out the required amount of the underlying asset.
         SafeTransferLib.safeTransfer(ERC20(underlyingAsset), msg.sender, txAmount);
     }
 

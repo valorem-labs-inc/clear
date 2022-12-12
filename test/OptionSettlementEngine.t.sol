@@ -1512,6 +1512,18 @@ contract OptionSettlementTest is Test, NftReceiver {
         engine.uri(420);
     }
 
+    function testRevertExerciseWhenInsufficientExercisableOptions() public {
+        uint256 bucketWindow = 12 hours;
+        uint256 periodsAfterEpoch = block.timestamp / bucketWindow;
+        uint256 nextWindowStartTs = (periodsAfterEpoch + 1) * bucketWindow;
+        vm.warp(block.timestamp + 1);
+        vm.startPrank(ALICE);
+        engine.write(testOptionId, 1);
+        vm.expectRevert(abi.encodeWithSelector(
+            IOptionSettlementEngine.InsufficientExercisableOptions.selector, nextWindowStartTs));
+        engine.exercise(testOptionId, 1);
+    }
+
     // **********************************************************************
     //                            FUZZ TESTS
     // **********************************************************************

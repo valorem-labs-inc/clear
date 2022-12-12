@@ -41,7 +41,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     uint8 public immutable feeBps = 5;
 
     /// @notice The size of the bucket period in seconds
-    uint256 public constant BUCKET_WINDOW = 1 days;
+    uint256 public constant BUCKET_WINDOW = 12 hours;
 
     /*//////////////////////////////////////////////////////////////
     //  State variables - Internal

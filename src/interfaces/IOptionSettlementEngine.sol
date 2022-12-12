@@ -327,16 +327,16 @@ interface IOptionSettlementEngine {
     /**
      * @notice Gets information for a given claim token id.
      * @param claimId The id of the claim
-     * @return claim The Claim struct for claimId if the tokenId is Type.Claim.
+     * @return claimInfo The Claim struct for claimId if the tokenId is Type.Claim.
      */
-    function claim(uint256 claimId) external view returns (Claim memory claim);
+    function claim(uint256 claimId) external view returns (Claim memory claimInfo);
 
     /**
      * @notice Gets option type information for a given tokenId.
      * @param tokenId The token id for which to get option inf.
-     * @return option The Option struct for tokenId if the optionKey for tokenId is initialized.
+     * @return optionInfo The Option struct for tokenId if the optionKey for tokenId is initialized.
      */
-    function option(uint256 tokenId) external view returns (Option memory option);
+    function option(uint256 tokenId) external view returns (Option memory optionInfo);
 
     /**
      * @notice Gets the TokenType for a given tokenId.
@@ -455,6 +455,11 @@ interface IOptionSettlementEngine {
     /**
      * @notice Redeems a claim NFT, transfers the underlying/exercise tokens to the caller.
      * @param claimId The ID of the claim to redeem.
+     * @dev Fair assignment is performed here. After option expiry, any claim holder
+     * seeking to redeem their claim for the underlying and exercise assets will claim
+     * amounts proportional to the per-period amounts written on their options lot (i.e.
+     * the ClaimIndex data structs) weighted by the ratio of exercised to
+     * un-exercised options on each of those periods.
      */
     function redeem(uint256 claimId) external;
 

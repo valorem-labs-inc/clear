@@ -332,6 +332,19 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert ExpiredOption(encodedOptionId, expiry);
         }
 
+        // Update internal bucket accounting.
+        uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
+
+        // Calculate the amount to transfer in.
+        uint256 rxAmount = optionTypeState.option.underlyingAmount * amount;
+        address underlyingAsset = optionTypeState.option.underlyingAsset;
+
+        // Assess a fee (if fee switch enabled) and emit events.
+        uint256 fee = 0;
+        if (feesEnabled) {
+            fee = _calculateRecordAndEmitFee(encodedOptionId, underlyingAsset, rxAmount);
+        }
+
         if (claimKey == 0) {
             // Then create a new claim.
 
@@ -340,37 +353,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             uint96 nextClaimKey = optionTypeState.option.nextClaimKey++;
             tokenId = _encodeTokenId(optionKey, nextClaimKey);
 
-            // Handle internal claim bucket accounting.
-            uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
+            // Add claim bucket indices
             _addOrUpdateClaimIndex(optionKey, nextClaimKey, bucketIndex, amount);
-        } else {
-            // Then add to an existing claim.
 
-            // The user must own the existing claim.
-            uint256 balance = balanceOf[msg.sender][tokenId];
-            if (balance != 1) {
-                revert CallerDoesNotOwnClaimId(tokenId);
-            }
+            // Emit event about options written on a new claim.
+            emit OptionsWritten(encodedOptionId, msg.sender, tokenId, amount);
 
-            // Handle internal claim bucket accounting.
-            uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
-            _addOrUpdateClaimIndex(optionKey, claimKey, bucketIndex, amount);
-        }
-
-        // Calculate the amount to transfer in.
-        uint256 rxAmount = optionTypeState.option.underlyingAmount * amount;
-
-        address underlyingAsset = optionTypeState.option.underlyingAsset;
-
-        // Assess a fee (if fee switch enabled) and emit events.
-        uint256 fee = 0;
-        if (feesEnabled) {
-            fee = _calculateRecordAndEmitFee(encodedOptionId, underlyingAsset, rxAmount);
-        }
-        emit OptionsWritten(encodedOptionId, msg.sender, tokenId, amount);
-
-        if (claimKey == 0) {
-            // Then we need to mint a new claim token and transfer option tokens.
+            // Mint a new claim token and transfer option tokens.
             uint256[] memory tokens = new uint256[](2);
             tokens[0] = encodedOptionId;
             tokens[1] = tokenId;
@@ -381,6 +370,20 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
             _batchMint(msg.sender, tokens, amounts, "");
         } else {
+            // Then add to an existing claim.
+
+            // The user must own the existing claim.
+            uint256 balance = balanceOf[msg.sender][tokenId];
+            if (balance != 1) {
+                revert CallerDoesNotOwnClaimId(tokenId);
+            }
+
+            // Add claim bucket indices
+            _addOrUpdateClaimIndex(optionKey, claimKey, bucketIndex, amount);
+
+            // Emit event about options written on existing claim.
+            emit OptionsWritten(encodedOptionId, msg.sender, tokenId, amount);
+
             // Mint more options on existing claim to writer.
             _mint(msg.sender, encodedOptionId, amount, "");
         }
@@ -427,7 +430,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         for (uint256 i = claimIndexArrayLength; i > 0; i--) {
             (uint256 _amountExercisedInBucket, uint256 _amountUnexercisedInBucket) =
-                _getExercisedAmountsForClaimIndex(optionKey, claimIndices, i - 1);
+                _getExercisedAmountsForClaimIndex(optionTypeState, claimIndices, i - 1);
             // Accumulate the amount exercised and unexercised in these variables
             // for later multiplication by optionRecord.exerciseAmount/underlyingAmount.
             totalExerciseAssetAmount += _amountExercisedInBucket;
@@ -623,14 +626,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return uint16(block.timestamp / 1 days);
     }
 
-    function _getExercisedAmountsForClaimIndex(uint160 optionKey, ClaimIndex[] storage claimIndexArray, uint256 index)
-        internal
-        view
-        returns (uint256 amountExercised, uint256 amountUnexercised)
-    {
+    function _getExercisedAmountsForClaimIndex(
+        OptionTypeState storage optionTypeState,
+        ClaimIndex[] storage claimIndexArray,
+        uint256 index
+    ) internal view returns (uint256 amountExercised, uint256 amountUnexercised) {
         // TODO(Possible rounding error)
         ClaimIndex storage claimIndex = claimIndexArray[index];
-        Bucket storage bucket = optionTypeStates[optionKey].bucketInfo.buckets[claimIndex.bucketIndex];
+        Bucket storage bucket = optionTypeState.bucketInfo.buckets[claimIndex.bucketIndex];
         // The ratio of exercised to written options in the bucket multiplied by the
         // number of options actually written in the claim.
         amountExercised =
@@ -710,10 +713,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // Set these to zero to start with
         amountExercised = 0;
         amountUnexercised = 0;
-        ClaimIndex[] storage claimIndexArray = optionTypeStates[optionKey].claimIndices[claimKey];
-        for (uint256 i = 0; i < claimIndexArray.length; i++) {
+        OptionTypeState storage optionTypeState = optionTypeStates[optionKey];
+        ClaimIndex[] storage claimIndexArray = optionTypeState.claimIndices[claimKey];
+        uint256 len = claimIndexArray.length;
+        for (uint256 i = 0; i < len; i++) {
             (uint256 _amountExercisedInBucket, uint256 _amountUnexercisedInBucket) =
-                _getExercisedAmountsForClaimIndex(optionKey, claimIndexArray, i);
+                _getExercisedAmountsForClaimIndex(optionTypeState, claimIndexArray, i);
             amountExercised += _amountExercisedInBucket;
             amountUnexercised += _amountUnexercisedInBucket;
         }

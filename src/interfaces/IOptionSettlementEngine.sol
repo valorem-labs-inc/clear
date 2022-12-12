@@ -95,14 +95,14 @@ interface IOptionSettlementEngine {
      */
     event FeeSwept(address indexed asset, address indexed feeTo, uint256 amount);
 
-    // Privileged functionality events
-
     /**
      * @notice Emitted when protocol fees are enabled or disabled.
      * @param feeTo The address which enabled or disabled fees.
      * @param enabled Whether fees are enabled or disabled.
      */
     event FeeSwitchUpdated(address feeTo, bool enabled);
+
+    // Access control events
 
     /**
      * @notice Emitted when feeTo address is updated.

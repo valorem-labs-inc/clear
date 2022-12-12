@@ -103,11 +103,19 @@ interface IOptionSettlementEngine {
      */
     event FeeSwitchUpdated(address feeTo, bool enabled);
 
+    // Access control events
+
     /**
      * @notice Emitted when feeTo address is updated.
      * @param newFeeTo The new feeTo address.
      */
     event FeeToUpdated(address indexed newFeeTo);
+
+    /**
+     * @notice Emitted when TokenURIGenerator is updated.
+     * @param newTokenURIGenerator The new TokenURIGenerator address.
+     */
+    event TokenURIGeneratorUpdated(address indexed newTokenURIGenerator);
 
     /*//////////////////////////////////////////////////////////////
     //  Errors

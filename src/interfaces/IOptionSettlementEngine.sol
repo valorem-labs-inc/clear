@@ -460,12 +460,8 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Redeems a claim NFT, transfers the underlying/exercise tokens to the caller.
+     * Can be called after option expiry timestamp (inclusive).
      * @param claimId The ID of the claim to redeem.
-     * @dev Fair assignment is performed here. After option expiry, any claim holder
-     * seeking to redeem their claim for the underlying and exercise assets will claim
-     * amounts proportional to the per-period amounts written on their options lot (i.e.
-     * the ClaimIndex data structs) weighted by the ratio of exercised to
-     * un-exercised options on each of those periods.
      */
     function redeem(uint256 claimId) external;
 
@@ -475,7 +471,8 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Exercises specified amount of optionId, transferring in the exercise asset,
-     * and transferring out the underlying asset if requirements are met.
+     * and transferring out the underlying asset if requirements are met. Can be called
+     * from exercise timestamp (inclusive), until option expiry timestamp (exclusive).
      * @param optionId The option token id of the option type to exercise.
      * @param amount The amount of option contracts to exercise.
      */

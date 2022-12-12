@@ -425,7 +425,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint256 totalExerciseAssetAmount;
         uint256 totalUnderlyingAssetAmount;
 
-        // @dev This isn't dry with _getPositionsForClaim because this mutates.
         for (uint256 i = claimIndexArrayLength; i > 0; i--) {
             (uint256 _amountExercisedInBucket, uint256 _amountUnexercisedInBucket) =
                 _getExercisedAmountsForClaimIndex(optionKey, claimIndices, i - 1);
@@ -639,24 +638,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         amountUnexercised = FixedPointMathLib.mulDivDown(
             bucket.amountWritten - bucket.amountExercised, claimIndex.amountWritten, bucket.amountWritten
         );
-    }
-
-    /// @dev Get the exercise and underlying amounts for a claim
-    function _getPositionsForClaim(uint160 optionKey, uint96 claimKey, Option storage optionRecord)
-        internal
-        view
-        returns (uint256 exerciseAmount, uint256 underlyingAmount)
-    {
-        // Set these to zero to start with
-        exerciseAmount = 0;
-        underlyingAmount = 0;
-        ClaimIndex[] storage claimIndexArray = optionTypeStates[optionKey].claimIndices[claimKey];
-        for (uint256 i = 0; i < claimIndexArray.length; i++) {
-            (uint256 amountExercised, uint256 amountUnexercised) =
-                _getExercisedAmountsForClaimIndex(optionKey, claimIndexArray, i);
-            exerciseAmount += optionRecord.exerciseAmount * amountExercised;
-            underlyingAmount += optionRecord.underlyingAmount * amountUnexercised;
-        }
     }
 
     /**

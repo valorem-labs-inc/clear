@@ -427,16 +427,20 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint256 claimIndexArrayLength = claimIndices.length;
         uint256 totalExerciseAssetAmount;
         uint256 totalUnderlyingAssetAmount;
+        uint256 amountExercisedInBucket;
+        uint256 amountUnexercisedInBucket;
 
-        for (uint256 i = claimIndexArrayLength; i > 0; i--) {
-            (uint256 _amountExercisedInBucket, uint256 _amountUnexercisedInBucket) =
-                _getExercisedAmountsForClaimIndex(optionTypeState, claimIndices, i - 1);
-            // Accumulate the amount exercised and unexercised in these variables
-            // for later multiplication by optionRecord.exerciseAmount/underlyingAmount.
-            totalExerciseAssetAmount += _amountExercisedInBucket;
-            totalUnderlyingAssetAmount += _amountUnexercisedInBucket;
-            // This zeroes out the array during the redemption process for a gas refund.
-            claimIndices.pop();
+        unchecked {
+            for (uint256 i = claimIndexArrayLength; i > 0; i--) {
+                (amountExercisedInBucket, amountUnexercisedInBucket) =
+                    _getExercisedAmountsForClaimIndex(optionTypeState, claimIndices, i - 1);
+                // Accumulate the amount exercised and unexercised in these variables
+                // for later multiplication by optionRecord.exerciseAmount/underlyingAmount.
+                totalExerciseAssetAmount += amountExercisedInBucket;
+                totalUnderlyingAssetAmount += amountUnexercisedInBucket;
+                // This zeroes out the array during the redemption process for a gas refund.
+                claimIndices.pop();
+            }
         }
 
         // Calculate the amounts to transfer out.
@@ -705,7 +709,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             uint160(uint256(keccak256(abi.encode(optionRecord.settlementSeed, unexercisedBucketsIndex))));
     }
 
-    /// @dev Get the exercise and underlying amounts for a claim
+    /**
+     * @notice Get the amount of options exercised and amount unexercised for a given claim.
+     */
     function _getExercisedAmountsForClaim(uint160 optionKey, uint96 claimKey)
         private
         view
@@ -714,14 +720,20 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // Set these to zero to start with
         amountExercised = 0;
         amountUnexercised = 0;
+
         OptionTypeState storage optionTypeState = optionTypeStates[optionKey];
         ClaimIndex[] storage claimIndexArray = optionTypeState.claimIndices[claimKey];
         uint256 len = claimIndexArray.length;
-        for (uint256 i = 0; i < len; i++) {
-            (uint256 _amountExercisedInBucket, uint256 _amountUnexercisedInBucket) =
-                _getExercisedAmountsForClaimIndex(optionTypeState, claimIndexArray, i);
-            amountExercised += _amountExercisedInBucket;
-            amountUnexercised += _amountUnexercisedInBucket;
+        uint256 amountExercisedInBucket;
+        uint256 amountUnexercisedInBucket;
+
+        unchecked {
+            for (uint256 i = 0; i < len; i++) {
+                (amountExercisedInBucket, amountUnexercisedInBucket) =
+                    _getExercisedAmountsForClaimIndex(optionTypeState, claimIndexArray, i);
+                amountExercised += amountExercisedInBucket;
+                amountUnexercised += amountUnexercisedInBucket;
+            }
         }
     }
 

@@ -729,10 +729,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //  Internal Mutators
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Help with internal options bucket accounting
+
     function _addOrUpdateClaimBucket(uint160 optionKey, uint112 amount) internal returns (uint16) {
-        Bucket[] storage claimBuckets = optionTypeStates[optionKey].bucketInfo.buckets;
-        uint16[] storage unexercised = optionTypeStates[optionKey].bucketInfo.bucketsWithCollateral;
+        BucketInfo storage bucketInfo = optionTypeStates[optionKey].bucketInfo;
+        Bucket[] storage claimBuckets = bucketInfo.buckets;
         Bucket storage currentBucket;
         uint16 daysAfterEpoch = _getDaysBucket();
         uint16 bucketIndex = uint16(claimBuckets.length);
@@ -740,14 +740,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // add a new bucket none exist
             claimBuckets.push(Bucket(amount, 0, daysAfterEpoch));
             // update _unexercisedBucketsByOption and corresponding index mapping
-            _updateUnexercisedBucketIndices(optionKey, bucketIndex, unexercised);
+            _updateUnexercisedBucketIndices(bucketInfo, bucketIndex);
             return bucketIndex;
         }
 
         currentBucket = claimBuckets[bucketIndex - 1];
         if (currentBucket.daysAfterEpoch < daysAfterEpoch) {
             claimBuckets.push(Bucket(amount, 0, daysAfterEpoch));
-            _updateUnexercisedBucketIndices(optionKey, bucketIndex, unexercised);
+            _updateUnexercisedBucketIndices(bucketInfo, bucketIndex);
         } else {
             // Update claim bucket for today
             currentBucket.amountWritten += amount;
@@ -755,22 +755,24 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
             // This block is executed if a bucket has been previously fully exercised
             // and now more options are being written into it
-            if (!optionTypeStates[optionKey].bucketInfo.bucketHasCollateral[bucketIndex]) {
-                _updateUnexercisedBucketIndices(optionKey, bucketIndex, unexercised);
+            if (!bucketInfo.bucketHasCollateral[bucketIndex]) {
+                _updateUnexercisedBucketIndices(bucketInfo, bucketIndex);
             }
         }
 
         return bucketIndex;
     }
 
-    /// @dev Help with internal claim bucket accounting
+    /**
+     * @notice Adds the bucket index to the list of buckets with collateral
+     * and sets the mapping for that bucket having collateral to true.
+     */
     function _updateUnexercisedBucketIndices(
-        uint160 optionKey,
-        uint16 bucketIndex,
-        uint16[] storage unexercisedBucketIndices
+        BucketInfo storage bucketInfo,
+        uint16 bucketIndex
     ) internal {
-        unexercisedBucketIndices.push(bucketIndex);
-        optionTypeStates[optionKey].bucketInfo.bucketHasCollateral[bucketIndex] = true;
+        bucketInfo.bucketsWithCollateral.push(bucketIndex);
+        bucketInfo.bucketHasCollateral[bucketIndex] = true;
     }
 
     /**

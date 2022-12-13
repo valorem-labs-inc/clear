@@ -1996,6 +1996,8 @@ contract OptionSettlementTest is Test, NftReceiver {
         uint112 toWrite,
         uint112 toExercise
     ) internal returns (uint256 claimId) {
+        uint256 ts = block.timestamp;
+
         if (toWrite > 0) {
             vm.startPrank(writer);
             claimId = engine.write(optionId, toWrite);
@@ -2004,11 +2006,13 @@ contract OptionSettlementTest is Test, NftReceiver {
         }
 
         if (toExercise > 0) {
-            vm.warp(testExerciseTimestamp + 1);
+            vm.warp(ts + 12 hours);
             vm.startPrank(exerciser);
             engine.exercise(optionId, toExercise);
             vm.stopPrank();
         }
+
+        vm.warp(ts);
     }
 
     function _writeTokenBalance(address who, address token, uint256 amt) internal {

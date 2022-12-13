@@ -272,12 +272,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert ExpiryWindowTooShort(expiryTimestamp);
         }
 
-        // Ensure the exercise window is at least 2 windows. 
+        // Ensure the exercise window is at least 2 windows.
         // To ensure advantaged writes do not occur, an options writer
-        // cannot: 
+        // cannot:
         // write in the last window before option expiry
         // exercise options written in the current window
-        // as a result, the option must be at least two 
+        // as a result, the option must be at least two
         if (expiryTimestamp < (exerciseTimestamp + BUCKET_WINDOW)) {
             revert ExerciseWindowTooShort(exerciseTimestamp);
         }

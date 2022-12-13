@@ -1254,7 +1254,9 @@ contract OptionSettlementTest is Test, NftReceiver {
 
     function testRevertNewOptionTypeWhenExerciseWindowTooShort() public {
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ExerciseWindowTooShort.selector, uint40(block.timestamp + 12 hours + 1))
+            abi.encodeWithSelector(
+                IOptionSettlementEngine.ExerciseWindowTooShort.selector, uint40(block.timestamp + 12 hours + 1)
+            )
         );
         engine.newOptionType({
             underlyingAsset: WETH_A,
@@ -1536,8 +1538,9 @@ contract OptionSettlementTest is Test, NftReceiver {
         vm.warp(block.timestamp + 1);
         vm.startPrank(ALICE);
         engine.write(testOptionId, 1);
-        vm.expectRevert(abi.encodeWithSelector(
-            IOptionSettlementEngine.InsufficientExercisableOptions.selector, nextWindowStartTs));
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.InsufficientExercisableOptions.selector, nextWindowStartTs)
+        );
         engine.exercise(testOptionId, 1);
 
         vm.warp(nextWindowStartTs + 1);
@@ -1550,8 +1553,9 @@ contract OptionSettlementTest is Test, NftReceiver {
         uint256 lastWriteableTs = testExpiryTimestamp - bucketWindow;
         vm.warp(lastWriteableTs + 1);
         vm.startPrank(ALICE);
-        vm.expectRevert(abi.encodeWithSelector(
-            IOptionSettlementEngine.CannotWriteOptionsInFinalPeriod.selector, lastWriteableTs));
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.CannotWriteOptionsInFinalPeriod.selector, lastWriteableTs)
+        );
         engine.write(testOptionId, 1);
     }
 

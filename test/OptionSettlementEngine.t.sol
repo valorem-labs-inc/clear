@@ -637,7 +637,7 @@ contract OptionSettlementTest is Test, NftReceiver {
         engine.safeTransferFrom(ALICE, BOB, testOptionId, 10, "");
         vm.stopPrank();
 
-        vm.warp(testExerciseTimestamp + 1 seconds);
+        _warpToNextBucketWindow();
         vm.prank(BOB);
         engine.exercise(testOptionId, 2);
 

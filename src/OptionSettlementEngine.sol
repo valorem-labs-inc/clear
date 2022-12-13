@@ -734,8 +734,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             uint160(uint256(keccak256(abi.encode(optionRecord.settlementSeed, unexercisedBucketsIndex))));
     }
 
-    /// @dev Help find a given days bucket by calculating days after epoch
-    function _getPeriodBucket() private view returns (uint16) {
+    /// @return settlementPeriods The number of settlement bucket periods after the epoch
+    function _getPeriodBucket() private view returns (uint16 settlementPeriods) {
         return uint16(block.timestamp / BUCKET_WINDOW);
     }
 

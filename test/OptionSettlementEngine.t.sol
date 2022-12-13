@@ -1254,14 +1254,14 @@ contract OptionSettlementTest is Test, NftReceiver {
 
     function testRevertNewOptionTypeWhenExerciseWindowTooShort() public {
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ExerciseWindowTooShort.selector, uint40(block.timestamp + 1))
+            abi.encodeWithSelector(IOptionSettlementEngine.ExerciseWindowTooShort.selector, uint40(block.timestamp + 12 hours + 1))
         );
         engine.newOptionType({
             underlyingAsset: WETH_A,
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: DAI_A,
             exerciseAmount: testExerciseAmount,
-            exerciseTimestamp: uint40(block.timestamp + 1),
+            exerciseTimestamp: uint40(block.timestamp + 12 hours + 1),
             expiryTimestamp: testExpiryTimestamp
         });
     }

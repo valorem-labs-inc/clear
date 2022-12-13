@@ -1227,6 +1227,7 @@ contract OptionSettlementTest is Test, NftReceiver {
     }
 
     function testRevertNewOptionTypeWhenExpiryTooSoon() public {
+        uint40 window = engine.BUCKET_WINDOW();
         uint40 tooSoonExpiryTimestamp = uint40(block.timestamp + 1 days - 1 seconds);
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
             underlyingAsset: DAI_A,
@@ -1242,7 +1243,7 @@ contract OptionSettlementTest is Test, NftReceiver {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOptionSettlementEngine.ExpiryWindowTooShort.selector, testExpiryTimestamp - 12 hours - 1
+                IOptionSettlementEngine.ExpiryWindowTooShort.selector, testExpiryTimestamp - window - 1
             )
         );
         engine.newOptionType({
@@ -1251,14 +1252,15 @@ contract OptionSettlementTest is Test, NftReceiver {
             exerciseAsset: DAI_A,
             exerciseAmount: testExerciseAmount,
             exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp - 12 hours - 1
+            expiryTimestamp: testExpiryTimestamp - window - 1
         });
     }
 
     function testRevertNewOptionTypeWhenExerciseWindowTooShort() public {
+        uint40 window = engine.BUCKET_WINDOW();
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOptionSettlementEngine.ExerciseWindowTooShort.selector, uint40(block.timestamp + 12 hours + 1)
+                IOptionSettlementEngine.ExerciseWindowTooShort.selector, uint40(block.timestamp + engine.BUCKET_WINDOW() + 1)
             )
         );
         engine.newOptionType({
@@ -1266,7 +1268,7 @@ contract OptionSettlementTest is Test, NftReceiver {
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: DAI_A,
             exerciseAmount: testExerciseAmount,
-            exerciseTimestamp: uint40(block.timestamp + 12 hours + 1),
+            exerciseTimestamp: uint40(block.timestamp + window + 1),
             expiryTimestamp: testExpiryTimestamp
         });
     }
@@ -1535,7 +1537,7 @@ contract OptionSettlementTest is Test, NftReceiver {
     }
 
     function testRevertExerciseWhenInsufficientExercisableOptions() public {
-        uint256 bucketWindow = 12 hours;
+        uint256 bucketWindow = engine.BUCKET_WINDOW();
         uint256 periodsAfterEpoch = block.timestamp / bucketWindow;
         uint256 nextWindowStartTs = (periodsAfterEpoch + 1) * bucketWindow;
         vm.warp(block.timestamp + 1);
@@ -1552,7 +1554,7 @@ contract OptionSettlementTest is Test, NftReceiver {
     }
 
     function testRevertWriteWhenCannotWriteOptionsInFinalPeriod() public {
-        uint256 bucketWindow = 12 hours;
+        uint256 bucketWindow = engine.BUCKET_WINDOW();
         uint256 lastWriteableTs = testExpiryTimestamp - bucketWindow;
         vm.warp(lastWriteableTs + 1);
         vm.startPrank(ALICE);
@@ -1865,7 +1867,7 @@ contract OptionSettlementTest is Test, NftReceiver {
             emit log_named_uint("exercise timestamp not hit", option.exerciseTimestamp);
             return (written, 0, newClaim);
         }
-        vm.warp(block.timestamp + 12 hours);
+        vm.warp(block.timestamp + engine.BUCKET_WINDOW());
         uint256 maxToExercise = engine.balanceOf(exerciser, optionId);
         // with Y pctg chance, exercise some amount of options
         unchecked {
@@ -1885,7 +1887,7 @@ contract OptionSettlementTest is Test, NftReceiver {
                 emit log_named_uint("SKIP EXERCISING", optionId);
             }
         }
-        vm.warp(block.timestamp - 12 hours);
+        vm.warp(block.timestamp - engine.BUCKET_WINDOW());
     }
 
     // **********************************************************************
@@ -2014,7 +2016,7 @@ contract OptionSettlementTest is Test, NftReceiver {
         }
 
         if (toExercise > 0) {
-            vm.warp(ts + 12 hours);
+            vm.warp(ts + engine.BUCKET_WINDOW());
             vm.startPrank(exerciser);
             engine.exercise(optionId, toExercise);
             vm.stopPrank();
@@ -2056,7 +2058,7 @@ contract OptionSettlementTest is Test, NftReceiver {
     }
 
     function _warpToNextBucketWindow() internal {
-        vm.warp(block.timestamp + 12 hours);
+        vm.warp(block.timestamp + engine.BUCKET_WINDOW());
     }
 
     function assertEq(IOptionSettlementEngine.Option memory actual, IOptionSettlementEngine.Option memory expected)

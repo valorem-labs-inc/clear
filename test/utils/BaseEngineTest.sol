@@ -4,14 +4,16 @@ pragma solidity 0.8.16;
 import "forge-std/Test.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
-import "../src/OptionSettlementEngine.sol";
+import "./MockERC20.sol";
+
+import "../../src/OptionSettlementEngine.sol";
 
 /// @notice Base for OptionSettlementEngine test suite
 abstract contract BaseEngineTest is Test {
     using stdStorage for StdStorage;
 
     OptionSettlementEngine internal engine;
-    ITokenURIGenerator private generator;
+    ITokenURIGenerator internal generator;
 
     // Users
     address internal constant ALICE = address(0xA);
@@ -22,29 +24,41 @@ abstract contract BaseEngineTest is Test {
     address internal constant FEE_TO = 0x2dbd50A4Ef9B172698596217b7DB0163D3607b41;
 
     // Tokens
-    address internal constant WETH_A = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address internal constant DAI_A = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-    address internal constant USDC_A = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    IERC20 internal WETHLIKE;
+    IERC20 internal DAILIKE;
+    IERC20 internal USDCLIKE;
+    IERC20 internal UNILIKE;
+    IERC20 internal ERC20A;
+    IERC20 internal ERC20B;
+    IERC20 internal ERC20C;
+    IERC20 internal ERC20D;
+    IERC20 internal ERC20E;
+    IERC20 internal ERC20F;
 
-    // Token interfaces
-    IERC20 internal constant DAI = IERC20(DAI_A);
-    IERC20 internal constant WETH = IERC20(WETH_A);
-    IERC20 internal constant USDC = IERC20(USDC_A);
+    uint256 internal constant STARTING_BALANCE_WETH = 10_000_000;
+    uint256 internal constant STARTING_BALANCE_OTHER = 1_000_000_000;
+
+    // address internal constant address(WETHLIKE) = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    // address internal constant address(DAILIKE) = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    // address internal constant address(USDCLIKE) = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    // IERC20 internal constant DAI = IERC20(address(DAILIKE));
+    // IERC20 internal constant WETH = IERC20(address(WETHLIKE));
+    // IERC20 internal constant USDC = IERC20(address(USDCLIKE));
 
     // Test option
     uint256 internal testOptionId;
-    address internal testUnderlyingAsset = WETH_A;
+    address internal testUnderlyingAsset;
     uint40 internal testExerciseTimestamp;
     uint40 internal testExpiryTimestamp;
-    address internal testExerciseAsset = DAI_A;
-    uint96 internal testUnderlyingAmount = 7 ether; // NOTE: uneven number to test for division rounding
+    address internal testExerciseAsset;
+    uint96 internal testUnderlyingAmount = 7 ether; // Uneven number to test for division rounding
     uint96 internal testExerciseAmount = 3000 ether;
     uint256 internal testDuration = 1 days;
     IOptionSettlementEngine.Option internal testOption;
 
     function setUp() public virtual {
         // Fork mainnet
-        vm.createSelectFork(vm.envString("RPC_URL"), 15_000_000); // specify block number to cache for future test runs
+        // vm.createSelectFork(vm.envString("RPC_URL"), 15_000_000);
 
         // Deploy OptionSettlementEngine
         generator = new TokenURIGenerator();
@@ -54,7 +68,57 @@ abstract contract BaseEngineTest is Test {
         vm.prank(FEE_TO);
         engine.setFeesEnabled(true);
 
-        // Setup test option contract
+        // Deploy mock ERC20 contracts
+        WETHLIKE = IERC20(address(new MockERC20("Wrapped Ether", "WETH", 18)));
+        DAILIKE = IERC20(address(new MockERC20("Dai", "DAI", 18)));
+        USDCLIKE = IERC20(address(new MockERC20("USD Coin", "USDC", 6)));
+        UNILIKE = IERC20(address(new MockERC20("Uniswap", "UNI", 18)));
+        ERC20A = IERC20(address(new MockERC20("Mock ERC20 A", "ERC20A", 18)));
+        ERC20B = IERC20(address(new MockERC20("Mock ERC20 B", "ERC20B", 18)));
+        ERC20C = IERC20(address(new MockERC20("Mock ERC20 C", "ERC20C", 18)));
+        ERC20D = IERC20(address(new MockERC20("Mock ERC20 D", "ERC20D", 18)));
+        ERC20E = IERC20(address(new MockERC20("Mock ERC20 E", "ERC20E", 18)));
+        ERC20F = IERC20(address(new MockERC20("Mock ERC20 F", "ERC20F", 18)));
+
+        // Setup token balances and approvals
+        address[3] memory recipients = [ALICE, BOB, CAROL];
+        for (uint256 i = 0; i < recipients.length; i++) {
+            address recipient = recipients[i];
+
+            // Now we have 1B in stables and 10M WETH
+            _mint(recipient, MockERC20(address(WETHLIKE)), STARTING_BALANCE_WETH * 1e18);
+            _mint(recipient, MockERC20(address(DAILIKE)), STARTING_BALANCE_OTHER * 1e18);
+            _mint(recipient, MockERC20(address(USDCLIKE)), STARTING_BALANCE_OTHER * 1e6);
+            _mint(recipient, MockERC20(address(UNILIKE)), STARTING_BALANCE_OTHER * 1e18);
+            _mint(recipient, MockERC20(address(ERC20A)), STARTING_BALANCE_OTHER * 1e18);
+            _mint(recipient, MockERC20(address(ERC20B)), STARTING_BALANCE_OTHER * 1e18);
+            _mint(recipient, MockERC20(address(ERC20C)), STARTING_BALANCE_OTHER * 1e18);
+            _mint(recipient, MockERC20(address(ERC20D)), STARTING_BALANCE_OTHER * 1e18);
+            _mint(recipient, MockERC20(address(ERC20E)), STARTING_BALANCE_OTHER * 1e18);
+            _mint(recipient, MockERC20(address(ERC20F)), STARTING_BALANCE_OTHER * 1e18);
+
+            // _writeTokenBalance(recipient, address(DAILIKE), 1000000000 * 1e18);
+            // _writeTokenBalance(recipient, address(USDCLIKE), 1000000000 * 1e6);
+            // _writeTokenBalance(recipient, address(WETHLIKE), 10000000 * 1e18);
+
+            // Approve settlement engine to spend ERC20 token balances on behalf of user
+            vm.startPrank(recipient);
+            WETHLIKE.approve(address(engine), type(uint256).max);
+            DAILIKE.approve(address(engine), type(uint256).max);
+            USDCLIKE.approve(address(engine), type(uint256).max);
+            UNILIKE.approve(address(engine), type(uint256).max);
+            ERC20A.approve(address(engine), type(uint256).max);
+            ERC20B.approve(address(engine), type(uint256).max);
+            ERC20C.approve(address(engine), type(uint256).max);
+            ERC20D.approve(address(engine), type(uint256).max);
+            ERC20E.approve(address(engine), type(uint256).max);
+            ERC20F.approve(address(engine), type(uint256).max);
+            vm.stopPrank();
+        }
+
+        // Setup test option
+        testUnderlyingAsset = address(WETHLIKE);       
+        testExerciseAsset = address(DAILIKE); 
         testExerciseTimestamp = uint40(block.timestamp);
         testExpiryTimestamp = uint40(block.timestamp + testDuration);
         (testOptionId, testOption) = _createNewOptionType({
@@ -65,32 +129,22 @@ abstract contract BaseEngineTest is Test {
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
-
-        // Pre-load balances and approvals
-        address[3] memory recipients = [ALICE, BOB, CAROL];
-        for (uint256 i = 0; i < recipients.length; i++) {
-            address recipient = recipients[i];
-
-            // Now we have 1B in stables and 10M WETH
-            _writeTokenBalance(recipient, DAI_A, 1000000000 * 1e18);
-            _writeTokenBalance(recipient, USDC_A, 1000000000 * 1e6);
-            _writeTokenBalance(recipient, WETH_A, 10000000 * 1e18);
-
-            // Approve settlement engine to spend ERC20 token balances
-            vm.startPrank(recipient);
-            WETH.approve(address(engine), type(uint256).max);
-            DAI.approve(address(engine), type(uint256).max);
-            USDC.approve(address(engine), type(uint256).max);
-            vm.stopPrank();
-        }
     }
 
     /*//////////////////////////////////////////////////////////////
     //  Test Helpers -- General
     //////////////////////////////////////////////////////////////*/
 
-    function _writeTokenBalance(address who, address token, uint256 amt) internal {
-        stdstore.target(token).sig(IERC20(token).balanceOf.selector).with_key(who).checked_write(amt);
+    // function _mockTotalSupply(address token)  {
+    //     vm.mock
+    // }
+
+    function _mint(address who, MockERC20 token, uint256 amount) internal {
+        token.mint(who, amount);
+    }
+
+    function _writeTokenBalance(address who, address token, uint256 amount) internal {
+        stdstore.target(token).sig(IERC20(token).balanceOf.selector).with_key(who).checked_write(amount);
     }
 
     /// @dev probability in bips
@@ -249,11 +303,15 @@ abstract contract BaseEngineTest is Test {
         assertEq(_actual, expected);
     }
 
-    function _assertClaimAmountExercised(uint256 claimId, uint112 amount) internal {
+    function _assertClaimAmountExercised(uint256 claimId, uint112 amount, string memory where) internal {
         IOptionSettlementEngine.Underlying memory underlying = engine.underlying(claimId);
         IOptionSettlementEngine.Option memory option = engine.option(claimId);
         uint112 amountExercised = uint112(uint256(underlying.exercisePosition) / option.exerciseAmount);
-        assertEq(amount, amountExercised);
+        assertEq(amount, amountExercised, where);
+    }
+
+    function _assertClaimAmountExercised(uint256 claimId, uint112 amount) internal {
+        _assertClaimAmountExercised(claimId, amount, "");
     }
 
     function assertEq(IOptionSettlementEngine.Option memory actual, IOptionSettlementEngine.Option memory expected)

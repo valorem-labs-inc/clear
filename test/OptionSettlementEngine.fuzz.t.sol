@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL 1.1
 pragma solidity 0.8.16;
 
-import "./BaseEngineTest.sol";
+import "./utils/BaseEngineTest.sol";
 
 /// @notice Fuzz tests for OptionSettlementEngine
 contract OptionSettlementFuzzTest is BaseEngineTest {
@@ -22,13 +22,13 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         vm.assume(exerciseTimestamp <= expiryTimestamp - 86400);
         vm.assume(expiryTimestamp <= type(uint64).max);
         vm.assume(exerciseTimestamp <= type(uint64).max);
-        vm.assume(underlyingAmount <= WETH.totalSupply());
-        vm.assume(exerciseAmount <= DAI.totalSupply());
+        vm.assume(underlyingAmount <= WETHLIKE.totalSupply());
+        vm.assume(exerciseAmount <= DAILIKE.totalSupply());
 
         (uint256 optionId, IOptionSettlementEngine.Option memory optionInfo) = _createNewOptionType({
-            underlyingAsset: WETH_A,
+            underlyingAsset: address(WETHLIKE),
             underlyingAmount: underlyingAmount,
-            exerciseAsset: DAI_A,
+            exerciseAsset: address(DAILIKE),
             exerciseAmount: exerciseAmount,
             exerciseTimestamp: exerciseTimestamp,
             expiryTimestamp: expiryTimestamp
@@ -42,8 +42,8 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         uint256 expectedOptionId = uint256(_optionId) << 96;
 
         assertEq(optionId, expectedOptionId);
-        assertEq(optionRecord.underlyingAsset, WETH_A);
-        assertEq(optionRecord.exerciseAsset, DAI_A);
+        assertEq(optionRecord.underlyingAsset, address(WETHLIKE));
+        assertEq(optionRecord.exerciseAsset, address(DAILIKE));
         assertEq(optionRecord.exerciseTimestamp, exerciseTimestamp);
         assertEq(optionRecord.expiryTimestamp, expiryTimestamp);
         assertEq(optionRecord.underlyingAmount, underlyingAmount);
@@ -52,9 +52,11 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         _assertTokenIsOption(optionId);
     }
 
+    // TODO investigate rounding error
+    // [FAIL. Reason: TRANSFER_FROM_FAILED Counterexample: calldata=0xf494d5a9000000000000000000000000000000000000000000000000000000000015c992, args=[1427858]]
     function testFuzzWrite(uint112 amount) public {
-        uint256 wethBalanceEngine = WETH.balanceOf(address(engine));
-        uint256 wethBalance = WETH.balanceOf(ALICE);
+        uint256 wethBalanceEngine = WETHLIKE.balanceOf(address(engine));
+        uint256 wethBalance = WETHLIKE.balanceOf(ALICE);
 
         vm.assume(amount > 0);
         vm.assume(amount <= wethBalance / testUnderlyingAmount);
@@ -66,8 +68,8 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         uint256 claimId = engine.write(testOptionId, amount);
         IOptionSettlementEngine.Underlying memory claimUnderlying = engine.underlying(claimId);
 
-        assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + rxAmount + fee);
-        assertEq(WETH.balanceOf(ALICE), wethBalance - rxAmount - fee);
+        assertEq(WETHLIKE.balanceOf(address(engine)), wethBalanceEngine + rxAmount + fee);
+        assertEq(WETHLIKE.balanceOf(ALICE), wethBalance - rxAmount - fee);
 
         assertEq(engine.balanceOf(ALICE, testOptionId), amount);
         assertEq(engine.balanceOf(ALICE, claimId), 1);
@@ -82,10 +84,10 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
     }
 
     function testFuzzExercise(uint112 amountWrite, uint112 amountExercise) public {
-        uint256 wethBalanceEngine = WETH.balanceOf(address(engine));
-        uint256 daiBalanceEngine = DAI.balanceOf(address(engine));
-        uint256 wethBalance = WETH.balanceOf(ALICE);
-        uint256 daiBalance = DAI.balanceOf(ALICE);
+        uint256 wethBalanceEngine = WETHLIKE.balanceOf(address(engine));
+        uint256 daiBalanceEngine = DAILIKE.balanceOf(address(engine));
+        uint256 wethBalance = WETHLIKE.balanceOf(ALICE);
+        uint256 daiBalance = DAILIKE.balanceOf(ALICE);
 
         vm.assume(amountWrite > 0);
         vm.assume(amountExercise > 0);
@@ -109,19 +111,19 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
 
         _assertClaimAmountExercised(claimId, amountExercise);
 
-        assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + writeAmount - txAmount + writeFee);
-        assertEq(WETH.balanceOf(ALICE), (wethBalance - writeAmount + txAmount - writeFee));
-        assertEq(DAI.balanceOf(address(engine)), daiBalanceEngine + rxAmount + exerciseFee);
-        assertEq(DAI.balanceOf(ALICE), (daiBalance - rxAmount - exerciseFee));
+        assertEq(WETHLIKE.balanceOf(address(engine)), wethBalanceEngine + writeAmount - txAmount + writeFee);
+        assertEq(WETHLIKE.balanceOf(ALICE), (wethBalance - writeAmount + txAmount - writeFee));
+        assertEq(DAILIKE.balanceOf(address(engine)), daiBalanceEngine + rxAmount + exerciseFee);
+        assertEq(DAILIKE.balanceOf(ALICE), (daiBalance - rxAmount - exerciseFee));
         assertEq(engine.balanceOf(ALICE, testOptionId), amountWrite - amountExercise);
         assertEq(engine.balanceOf(ALICE, claimId), 1);
     }
 
     function testFuzzRedeem(uint112 amountWrite, uint112 amountExercise) public {
-        uint256 wethBalanceEngine = WETH.balanceOf(address(engine));
-        uint256 daiBalanceEngine = DAI.balanceOf(address(engine));
-        uint256 wethBalance = WETH.balanceOf(ALICE);
-        uint256 daiBalance = DAI.balanceOf(ALICE);
+        uint256 wethBalanceEngine = WETHLIKE.balanceOf(address(engine));
+        uint256 daiBalanceEngine = DAILIKE.balanceOf(address(engine));
+        uint256 wethBalance = WETHLIKE.balanceOf(ALICE);
+        uint256 daiBalance = DAILIKE.balanceOf(ALICE);
 
         vm.assume(amountWrite > 0);
         vm.assume(amountExercise > 0);
@@ -146,10 +148,10 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
 
         IOptionSettlementEngine.Underlying memory claimUnderlying = engine.underlying(claimId);
 
-        assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + writeFee);
-        assertEq(WETH.balanceOf(ALICE), wethBalance - writeFee);
-        assertEq(DAI.balanceOf(address(engine)), daiBalanceEngine + exerciseFee);
-        assertEq(DAI.balanceOf(ALICE), daiBalance - exerciseFee);
+        assertEq(WETHLIKE.balanceOf(address(engine)), wethBalanceEngine + writeFee);
+        assertEq(WETHLIKE.balanceOf(ALICE), wethBalance - writeFee);
+        assertEq(DAILIKE.balanceOf(address(engine)), daiBalanceEngine + exerciseFee);
+        assertEq(DAILIKE.balanceOf(ALICE), daiBalance - exerciseFee);
         assertEq(engine.balanceOf(ALICE, testOptionId), amountWrite - amountExercise);
         assertEq(engine.balanceOf(ALICE, claimId), 0);
         assertEq(claimUnderlying.underlyingPosition, 0);
@@ -167,9 +169,9 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
 
         // create monthly option
         (uint256 optionId1M, IOptionSettlementEngine.Option memory option1M) = _createNewOptionType({
-            underlyingAsset: WETH_A,
+            underlyingAsset: address(WETHLIKE),
             underlyingAmount: testUnderlyingAmount,
-            exerciseAsset: DAI_A,
+            exerciseAsset: address(DAILIKE),
             exerciseAmount: testExerciseAmount,
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: uint40(block.timestamp + 30 days)
@@ -177,9 +179,9 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
 
         // create quarterly option
         (uint256 optionId3M, IOptionSettlementEngine.Option memory option3M) = _createNewOptionType({
-            underlyingAsset: WETH_A,
+            underlyingAsset: address(WETHLIKE),
             underlyingAmount: testUnderlyingAmount,
-            exerciseAsset: DAI_A,
+            exerciseAsset: address(DAILIKE),
             exerciseAmount: testExerciseAmount,
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: uint40(block.timestamp + 90 days)

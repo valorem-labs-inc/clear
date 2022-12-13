@@ -1863,7 +1863,7 @@ contract OptionSettlementTest is Test, NftReceiver {
             emit log_named_uint("exercise timestamp not hit", option.exerciseTimestamp);
             return (written, 0, newClaim);
         }
-
+        vm.warp(block.timestamp + 12 hours);
         uint256 maxToExercise = engine.balanceOf(exerciser, optionId);
         // with Y pctg chance, exercise some amount of options
         unchecked {
@@ -1883,6 +1883,7 @@ contract OptionSettlementTest is Test, NftReceiver {
                 emit log_named_uint("SKIP EXERCISING", optionId);
             }
         }
+        vm.warp(block.timestamp - 12 hours);
     }
 
     // **********************************************************************

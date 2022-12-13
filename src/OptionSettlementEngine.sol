@@ -108,7 +108,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function option(uint256 tokenId) external view returns (Option memory optionInfo) {
         (uint160 optionKey,) = _decodeTokenId(tokenId);
 
-        if (!isOptionInitialized(optionKey)) {
+        if (!_isOptionInitialized(optionKey)) {
             revert TokenNotFound(tokenId);
         }
 
@@ -120,7 +120,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function claim(uint256 claimId) public view returns (Claim memory claimInfo) {
         (uint160 optionKey, uint96 claimKey) = _decodeTokenId(claimId);
 
-        if (!isClaimInitialized(optionKey, claimKey)) {
+        if (!_isClaimInitialized(optionKey, claimKey)) {
             revert TokenNotFound(claimId);
         }
 
@@ -188,10 +188,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         typeOfToken = TokenType.None;
 
         // Check if the token is an initialized option or claim and update accordingly.
-        if (isOptionInitialized(optionKey)) {
+        if (_isOptionInitialized(optionKey)) {
             if ((tokenId & CLAIM_NUMBER_MASK) == 0) {
                 typeOfToken = TokenType.Option;
-            } else if (isClaimInitialized(optionKey, claimKey)) {
+            } else if (_isClaimInitialized(optionKey, claimKey)) {
                 typeOfToken = TokenType.Claim;
             }
         }
@@ -260,7 +260,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         );
         optionId = uint256(optionKey) << OPTION_ID_PADDING;
 
-        if (isOptionInitialized(optionKey)) {
+        if (_isOptionInitialized(optionKey)) {
             revert OptionsTypeExists(optionId);
         }
 
@@ -378,7 +378,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 revert CallerDoesNotOwnClaimId(tokenId);
             }
 
-            // Add claim bucket indices
+            // Add claim bucket indices.
             _addOrUpdateClaimIndex(optionTypeStates[optionKey], claimKey, bucketIndex, amount);
 
             // Emit event about options written on existing claim.
@@ -611,7 +611,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * @param optionKey The option key to check.
      * @return initialized Whether or not the option type is initialized.
      */
-    function isOptionInitialized(uint160 optionKey) private view returns (bool initialized) {
+    function _isOptionInitialized(uint160 optionKey) private view returns (bool initialized) {
         return optionTypeStates[optionKey].option.underlyingAsset != address(0);
     }
 
@@ -621,7 +621,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * @param claimKey The claim key to check.
      * @return initialized Whether or not the claim is initialized.
      */
-    function isClaimInitialized(uint160 optionKey, uint96 claimKey) private view returns (bool initialized) {
+    function _isClaimInitialized(uint160 optionKey, uint96 claimKey) private view returns (bool initialized) {
         return optionTypeStates[optionKey].claimIndices[claimKey].length > 0;
     }
 

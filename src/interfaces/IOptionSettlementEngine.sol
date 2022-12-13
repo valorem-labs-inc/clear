@@ -379,9 +379,9 @@ interface IOptionSettlementEngine {
     /**
      * @notice Gets information about the ERC20 token positions represented by a tokenId.
      * @param tokenId The token id for which to retrieve the Underlying position.
-     * @return underlyingPosition The Underlying struct for the supplied tokenId.
+     * @return position The Underlying struct for the supplied tokenId.
      */
-    function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPosition);
+    function underlying(uint256 tokenId) external view returns (Underlying memory position);
 
     //
     // Fee Information

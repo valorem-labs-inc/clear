@@ -333,7 +333,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
 
         // Update internal bucket accounting.
-        uint16 bucketIndex = _addOrUpdateClaimBucket(optionKey, amount);
+        uint16 bucketIndex = _addOrUpdateClaimBucket(optionTypeState, amount);
 
         // Calculate the amount to transfer in.
         uint256 rxAmount = optionTypeState.option.underlyingAmount * amount;
@@ -729,32 +729,44 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //  Internal Mutators
     //////////////////////////////////////////////////////////////*/
 
-
-    function _addOrUpdateClaimBucket(uint160 optionKey, uint112 amount) internal returns (uint16) {
-        BucketInfo storage bucketInfo = optionTypeStates[optionKey].bucketInfo;
+    /**
+     * @notice Adds or updates a claim bucket as needed for a given option type
+     * and amount of options written, based on the present time and bucket
+     * state.
+     */
+    function _addOrUpdateClaimBucket(OptionTypeState storage optionTypeState, uint112 amount)
+        internal
+        returns (uint16)
+    {
+        BucketInfo storage bucketInfo = optionTypeState.bucketInfo;
         Bucket[] storage claimBuckets = bucketInfo.buckets;
-        Bucket storage currentBucket;
         uint16 daysAfterEpoch = _getDaysBucket();
         uint16 bucketIndex = uint16(claimBuckets.length);
+
         if (claimBuckets.length == 0) {
-            // add a new bucket none exist
+            // Then add a new claim bucket to this option type, because none exist.
             claimBuckets.push(Bucket(amount, 0, daysAfterEpoch));
-            // update _unexercisedBucketsByOption and corresponding index mapping
             _updateUnexercisedBucketIndices(bucketInfo, bucketIndex);
+
             return bucketIndex;
         }
 
-        currentBucket = claimBuckets[bucketIndex - 1];
+        // Else, get the currentBucket.
+        Bucket storage currentBucket = claimBuckets[bucketIndex - 1];
+
         if (currentBucket.daysAfterEpoch < daysAfterEpoch) {
+            // Then we are out of the time range for currentBucket, so we need to
+            // create a new bucket
             claimBuckets.push(Bucket(amount, 0, daysAfterEpoch));
             _updateUnexercisedBucketIndices(bucketInfo, bucketIndex);
         } else {
-            // Update claim bucket for today
+            // Then we are still in the time range for currentBucket, and thus
+            // need to update it's state.
             currentBucket.amountWritten += amount;
             bucketIndex -= 1;
 
             // This block is executed if a bucket has been previously fully exercised
-            // and now more options are being written into it
+            // and now more options are being written into it.
             if (!bucketInfo.bucketHasCollateral[bucketIndex]) {
                 _updateUnexercisedBucketIndices(bucketInfo, bucketIndex);
             }
@@ -767,10 +779,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * @notice Adds the bucket index to the list of buckets with collateral
      * and sets the mapping for that bucket having collateral to true.
      */
-    function _updateUnexercisedBucketIndices(
-        BucketInfo storage bucketInfo,
-        uint16 bucketIndex
-    ) internal {
+    function _updateUnexercisedBucketIndices(BucketInfo storage bucketInfo, uint16 bucketIndex) internal {
         bucketInfo.bucketsWithCollateral.push(bucketIndex);
         bucketInfo.bucketHasCollateral[bucketIndex] = true;
     }
@@ -790,6 +799,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // If the array is empty, create a new index and return.
         if (arrayLength == 0) {
             claimIndices.push(ClaimIndex({amountWritten: amount, bucketIndex: bucketIndex}));
+
             return;
         }
 
@@ -798,6 +808,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // If we are writing to an index that doesn't yet exist, create it and return.
         if (lastIndex.bucketIndex < bucketIndex) {
             claimIndices.push(ClaimIndex({amountWritten: amount, bucketIndex: bucketIndex}));
+
             return;
         }
 

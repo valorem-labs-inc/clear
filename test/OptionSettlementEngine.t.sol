@@ -465,6 +465,7 @@ contract OptionSettlementTest is Test, NftReceiver {
         uint256 bobBalanceExerciseAsset1 = ERC20(option.exerciseAsset).balanceOf(BOB);
         uint256 bobBalanceUnderlyingAsset1 = ERC20(option.underlyingAsset).balanceOf(BOB);
         uint256 bobExerciseFee = (bobExerciseAmount * option.exerciseAmount / 10000) * engine.feeBps();
+        _warpToNextBucketWindow();
         vm.startPrank(BOB);
         engine.exercise(optionId, bobExerciseAmount);
         assertEq(bobOptionAmount - bobExerciseAmount, engine.balanceOf(BOB, optionId));

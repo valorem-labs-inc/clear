@@ -1241,7 +1241,7 @@ contract OptionSettlementTest is Test, NftReceiver {
         _createOptionIdFromStruct(option);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ExpiryWindowTooShort.selector, testExpiryTimestamp - 1)
+            abi.encodeWithSelector(IOptionSettlementEngine.ExpiryWindowTooShort.selector, testExpiryTimestamp - 12 hours - 1)
         );
         engine.newOptionType({
             underlyingAsset: WETH_A,
@@ -1249,7 +1249,7 @@ contract OptionSettlementTest is Test, NftReceiver {
             exerciseAsset: DAI_A,
             exerciseAmount: testExerciseAmount,
             exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp - 1
+            expiryTimestamp: testExpiryTimestamp - 12 hours - 1
         });
     }
 

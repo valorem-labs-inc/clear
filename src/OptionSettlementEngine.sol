@@ -640,11 +640,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return optionTypeStates[optionKey].claimIndices[claimKey].length > 0;
     }
 
-    /// @return settlementPeriods The number of settlement bucket periods after the epoch.
-    function _getDaysBucket() private view returns (uint16 settlementPeriods) {
-        return uint16(block.timestamp / 1 days);
-    }
-
     /**
      * @notice Returns the exercised and unexercised amounts for a given claim index.
      */

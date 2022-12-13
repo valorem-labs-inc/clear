@@ -24,24 +24,31 @@ import "./TokenURIGenerator.sol";
  */
 contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /*//////////////////////////////////////////////////////////////
-    //  Immutable/Constant Variables - Public
+    //  Immutable/Constant - Private
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev The bit padding for option IDs
+    uint8 internal constant OPTION_ID_PADDING = 96;
+
+    /// @dev The mask to mask out a claim number from a claimId
+    uint96 internal constant CLAIM_NUMBER_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFF;
+
+    /*//////////////////////////////////////////////////////////////
+    //  Immutable/Constant - Public
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IOptionSettlementEngine
     uint8 public immutable feeBps = 5;
 
     /*//////////////////////////////////////////////////////////////
-    //  Immutable/Constant Variables - Private
+    //  State variables - Internal
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev The bit padding for option IDs
-    uint8 private constant OPTION_ID_PADDING = 96;
-
-    /// @dev The mask to mask out a claim number from a claimId
-    uint96 private constant CLAIM_NUMBER_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFF;
+    /// @notice Accessor for Option contract details
+    mapping(uint160 => OptionTypeState) internal optionTypeStates;
 
     /*//////////////////////////////////////////////////////////////
-    //  State Variables - Public
+    //  State variables - Public
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IOptionSettlementEngine
@@ -55,13 +62,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @inheritdoc IOptionSettlementEngine
     bool public feesEnabled;
-
-    /*//////////////////////////////////////////////////////////////
-    //  State Variables - Private
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Accessor for Option contract details
-    mapping(uint160 => OptionTypeState) private optionTypeStates;
 
     /*//////////////////////////////////////////////////////////////
     //  Modifiers
@@ -92,7 +92,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
-    //  Token Information
+    //  Accessors
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IOptionSettlementEngine
@@ -173,6 +173,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
     }
 
+    /*//////////////////////////////////////////////////////////////
+    //  Token URI
+    //////////////////////////////////////////////////////////////*/
+
     function uri(uint256 tokenId) public view virtual override returns (string memory) {
         Option memory optionInfo = optionTypeStates[uint160(tokenId >> OPTION_ID_PADDING)].option;
 
@@ -198,35 +202,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
-    //  Protocol Fees
-    //////////////////////////////////////////////////////////////*/
-
-    /// @inheritdoc IOptionSettlementEngine
-    function sweepFees(address[] memory tokens) external {
-        address sendFeeTo = feeTo;
-        address token;
-        uint256 fee;
-        uint256 sweep;
-        uint256 numTokens = tokens.length;
-
-        unchecked {
-            for (uint256 i = 0; i < numTokens; i++) {
-                // Get the token and balance to sweep
-                token = tokens[i];
-                fee = feeBalance[token];
-                // Leave 1 wei here as a gas optimization
-                if (fee > 1) {
-                    sweep = fee - 1;
-                    feeBalance[token] = 1;
-                    emit FeeSwept(token, sendFeeTo, sweep);
-                    SafeTransferLib.safeTransfer(ERC20(token), sendFeeTo, sweep);
-                }
-            }
-        }
-    }
-
-    /*//////////////////////////////////////////////////////////////
-    //  Write Options / Redeem Claims
+    //  Write Options
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IOptionSettlementEngine
@@ -396,6 +372,61 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return encodedClaimId;
     }
 
+    /*//////////////////////////////////////////////////////////////
+    //  Exercise Options
+    //////////////////////////////////////////////////////////////*/
+
+    /// @inheritdoc IOptionSettlementEngine
+    function exercise(uint256 optionId, uint112 amount) external {
+        (uint160 optionKey, uint96 claimKey) = _decodeTokenId(optionId);
+
+        // option ID should be specified without claim in lower 96b
+        if (claimKey != 0) {
+            revert InvalidOption(optionId);
+        }
+
+        Option storage optionRecord = optionTypeStates[optionKey].option;
+
+        if (optionRecord.expiryTimestamp <= block.timestamp) {
+            revert ExpiredOption(optionId, optionRecord.expiryTimestamp);
+        }
+        // Require that we have reached the exercise timestamp
+        if (optionRecord.exerciseTimestamp >= block.timestamp) {
+            revert ExerciseTooEarly(optionId, optionRecord.exerciseTimestamp);
+        }
+
+        if (this.balanceOf(msg.sender, optionId) < amount) {
+            revert CallerHoldsInsufficientOptions(optionId, amount);
+        }
+
+        // Calculate, record, and emit event for fee accrual on exercise asset
+        uint256 rxAmount = optionRecord.exerciseAmount * amount;
+        uint256 txAmount = optionRecord.underlyingAmount * amount;
+        address exerciseAsset = optionRecord.exerciseAsset;
+        address underlyingAsset = optionRecord.underlyingAsset;
+
+        _assignExercise(optionKey, optionRecord, amount);
+
+        // Assess fee (if fee switch enabled) and emit events
+        uint256 fee = 0;
+        if (feesEnabled) {
+            fee = _calculateRecordAndEmitFee(optionId, exerciseAsset, rxAmount);
+        }
+        emit OptionsExercised(optionId, msg.sender, amount);
+
+        _burn(msg.sender, optionId, amount);
+
+        // Transfer in the requisite exercise asset
+        SafeTransferLib.safeTransferFrom(ERC20(exerciseAsset), msg.sender, address(this), (rxAmount + fee));
+
+        // Transfer out the underlying
+        SafeTransferLib.safeTransfer(ERC20(underlyingAsset), msg.sender, txAmount);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+    //  Redeem Claims
+    //////////////////////////////////////////////////////////////*/
+
     /// @inheritdoc IOptionSettlementEngine
     /// @dev Fair assignment is performed here. After option expiry, any claim holder
     /// seeking to redeem their claim for the underlying and exercise assets will claim
@@ -465,58 +496,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
-    //  Exercise Options
-    //////////////////////////////////////////////////////////////*/
-
-    /// @inheritdoc IOptionSettlementEngine
-    function exercise(uint256 optionId, uint112 amount) external {
-        (uint160 optionKey, uint96 claimKey) = _decodeTokenId(optionId);
-
-        // option ID should be specified without claim in lower 96b
-        if (claimKey != 0) {
-            revert InvalidOption(optionId);
-        }
-
-        Option storage optionRecord = optionTypeStates[optionKey].option;
-
-        if (optionRecord.expiryTimestamp <= block.timestamp) {
-            revert ExpiredOption(optionId, optionRecord.expiryTimestamp);
-        }
-        // Require that we have reached the exercise timestamp
-        if (optionRecord.exerciseTimestamp >= block.timestamp) {
-            revert ExerciseTooEarly(optionId, optionRecord.exerciseTimestamp);
-        }
-
-        if (this.balanceOf(msg.sender, optionId) < amount) {
-            revert CallerHoldsInsufficientOptions(optionId, amount);
-        }
-
-        // Calculate, record, and emit event for fee accrual on exercise asset
-        uint256 rxAmount = optionRecord.exerciseAmount * amount;
-        uint256 txAmount = optionRecord.underlyingAmount * amount;
-        address exerciseAsset = optionRecord.exerciseAsset;
-        address underlyingAsset = optionRecord.underlyingAsset;
-
-        _assignExercise(optionKey, optionRecord, amount);
-
-        // Assess fee (if fee switch enabled) and emit events
-        uint256 fee = 0;
-        if (feesEnabled) {
-            fee = _calculateRecordAndEmitFee(optionId, exerciseAsset, rxAmount);
-        }
-        emit OptionsExercised(optionId, msg.sender, amount);
-
-        _burn(msg.sender, optionId, amount);
-
-        // Transfer in the requisite exercise asset
-        SafeTransferLib.safeTransferFrom(ERC20(exerciseAsset), msg.sender, address(this), (rxAmount + fee));
-
-        // Transfer out the underlying
-        SafeTransferLib.safeTransfer(ERC20(underlyingAsset), msg.sender, txAmount);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-    //  Privileged Functions
+    //  Protocol Admin
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IOptionSettlementEngine
@@ -537,6 +517,30 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @inheritdoc IOptionSettlementEngine
+    function sweepFees(address[] memory tokens) external {
+        address sendFeeTo = feeTo;
+        address token;
+        uint256 fee;
+        uint256 sweep;
+        uint256 numTokens = tokens.length;
+
+        unchecked {
+            for (uint256 i = 0; i < numTokens; i++) {
+                // Get the token and balance to sweep
+                token = tokens[i];
+                fee = feeBalance[token];
+                // Leave 1 wei here as a gas optimization
+                if (fee > 1) {
+                    sweep = fee - 1;
+                    feeBalance[token] = 1;
+                    emit FeeSwept(token, sendFeeTo, sweep);
+                    SafeTransferLib.safeTransfer(ERC20(token), sendFeeTo, sweep);
+                }
+            }
+        }
+    }
+
+    /// @inheritdoc IOptionSettlementEngine
     function setTokenURIGenerator(address newTokenURIGenerator) external onlyFeeTo {
         if (newTokenURIGenerator == address(0)) {
             revert InvalidAddress(address(0));
@@ -546,7 +550,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
-    //  Private Functions
+    //  Token ID Encoding
     //////////////////////////////////////////////////////////////*/
 
     /**
@@ -555,7 +559,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * @param claimKey The claimKey to encode.
      * @return tokenId The encoded token id.
      */
-    function _encodeTokenId(uint160 optionKey, uint96 claimKey) private pure returns (uint256 tokenId) {
+    function _encodeTokenId(uint160 optionKey, uint96 claimKey) internal pure returns (uint256 tokenId) {
         tokenId |= uint256(optionKey) << OPTION_ID_PADDING;
         tokenId |= uint256(claimKey);
     }
@@ -566,7 +570,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * @param tokenId The token id to decode
      * @return optionKey claimNum The decoded components of the id as described above, padded as required
      */
-    function _decodeTokenId(uint256 tokenId) private pure returns (uint160 optionKey, uint96 claimKey) {
+    function _decodeTokenId(uint256 tokenId) internal pure returns (uint160 optionKey, uint96 claimKey) {
         // move key to lsb to fit into uint160
         optionKey = uint160(tokenId >> OPTION_ID_PADDING);
 
@@ -574,16 +578,20 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         claimKey = uint96(tokenId & CLAIM_NUMBER_MASK);
     }
 
+    /*//////////////////////////////////////////////////////////////
+    //  Internal Helper Functions
+    //////////////////////////////////////////////////////////////*/
+
     /**
      * @notice Check to see if an option type is already initialized.
      * @param optionKey The option key to check.
      * @return initialized Whether or not the option type is initialized.
      */
-    function isOptionInitialized(uint160 optionKey) private view returns (bool initialized) {
+    function isOptionInitialized(uint160 optionKey) internal view returns (bool initialized) {
         return optionTypeStates[optionKey].option.underlyingAsset != address(0);
     }
 
-    function isClaimInitialized(uint160 optionKey, uint96 claimKey) private view returns (bool initialized) {
+    function isClaimInitialized(uint160 optionKey, uint96 claimKey) internal view returns (bool initialized) {
         return optionTypeStates[optionKey].claimIndices[claimKey].length > 0;
     }
 
@@ -591,7 +599,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// when writing (on underlying asset) and when exercising (on exercise asset). Checks
     /// that fee switch is enabled, otherwise returns fee of 0 and does not record or emit.
     function _calculateRecordAndEmitFee(uint256 optionId, address assetAddress, uint256 assetAmount)
-        private
+        internal
         returns (uint256 fee)
     {
         fee = ((assetAmount * feeBps) / 10_000);
@@ -605,7 +613,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// are then iterated from oldest to newest (looping if we reach "today") if the
     /// exercise amount overflows into another bucket. The seed for the pseudorandom
     /// index is updated accordingly on the option type.
-    function _assignExercise(uint160 optionKey, Option storage optionRecord, uint112 amount) private {
+    function _assignExercise(uint160 optionKey, Option storage optionRecord, uint112 amount) internal {
         // A bucket of the overall amounts written and exercised for all claims
         // on a given day
         Bucket[] storage claimBuckets = optionTypeStates[optionKey].bucketInfo.buckets;
@@ -646,13 +654,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @dev Help find a given days bucket by calculating days after epoch
-    function _getDaysBucket() private view returns (uint16) {
+    function _getDaysBucket() internal view returns (uint16) {
         return uint16(block.timestamp / 1 days);
     }
 
     /// @dev Get the exercise and underlying amounts for a claim
     function _getExercisedAmountsForClaim(uint160 optionKey, uint96 claimKey)
-        private
+        internal
         view
         returns (uint256 amountExercised, uint256 amountUnexercised)
     {
@@ -669,7 +677,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     function _getExercisedAmountsForClaimIndex(uint160 optionKey, ClaimIndex[] storage claimIndexArray, uint256 index)
-        private
+        internal
         view
         returns (uint256 amountExercised, uint256 amountUnexercised)
     {
@@ -689,7 +697,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @dev Get the exercise and underlying amounts for a claim
     function _getPositionsForClaim(uint160 optionKey, uint96 claimKey, Option storage optionRecord)
-        private
+        internal
         view
         returns (uint256 exerciseAmount, uint256 underlyingAmount)
     {
@@ -706,7 +714,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @dev Help with internal options bucket accounting
-    function _addOrUpdateClaimBucket(uint160 optionKey, uint112 amount) private returns (uint16) {
+    function _addOrUpdateClaimBucket(uint160 optionKey, uint112 amount) internal returns (uint16) {
         Bucket[] storage claimBuckets = optionTypeStates[optionKey].bucketInfo.buckets;
         uint16[] storage unexercised = optionTypeStates[optionKey].bucketInfo.bucketsWithCollateral;
         Bucket storage currentBucket;
@@ -744,13 +752,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint160 optionKey,
         uint16 bucketIndex,
         uint16[] storage unexercisedBucketIndices
-    ) private {
+    ) internal {
         unexercisedBucketIndices.push(bucketIndex);
         optionTypeStates[optionKey].bucketInfo.bucketHasCollateral[bucketIndex] = true;
     }
 
     /// @dev Help with internal claim bucket accounting
-    function _addOrUpdateClaimIndex(uint160 optionKey, uint96 claimKey, uint16 bucketIndex, uint112 amount) private {
+    function _addOrUpdateClaimIndex(uint160 optionKey, uint96 claimKey, uint16 bucketIndex, uint112 amount) internal {
         ClaimIndex storage lastIndex;
         ClaimIndex[] storage claimIndices = optionTypeStates[optionKey].claimIndices[claimKey];
         uint256 arrayLength = claimIndices.length;

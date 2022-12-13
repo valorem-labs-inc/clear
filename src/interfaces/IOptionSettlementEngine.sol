@@ -9,6 +9,8 @@ interface IOptionSettlementEngine {
     //  Events
     //////////////////////////////////////////////////////////////*/
 
+    // Write/Redeem events
+
     // TODO(Do we need exercise and underlying asset here?)
     /**
      * @notice Emitted when a claim is redeemed.
@@ -29,6 +31,47 @@ interface IOptionSettlementEngine {
         uint256 exerciseAmountRedeemed,
         uint256 underlyingAmountRedeemed
     );
+
+    /**
+     * @notice Emitted when a new option type is created.
+     * @param optionId The token id of the new option type created.
+     * @param exerciseAsset The ERC20 contract address of the exercise asset.
+     * @param underlyingAsset The ERC20 contract address of the underlying asset.
+     * @param exerciseAmount The amount, in wei, of the exercise asset required to exercise each contract.
+     * @param underlyingAmount The amount, in wei of the underlying asset in each contract.
+     * @param exerciseTimestamp The timestamp after which this option type can be exercised.
+     * @param expiryTimestamp The timestamp before which this option type can be exercised.
+     */
+    event NewOptionType(
+        uint256 optionId,
+        address indexed exerciseAsset,
+        address indexed underlyingAsset,
+        uint96 exerciseAmount,
+        uint96 underlyingAmount,
+        uint40 exerciseTimestamp,
+        uint40 indexed expiryTimestamp
+    );
+
+    // Exercise events
+
+    /**
+     * @notice Emitted when option contract(s) is(are) exercised.
+     * @param optionId The token id of the option type exercised.
+     * @param exerciser The address that exercised the option contract(s).
+     * @param amount The amount of option contracts exercised.
+     */
+    event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
+
+    /**
+     * @notice Emitted when new options contracts are written.
+     * @param optionId The token id of the option type written.
+     * @param writer The address of the writer.
+     * @param claimId The claim token id of the new or existing short position written against.
+     * @param amount The amount of options contracts written.
+     */
+    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
+
+    // Fee events
 
     /**
      * @notice Emitted when protocol fees are accrued for a given asset.
@@ -64,46 +107,11 @@ interface IOptionSettlementEngine {
      */
     event FeeToUpdated(address indexed newFeeTo);
 
-    /**
-     * @notice Emitted when a new option type is created.
-     * @param optionId The token id of the new option type created.
-     * @param exerciseAsset The ERC20 contract address of the exercise asset.
-     * @param underlyingAsset The ERC20 contract address of the underlying asset.
-     * @param exerciseAmount The amount, in wei, of the exercise asset required to exercise each contract.
-     * @param underlyingAmount The amount, in wei of the underlying asset in each contract.
-     * @param exerciseTimestamp The timestamp after which this option type can be exercised.
-     * @param expiryTimestamp The timestamp before which this option type can be exercised.
-     */
-    event NewOptionType(
-        uint256 optionId,
-        address indexed exerciseAsset,
-        address indexed underlyingAsset,
-        uint96 exerciseAmount,
-        uint96 underlyingAmount,
-        uint40 exerciseTimestamp,
-        uint40 indexed expiryTimestamp
-    );
-
-    /**
-     * @notice Emitted when option contract(s) is(are) exercised.
-     * @param optionId The token id of the option type exercised.
-     * @param exerciser The address that exercised the option contract(s).
-     * @param amount The amount of option contracts exercised.
-     */
-    event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
-
-    /**
-     * @notice Emitted when new options contracts are written.
-     * @param optionId The token id of the option type written.
-     * @param writer The address of the writer.
-     * @param claimId The claim token id of the new or existing short position written against.
-     * @param amount The amount of options contracts written.
-     */
-    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
-
     /*//////////////////////////////////////////////////////////////
     //  Errors
     //////////////////////////////////////////////////////////////*/
+
+    // Access control errors
 
     /**
      * @notice The caller doesn't have permission to access that function.
@@ -111,6 +119,8 @@ interface IOptionSettlementEngine {
      * @param permissioned The address which has the requisite permissions.
      */
     error AccessControlViolation(address accessor, address permissioned);
+
+    // Input Errors
 
     /// @notice The amount of options contracts written must be greater than zero.
     error AmountWrittenCannotBeZero();
@@ -200,7 +210,7 @@ interface IOptionSettlementEngine {
     error TokenNotFound(uint256 token);
 
     /*//////////////////////////////////////////////////////////////
-    //  Data Structures
+    //  Data structures
     //////////////////////////////////////////////////////////////*/
 
     /// @dev This enumeration is used to determine the type of an ERC1155 subtoken in the engine.
@@ -311,7 +321,7 @@ interface IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
-    //  Token Information
+    //  Accessors
     //////////////////////////////////////////////////////////////*/
 
     /**
@@ -361,9 +371,7 @@ interface IOptionSettlementEngine {
      */
     function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions);
 
-    /*//////////////////////////////////////////////////////////////
-    //  Protocol Fees
-    //////////////////////////////////////////////////////////////*/
+    // Fee Information
 
     /**
      * @notice Gets the balance of protocol fees for a given token which have not been swept yet.
@@ -389,15 +397,8 @@ interface IOptionSettlementEngine {
      */
     function feeTo() external view returns (address);
 
-    /**
-     * @notice Sweeps fees to the feeTo address if there is more than 1 wei for
-     * feeBalance for a given token.
-     * @param tokens An array of tokens to sweep fees for.
-     */
-    function sweepFees(address[] memory tokens) external;
-
     /*//////////////////////////////////////////////////////////////
-    //  Write Options / Redeem Claims
+    //  Write Options/Claims
     //////////////////////////////////////////////////////////////*/
 
     /**
@@ -447,6 +448,10 @@ interface IOptionSettlementEngine {
      */
     function write(uint256 tokenId, uint112 amount) external returns (uint256 claimId);
 
+    /*//////////////////////////////////////////////////////////////
+    //  Redeem Claims
+    //////////////////////////////////////////////////////////////*/
+
     /**
      * @notice Redeems a claim NFT, transfers the underlying/exercise tokens to the caller.
      * @param claimId The ID of the claim to redeem.
@@ -486,4 +491,11 @@ interface IOptionSettlementEngine {
      * @param newTokenURIGenerator The address of the new ITokenURIGenerator contract.
      */
     function setTokenURIGenerator(address newTokenURIGenerator) external;
+
+    /**
+     * @notice Sweeps fees to the feeTo address if there is more than 1 wei for
+     * feeBalance for a given token.
+     * @param tokens An array of tokens to sweep fees for.
+     */
+    function sweepFees(address[] memory tokens) external;
 }

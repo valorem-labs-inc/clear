@@ -692,7 +692,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             if (amountAvailable <= amount) {
                 amount -= amountAvailable;
                 amountPresentlyExercised = amountAvailable;
-                // swap and pop, index mgmt
+                // Perform "swap and pop" index management.
                 uint16 overwrite = unexercisedBucketIndices[unexercisedBucketIndices.length - 1];
                 unexercisedBucketIndices[unexercisedBucketsIndex] = overwrite;
                 unexercisedBucketIndices.pop();

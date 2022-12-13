@@ -575,7 +575,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
-    //  Internal Views
+    //  Private Views
     //////////////////////////////////////////////////////////////*/
 
     /**
@@ -584,7 +584,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * @param claimKey The claimKey to encode.
      * @return tokenId The encoded token id.
      */
-    function _encodeTokenId(uint160 optionKey, uint96 claimKey) internal pure returns (uint256 tokenId) {
+    function _encodeTokenId(uint160 optionKey, uint96 claimKey) private pure returns (uint256 tokenId) {
         tokenId |= uint256(optionKey) << OPTION_ID_PADDING;
         tokenId |= uint256(claimKey);
     }
@@ -595,7 +595,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * @param tokenId The token id to decode
      * @return optionKey claimNum The decoded components of the id as described above, padded as required
      */
-    function _decodeTokenId(uint256 tokenId) internal pure returns (uint160 optionKey, uint96 claimKey) {
+    function _decodeTokenId(uint256 tokenId) private pure returns (uint160 optionKey, uint96 claimKey) {
         // move key to lsb to fit into uint160
         optionKey = uint160(tokenId >> OPTION_ID_PADDING);
 
@@ -608,7 +608,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * @param optionKey The option key to check.
      * @return initialized Whether or not the option type is initialized.
      */
-    function isOptionInitialized(uint160 optionKey) internal view returns (bool initialized) {
+    function isOptionInitialized(uint160 optionKey) private view returns (bool initialized) {
         return optionTypeStates[optionKey].option.underlyingAsset != address(0);
     }
 
@@ -618,12 +618,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * @param claimKey The claim key to check.
      * @return initialized Whether or not the claim is initialized.
      */
-    function isClaimInitialized(uint160 optionKey, uint96 claimKey) internal view returns (bool initialized) {
+    function isClaimInitialized(uint160 optionKey, uint96 claimKey) private view returns (bool initialized) {
         return optionTypeStates[optionKey].claimIndices[claimKey].length > 0;
     }
 
-    /// @dev Help find a given days bucket by calculating days after epoch
-    function _getDaysBucket() internal view returns (uint16) {
+    /// @return settlementPeriods The number of settlement bucket periods after the epoch.
+    function _getDaysBucket() private view returns (uint16 settlementPeriods) {
         return uint16(block.timestamp / 1 days);
     }
 
@@ -631,7 +631,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         OptionTypeState storage optionTypeState,
         ClaimIndex[] storage claimIndexArray,
         uint256 index
-    ) internal view returns (uint256 amountExercised, uint256 amountUnexercised) {
+    ) private view returns (uint256 amountExercised, uint256 amountUnexercised) {
         // TODO(Possible rounding error)
         ClaimIndex storage claimIndex = claimIndexArray[index];
         Bucket storage bucket = optionTypeState.bucketInfo.buckets[claimIndex.bucketIndex];
@@ -651,7 +651,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * @notice Calculates, records, and emits an event for a fee accrual.
      */
     function _calculateRecordAndEmitFee(uint256 optionId, address assetAddress, uint256 assetAmount)
-        internal
+        private
         returns (uint256 fee)
     {
         fee = (assetAmount * feeBps) / 10_000;
@@ -665,7 +665,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// are then iterated from oldest to newest (looping if we reach "today") if the
     /// exercise amount overflows into another bucket. The seed for the pseudorandom
     /// index is updated accordingly on the option type.
-    function _assignExercise(uint160 optionKey, Option storage optionRecord, uint112 amount) internal {
+    function _assignExercise(uint160 optionKey, Option storage optionRecord, uint112 amount) private {
         // A bucket of the overall amounts written and exercised for all claims
         // on a given day
         Bucket[] storage claimBuckets = optionTypeStates[optionKey].bucketInfo.buckets;
@@ -707,7 +707,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @dev Get the exercise and underlying amounts for a claim
     function _getExercisedAmountsForClaim(uint160 optionKey, uint96 claimKey)
-        internal
+        private
         view
         returns (uint256 amountExercised, uint256 amountUnexercised)
     {
@@ -735,7 +735,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * state.
      */
     function _addOrUpdateClaimBucket(OptionTypeState storage optionTypeState, uint112 amount)
-        internal
+        private
         returns (uint16)
     {
         BucketInfo storage bucketInfo = optionTypeState.bucketInfo;
@@ -792,7 +792,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint96 claimKey,
         uint16 bucketIndex,
         uint112 amount
-    ) internal {
+    ) private {
         ClaimIndex[] storage claimIndices = optionTypeState.claimIndices[claimKey];
         uint256 arrayLength = claimIndices.length;
 

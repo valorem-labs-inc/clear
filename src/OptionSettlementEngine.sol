@@ -773,7 +773,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * and amount of options written, based on the present time and bucket
      * state.
      */
-    function _addOrUpdateClaimBucket(OptionTypeState storage optionTypeState, uint112 amount) internal returns (uint16) {
+    function _addOrUpdateClaimBucket(OptionTypeState storage optionTypeState, uint112 amount)
+        internal
+        returns (uint16)
+    {
         BucketInfo storage bucketInfo = optionTypeState.bucketInfo;
         Bucket[] storage claimBuckets = bucketInfo.buckets;
         Bucket storage currentBucket;

@@ -1260,8 +1260,7 @@ contract OptionSettlementTest is Test, NftReceiver {
         uint40 window = engine.BUCKET_WINDOW();
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOptionSettlementEngine.ExerciseWindowTooShort.selector,
-                uint40(block.timestamp + window + 1)
+                IOptionSettlementEngine.ExerciseWindowTooShort.selector, uint40(block.timestamp + window + 1)
             )
         );
         engine.newOptionType({

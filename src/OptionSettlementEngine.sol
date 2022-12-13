@@ -430,17 +430,15 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint256 amountExercisedInBucket;
         uint256 amountUnexercisedInBucket;
 
-        unchecked {
-            for (uint256 i = claimIndexArrayLength; i > 0; i--) {
-                (amountExercisedInBucket, amountUnexercisedInBucket) =
-                    _getExercisedAmountsForClaimIndex(optionTypeState, claimIndices, i - 1);
-                // Accumulate the amount exercised and unexercised in these variables
-                // for later multiplication by optionRecord.exerciseAmount/underlyingAmount.
-                totalExerciseAssetAmount += amountExercisedInBucket;
-                totalUnderlyingAssetAmount += amountUnexercisedInBucket;
-                // This zeroes out the array during the redemption process for a gas refund.
-                claimIndices.pop();
-            }
+        for (uint256 i = claimIndexArrayLength; i > 0; i--) {
+            (amountExercisedInBucket, amountUnexercisedInBucket) =
+                _getExercisedAmountsForClaimIndex(optionTypeState, claimIndices, i - 1);
+            // Accumulate the amount exercised and unexercised in these variables
+            // for later multiplication by optionRecord.exerciseAmount/underlyingAmount.
+            totalExerciseAssetAmount += amountExercisedInBucket;
+            totalUnderlyingAssetAmount += amountUnexercisedInBucket;
+            // This zeroes out the array during the redemption process for a gas refund.
+            claimIndices.pop();
         }
 
         // Calculate the amounts to transfer out.
@@ -727,13 +725,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint256 amountExercisedInBucket;
         uint256 amountUnexercisedInBucket;
 
-        unchecked {
-            for (uint256 i = 0; i < len; i++) {
-                (amountExercisedInBucket, amountUnexercisedInBucket) =
-                    _getExercisedAmountsForClaimIndex(optionTypeState, claimIndexArray, i);
-                amountExercised += amountExercisedInBucket;
-                amountUnexercised += amountUnexercisedInBucket;
-            }
+        for (uint256 i = 0; i < len; i++) {
+            (amountExercisedInBucket, amountUnexercisedInBucket) =
+                _getExercisedAmountsForClaimIndex(optionTypeState, claimIndexArray, i);
+            amountExercised += amountExercisedInBucket;
+            amountUnexercised += amountUnexercisedInBucket;
         }
     }
 

@@ -621,7 +621,7 @@ contract OptionSettlementTest is Test, NftReceiver {
         vm.stopPrank();
 
         // Bob exercises 2
-        vm.warp(testExerciseTimestamp + 1 seconds);
+        _warpToNextBucketWindow();
         vm.prank(BOB);
         engine.exercise(testOptionId, 2);
 

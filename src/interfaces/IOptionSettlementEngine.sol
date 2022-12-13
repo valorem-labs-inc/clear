@@ -9,7 +9,9 @@ interface IOptionSettlementEngine {
     //  Events
     //////////////////////////////////////////////////////////////*/
 
+    //
     // Write/Redeem events
+    //
 
     // TODO(Do we need exercise and underlying asset here?)
     /**
@@ -17,17 +19,13 @@ interface IOptionSettlementEngine {
      * @param optionId The token id of the option type of the claim being redeemed.
      * @param claimId The token id of the claim being redeemed.
      * @param redeemer The address redeeming the claim.
-     * @param exerciseAsset The ERC20 exercise asset of the option.
-     * @param underlyingAsset The ERC20 underlying asset of the option.
-     * @param exerciseAmountRedeemed The amount of the exerciseAsset redeemed.
-     * @param underlyingAmountRedeemed The amount of underlyingAsset redeemed.
+     * @param exerciseAmountRedeemed The amount of the option.exerciseAsset redeemed.
+     * @param underlyingAmountRedeemed The amount of option.underlyingAsset redeemed.
      */
     event ClaimRedeemed(
         uint256 indexed claimId,
         uint256 indexed optionId,
         address indexed redeemer,
-        address exerciseAsset,
-        address underlyingAsset,
         uint256 exerciseAmountRedeemed,
         uint256 underlyingAmountRedeemed
     );
@@ -52,7 +50,9 @@ interface IOptionSettlementEngine {
         uint40 indexed expiryTimestamp
     );
 
+    //
     // Exercise events
+    //
 
     /**
      * @notice Emitted when option contract(s) is(are) exercised.
@@ -71,7 +71,9 @@ interface IOptionSettlementEngine {
      */
     event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
 
+    //
     // Fee events
+    //
 
     /**
      * @notice Emitted when protocol fees are accrued for a given asset.
@@ -101,17 +103,27 @@ interface IOptionSettlementEngine {
      */
     event FeeSwitchUpdated(address feeTo, bool enabled);
 
+    // Access control events
+
     /**
      * @notice Emitted when feeTo address is updated.
      * @param newFeeTo The new feeTo address.
      */
     event FeeToUpdated(address indexed newFeeTo);
 
+    /**
+     * @notice Emitted when TokenURIGenerator is updated.
+     * @param newTokenURIGenerator The new TokenURIGenerator address.
+     */
+    event TokenURIGeneratorUpdated(address indexed newTokenURIGenerator);
+
     /*//////////////////////////////////////////////////////////////
     //  Errors
     //////////////////////////////////////////////////////////////*/
 
+    //
     // Access control errors
+    //
 
     /**
      * @notice The caller doesn't have permission to access that function.
@@ -286,9 +298,9 @@ interface IOptionSettlementEngine {
      */
     struct Claim {
         /// @custom:member amountWritten The number of option contracts written against this claim.
-        uint112 amountWritten;
+        uint256 amountWritten;
         /// @custom:member amountExercised The amount of option contracts exercised against this claim.
-        uint112 amountExercised;
+        uint256 amountExercised;
         /// @custom:member optionId The option ID of the option type this claim is for.
         uint256 optionId;
         /// @custom:member unredeemed Whether or not this claim has been redeemed.
@@ -344,16 +356,16 @@ interface IOptionSettlementEngine {
     /**
      * @notice Gets information for a given claim token id.
      * @param claimId The id of the claim
-     * @return claim The Claim struct for claimId if the tokenId is Type.Claim.
+     * @return claimInfo The Claim struct for claimId if the tokenId is Type.Claim.
      */
-    function claim(uint256 claimId) external view returns (Claim memory claim);
+    function claim(uint256 claimId) external view returns (Claim memory claimInfo);
 
     /**
      * @notice Gets option type information for a given tokenId.
      * @param tokenId The token id for which to get option inf.
-     * @return option The Option struct for tokenId if the optionKey for tokenId is initialized.
+     * @return optionInfo The Option struct for tokenId if the optionKey for tokenId is initialized.
      */
-    function option(uint256 tokenId) external view returns (Option memory option);
+    function option(uint256 tokenId) external view returns (Option memory optionInfo);
 
     /**
      * @notice Gets the TokenType for a given tokenId.
@@ -362,12 +374,12 @@ interface IOptionSettlementEngine {
      *   MSb
      *   0000 0000   0000 0000   0000 0000   0000 0000 ┐
      *   0000 0000   0000 0000   0000 0000   0000 0000 │
-     *   0000 0000   0000 0000   0000 0000   0000 0000 │ 160b option key, created from hash of Option struct
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │ 160b option key, created Option struct hash.
      *   0000 0000   0000 0000   0000 0000   0000 0000 │
      *   0000 0000   0000 0000   0000 0000   0000 0000 │
      *   0000 0000   0000 0000   0000 0000   0000 0000 ┘
      *   0000 0000   0000 0000   0000 0000   0000 0000 ┐
-     *   0000 0000   0000 0000   0000 0000   0000 0000 │ 96b auto-incrementing option lot claim number
+     *   0000 0000   0000 0000   0000 0000   0000 0000 │ 96b auto-incrementing claim key.
      *   0000 0000   0000 0000   0000 0000   0000 0000 ┘
      *                                             LSb
      * This function accounts for that, and whether or not tokenId has been initialized/decommissioned yet.
@@ -384,11 +396,13 @@ interface IOptionSettlementEngine {
     /**
      * @notice Gets information about the ERC20 token positions represented by a tokenId.
      * @param tokenId The token id for which to retrieve the Underlying position.
-     * @return underlyingPositions The Underlying struct for the supplied tokenId.
+     * @return underlyingPosition The Underlying struct for the supplied tokenId.
      */
-    function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPositions);
+    function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPosition);
 
+    //
     // Fee Information
+    //
 
     /**
      * @notice Gets the balance of protocol fees for a given token which have not been swept yet.
@@ -471,6 +485,7 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Redeems a claim NFT, transfers the underlying/exercise tokens to the caller.
+     * Can be called after option expiry timestamp (inclusive).
      * @param claimId The ID of the claim to redeem.
      */
     function redeem(uint256 claimId) external;
@@ -481,7 +496,8 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Exercises specified amount of optionId, transferring in the exercise asset,
-     * and transferring out the underlying asset if requirements are met.
+     * and transferring out the underlying asset if requirements are met. Can be called
+     * from exercise timestamp (inclusive), until option expiry timestamp (exclusive).
      * @param optionId The option token id of the option type to exercise.
      * @param amount The amount of option contracts to exercise.
      */

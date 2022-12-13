@@ -296,8 +296,8 @@ contract OptionSettlementTest is Test, NftReceiver {
         assertTrue(claimUnderlying.underlyingPosition != 0);
 
         engine.redeem(claimId);
-        claimUnderlying = engine.underlying(claimId);
-        assertEq(claimUnderlying.underlyingPosition, 0);
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, claimId));
+        engine.underlying(claimId);
 
         // Fees
         uint256 writeAmount = 7 * testUnderlyingAmount;
@@ -392,11 +392,11 @@ contract OptionSettlementTest is Test, NftReceiver {
         assertEq(testUnderlyingAsset, underlying.underlyingAsset);
 
         vm.warp(testOption.expiryTimestamp);
+        // The token is now expired/worthless, and this should revert.
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
+        );
         underlying = engine.underlying(testOptionId);
-        _assertPosition(underlying.underlyingPosition, 0);
-        _assertPosition(underlying.exercisePosition, 0);
-        assertEq(testExerciseAsset, underlying.exerciseAsset);
-        assertEq(testUnderlyingAsset, underlying.underlyingAsset);
     }
 
     function testAddOptionsToExistingClaim() public {
@@ -738,8 +738,6 @@ contract OptionSettlementTest is Test, NftReceiver {
 
         vm.prank(FEE_TO);
         engine.setFeeTo(address(0xCAFE));
-
-        assertEq(engine.feeTo(), address(0xCAFE));
     }
 
     function testRevertSetFeeToWhenNotCurrentFeeTo() public {
@@ -755,9 +753,22 @@ contract OptionSettlementTest is Test, NftReceiver {
     }
 
     function testSetTokenURIGenerator() public {
+        TokenURIGenerator newTokenURIGenerator = new TokenURIGenerator();
+
         vm.prank(FEE_TO);
-        engine.setTokenURIGenerator(address(0xCAFE));
-        assertEq(address(engine.tokenURIGenerator()), address(0xCAFE));
+        engine.setTokenURIGenerator(address(newTokenURIGenerator));
+
+        assertEq(address(engine.tokenURIGenerator()), address(newTokenURIGenerator));
+    }
+
+    function testEventSetTokenURIGenerator() public {
+        TokenURIGenerator newTokenURIGenerator = new TokenURIGenerator();
+
+        vm.expectEmit(true, true, true, true);
+        emit TokenURIGeneratorUpdated(address(newTokenURIGenerator));
+
+        vm.prank(FEE_TO);
+        engine.setTokenURIGenerator(address(newTokenURIGenerator));
     }
 
     function testRevertSetTokenURIGeneratorWhenNotCurrentFeeTo() public {
@@ -983,8 +994,6 @@ contract OptionSettlementTest is Test, NftReceiver {
             claimId,
             testOptionId,
             ALICE,
-            DAI_A,
-            WETH_A,
             0, // no one has exercised
             expectedUnderlyingAmount
             );
@@ -1035,7 +1044,9 @@ contract OptionSettlementTest is Test, NftReceiver {
         // Then assert expected fee amounts
         uint256[] memory expectedFees = new uint256[](3);
         expectedFees[0] = (((testUnderlyingAmount * optionsWrittenWethUnderlying) / 10_000) * engine.feeBps());
+
         expectedFees[1] = (((daiUnderlyingAmount * optionsWrittenDaiUnderlying) / 10_000) * engine.feeBps());
+
         expectedFees[2] = (((usdcUnderlyingAmount * optionsWrittenUsdcUnderlying) / 10_000) * engine.feeBps());
 
         // Pre feeTo balance check
@@ -1070,8 +1081,11 @@ contract OptionSettlementTest is Test, NftReceiver {
         engine.write(usdcOptionId, optionsWrittenUsdcUnderlying);
         vm.stopPrank();
         expectedFees[0] = (((testUnderlyingAmount * optionsWrittenWethUnderlying) / 10_000) * engine.feeBps());
+
         expectedFees[1] = (((daiUnderlyingAmount * optionsWrittenDaiUnderlying) / 10_000) * engine.feeBps());
+
         expectedFees[2] = (((usdcUnderlyingAmount * optionsWrittenUsdcUnderlying) / 10_000) * engine.feeBps());
+
         for (uint256 i = 0; i < tokens.length; i++) {
             vm.expectEmit(true, true, true, true);
             emit FeeSwept(tokens[i], engine.feeTo(), expectedFees[i]); // true amount
@@ -1176,7 +1190,9 @@ contract OptionSettlementTest is Test, NftReceiver {
         // has already happened, therefore actual fee swept amount = true fee amount.
         uint256[] memory expectedFees = new uint256[](3);
         expectedFees[0] = (((daiExerciseAmount * optionsWrittenDaiExercise) / 10_000) * engine.feeBps());
+
         expectedFees[1] = (((wethExerciseAmount * optionsWrittenWethExercise) / 10_000) * engine.feeBps());
+
         expectedFees[2] = (((usdcExerciseAmount * optionsWrittenUsdcExercise) / 10_000) * engine.feeBps());
 
         for (uint256 i = 0; i < tokens.length; i++) {
@@ -1369,6 +1385,7 @@ contract OptionSettlementTest is Test, NftReceiver {
 
         // Bob immediately exercises before exerciseTimestamp
         vm.startPrank(BOB);
+        vm.warp(testExerciseTimestamp - 1 seconds);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IOptionSettlementEngine.ExerciseTooEarly.selector, testOptionId, testExerciseTimestamp
@@ -1675,7 +1692,8 @@ contract OptionSettlementTest is Test, NftReceiver {
 
         engine.redeem(claimId);
 
-        IOptionSettlementEngine.Underlying memory claimUnderlying = engine.underlying(claimId);
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, claimId));
+        engine.underlying(claimId);
 
         assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + writeFee);
         assertEq(WETH.balanceOf(ALICE), wethBalance - writeFee);
@@ -1683,8 +1701,6 @@ contract OptionSettlementTest is Test, NftReceiver {
         assertEq(DAI.balanceOf(ALICE), daiBalance - exerciseFee);
         assertEq(engine.balanceOf(ALICE, testOptionId), amountWrite - amountExercise);
         assertEq(engine.balanceOf(ALICE, claimId), 0);
-        assertEq(claimUnderlying.underlyingPosition, 0);
-        assertEq(claimUnderlying.exercisePosition, 0);
 
         _assertTokenIsNone(claimId);
     }
@@ -2056,8 +2072,6 @@ contract OptionSettlementTest is Test, NftReceiver {
         uint256 indexed claimId,
         uint256 indexed optionId,
         address indexed redeemer,
-        address exerciseAsset,
-        address underlyingAsset,
         uint256 exerciseAmountRedeemed,
         uint256 underlyingAmountRedeemed
     );
@@ -2071,4 +2085,6 @@ contract OptionSettlementTest is Test, NftReceiver {
     event FeeSwitchUpdated(address feeTo, bool enabled);
 
     event FeeToUpdated(address indexed newFeeTo);
+
+    event TokenURIGeneratorUpdated(address indexed newTokenURIGenerator);
 }

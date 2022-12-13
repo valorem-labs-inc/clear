@@ -9,9 +9,9 @@ import "./interfaces/ITokenURIGenerator.sol";
 
 /// @title Library to dynamically generate Valorem token URIs
 /// @author Thal0x
-/// @author 0xAlcibiades
 /// @author Flip-Liquid
 /// @author neodaoist
+/// @author 0xAlcibiades
 contract TokenURIGenerator is ITokenURIGenerator {
     /// @inheritdoc ITokenURIGenerator
     function constructTokenURI(TokenURIParams memory params) public view returns (string memory) {

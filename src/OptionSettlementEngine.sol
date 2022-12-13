@@ -478,7 +478,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             revert InvalidOption(optionId);
         }
 
-        Option storage optionRecord = optionTypeStates[optionKey].option;
+        OptionTypeState storage optionTypeState = optionTypeStates[optionKey];
+        Option storage optionRecord = optionTypeState.option;
 
         // These will implicitly check that the option type is initialized.
 
@@ -503,7 +504,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         address underlyingAsset = optionRecord.underlyingAsset;
 
         // Assign exercise to writers.
-        _assignExercise(optionKey, optionRecord, amount);
+        _assignExercise(optionTypeState, optionRecord, amount);
 
         // Assess a fee (if fee switch enabled) and emit events.
         uint256 fee = 0;
@@ -629,6 +630,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return uint16(block.timestamp / 1 days);
     }
 
+    /**
+     * @notice Returns the exercised and unexercised amounts for a given claim index.
+     */
     function _getExercisedAmountsForClaimIndex(
         OptionTypeState storage optionTypeState,
         ClaimIndex[] storage claimIndexArray,
@@ -662,20 +666,24 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         emit FeeAccrued(optionId, assetAddress, msg.sender, fee);
     }
 
-    /// @dev Performs fair exercise assignment via the pseudorandom selection of a claim
-    /// bucket between the initial creation of the option type and "today". The buckets
-    /// are then iterated from oldest to newest (looping if we reach "today") if the
-    /// exercise amount overflows into another bucket. The seed for the pseudorandom
-    /// index is updated accordingly on the option type.
-    function _assignExercise(uint160 optionKey, Option storage optionRecord, uint112 amount) private {
-        // A bucket of the overall amounts written and exercised for all claims
-        // on a given day
-        Bucket[] storage claimBuckets = optionTypeStates[optionKey].bucketInfo.buckets;
-        uint16[] storage unexercisedBucketIndices = optionTypeStates[optionKey].bucketInfo.bucketsWithCollateral;
+    /**
+     * @notice Performs fair exercise assignment via the pseudorandom selection of a claim
+     * bucket between the initial creation of the option type and "today". The buckets
+     * are then iterated from oldest to newest (looping if we reach "today") if the
+     * exercise amount overflows into another bucket. The seed for the pseudorandom
+     * index is updated accordingly on the option type.
+     */
+    function _assignExercise(OptionTypeState storage optionTypeState, Option storage optionRecord, uint112 amount)
+        private
+    {
+        // Setup pointers to buckets and buckets with collateral available for exercise.
+        Bucket[] storage claimBuckets = optionTypeState.bucketInfo.buckets;
+        uint16[] storage unexercisedBucketIndices = optionTypeState.bucketInfo.bucketsWithCollateral;
         uint16 unexercisedBucketsMod = uint16(unexercisedBucketIndices.length);
         uint16 unexercisedBucketsIndex = uint16(optionRecord.settlementSeed % unexercisedBucketsMod);
+
         while (amount > 0) {
-            // get the claim bucket to assign
+            // Get the claim bucket to assign exercise to.
             uint16 bucketIndex = unexercisedBucketIndices[unexercisedBucketsIndex];
             Bucket storage claimBucketInfo = claimBuckets[bucketIndex];
 
@@ -690,7 +698,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 unexercisedBucketIndices.pop();
                 unexercisedBucketsMod -= 1;
 
-                optionTypeStates[optionKey].bucketInfo.bucketHasCollateral[bucketIndex] = false;
+                optionTypeState.bucketInfo.bucketHasCollateral[bucketIndex] = false;
             } else {
                 amountPresentlyExercised = amount;
                 amount = 0;

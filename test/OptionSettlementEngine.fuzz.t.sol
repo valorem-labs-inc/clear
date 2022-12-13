@@ -1,0 +1,333 @@
+// SPDX-License-Identifier: BUSL 1.1
+pragma solidity 0.8.16;
+
+import "./BaseEngineTest.sol";
+
+/// @notice Fuzz tests for OptionSettlementEngine
+contract OptionSettlementFuzzTest is BaseEngineTest {
+    struct FuzzMetadata {
+        uint256 claimsLength;
+        uint256 totalWritten;
+        uint256 totalExercised;
+    }
+
+    function testFuzzNewOptionType(
+        uint96 underlyingAmount,
+        uint96 exerciseAmount,
+        uint40 exerciseTimestamp,
+        uint40 expiryTimestamp
+    ) public {
+        vm.assume(expiryTimestamp >= block.timestamp + 86400);
+        vm.assume(exerciseTimestamp >= block.timestamp);
+        vm.assume(exerciseTimestamp <= expiryTimestamp - 86400);
+        vm.assume(expiryTimestamp <= type(uint64).max);
+        vm.assume(exerciseTimestamp <= type(uint64).max);
+        vm.assume(underlyingAmount <= WETH.totalSupply());
+        vm.assume(exerciseAmount <= DAI.totalSupply());
+
+        (uint256 optionId, IOptionSettlementEngine.Option memory optionInfo) = _createNewOptionType({
+            underlyingAsset: WETH_A,
+            underlyingAmount: underlyingAmount,
+            exerciseAsset: DAI_A,
+            exerciseAmount: exerciseAmount,
+            exerciseTimestamp: exerciseTimestamp,
+            expiryTimestamp: expiryTimestamp
+        });
+
+        IOptionSettlementEngine.Option memory optionRecord = engine.option(optionId);
+
+        // assert the option ID is equal to the upper 160 of the keccak256 hash
+        bytes20 _optionInfoHash = bytes20(keccak256(abi.encode(optionInfo)));
+        uint160 _optionId = uint160(_optionInfoHash);
+        uint256 expectedOptionId = uint256(_optionId) << 96;
+
+        assertEq(optionId, expectedOptionId);
+        assertEq(optionRecord.underlyingAsset, WETH_A);
+        assertEq(optionRecord.exerciseAsset, DAI_A);
+        assertEq(optionRecord.exerciseTimestamp, exerciseTimestamp);
+        assertEq(optionRecord.expiryTimestamp, expiryTimestamp);
+        assertEq(optionRecord.underlyingAmount, underlyingAmount);
+        assertEq(optionRecord.exerciseAmount, exerciseAmount);
+
+        _assertTokenIsOption(optionId);
+    }
+
+    function testFuzzWrite(uint112 amount) public {
+        uint256 wethBalanceEngine = WETH.balanceOf(address(engine));
+        uint256 wethBalance = WETH.balanceOf(ALICE);
+
+        vm.assume(amount > 0);
+        vm.assume(amount <= wethBalance / testUnderlyingAmount);
+
+        uint256 rxAmount = amount * testUnderlyingAmount;
+        uint256 fee = ((rxAmount / 10000) * engine.feeBps());
+
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, amount);
+        IOptionSettlementEngine.Underlying memory claimUnderlying = engine.underlying(claimId);
+
+        assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + rxAmount + fee);
+        assertEq(WETH.balanceOf(ALICE), wethBalance - rxAmount - fee);
+
+        assertEq(engine.balanceOf(ALICE, testOptionId), amount);
+        assertEq(engine.balanceOf(ALICE, claimId), 1);
+        assertEq(uint256(claimUnderlying.underlyingPosition), testUnderlyingAmount * amount);
+
+        (uint160 optionId, uint96 claimIdx) = decodeTokenId(claimId);
+        assertEq(uint256(optionId) << 96, testOptionId);
+        assertEq(claimIdx, 1);
+        _assertClaimAmountExercised(claimId, 0);
+
+        _assertTokenIsClaim(claimId);
+    }
+
+    function testFuzzExercise(uint112 amountWrite, uint112 amountExercise) public {
+        uint256 wethBalanceEngine = WETH.balanceOf(address(engine));
+        uint256 daiBalanceEngine = DAI.balanceOf(address(engine));
+        uint256 wethBalance = WETH.balanceOf(ALICE);
+        uint256 daiBalance = DAI.balanceOf(ALICE);
+
+        vm.assume(amountWrite > 0);
+        vm.assume(amountExercise > 0);
+        vm.assume(amountWrite >= amountExercise);
+        vm.assume(amountWrite <= wethBalance / testUnderlyingAmount);
+        vm.assume(amountExercise <= daiBalance / testExerciseAmount);
+
+        uint256 writeAmount = amountWrite * testUnderlyingAmount;
+        uint256 writeFee = ((amountWrite * testUnderlyingAmount) / 10000) * engine.feeBps();
+
+        uint256 rxAmount = amountExercise * testExerciseAmount;
+        uint256 txAmount = amountExercise * testUnderlyingAmount;
+        uint256 exerciseFee = (rxAmount / 10000) * engine.feeBps();
+
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, amountWrite);
+
+        vm.warp(testExpiryTimestamp - 1);
+
+        engine.exercise(testOptionId, amountExercise);
+
+        _assertClaimAmountExercised(claimId, amountExercise);
+
+        assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + writeAmount - txAmount + writeFee);
+        assertEq(WETH.balanceOf(ALICE), (wethBalance - writeAmount + txAmount - writeFee));
+        assertEq(DAI.balanceOf(address(engine)), daiBalanceEngine + rxAmount + exerciseFee);
+        assertEq(DAI.balanceOf(ALICE), (daiBalance - rxAmount - exerciseFee));
+        assertEq(engine.balanceOf(ALICE, testOptionId), amountWrite - amountExercise);
+        assertEq(engine.balanceOf(ALICE, claimId), 1);
+    }
+
+    function testFuzzRedeem(uint112 amountWrite, uint112 amountExercise) public {
+        uint256 wethBalanceEngine = WETH.balanceOf(address(engine));
+        uint256 daiBalanceEngine = DAI.balanceOf(address(engine));
+        uint256 wethBalance = WETH.balanceOf(ALICE);
+        uint256 daiBalance = DAI.balanceOf(ALICE);
+
+        vm.assume(amountWrite > 0);
+        vm.assume(amountExercise > 0);
+        vm.assume(amountWrite >= amountExercise);
+        vm.assume(amountWrite <= wethBalance / testUnderlyingAmount);
+        vm.assume(amountExercise <= daiBalance / testExerciseAmount);
+
+        uint256 rxAmount = amountExercise * testExerciseAmount;
+        uint256 exerciseFee = (rxAmount / 10000) * engine.feeBps();
+        uint256 writeFee = ((amountWrite * testUnderlyingAmount) / 10000) * engine.feeBps();
+
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, amountWrite);
+        _assertTokenIsClaim(claimId);
+
+        vm.warp(testExpiryTimestamp - 1);
+        engine.exercise(testOptionId, amountExercise);
+
+        vm.warp(1e15);
+
+        engine.redeem(claimId);
+
+        IOptionSettlementEngine.Underlying memory claimUnderlying = engine.underlying(claimId);
+
+        assertEq(WETH.balanceOf(address(engine)), wethBalanceEngine + writeFee);
+        assertEq(WETH.balanceOf(ALICE), wethBalance - writeFee);
+        assertEq(DAI.balanceOf(address(engine)), daiBalanceEngine + exerciseFee);
+        assertEq(DAI.balanceOf(ALICE), daiBalance - exerciseFee);
+        assertEq(engine.balanceOf(ALICE, testOptionId), amountWrite - amountExercise);
+        assertEq(engine.balanceOf(ALICE, claimId), 0);
+        assertEq(claimUnderlying.underlyingPosition, 0);
+        assertEq(claimUnderlying.exercisePosition, 0);
+
+        _assertTokenIsNone(claimId);
+    }
+
+    function testFuzzWriteExerciseRedeem(uint32 seed) public {
+        uint32 i = 0;
+        uint256[] memory claimIds1 = new uint256[](30);
+        FuzzMetadata memory opt1 = FuzzMetadata(0, 0, 0);
+        uint256[] memory claimIds2 = new uint256[](90);
+        FuzzMetadata memory opt2 = FuzzMetadata(0, 0, 0);
+
+        // create monthly option
+        (uint256 optionId1M, IOptionSettlementEngine.Option memory option1M) = _createNewOptionType({
+            underlyingAsset: WETH_A,
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAsset: DAI_A,
+            exerciseAmount: testExerciseAmount,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: uint40(block.timestamp + 30 days)
+        });
+
+        // create quarterly option
+        (uint256 optionId3M, IOptionSettlementEngine.Option memory option3M) = _createNewOptionType({
+            underlyingAsset: WETH_A,
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAsset: DAI_A,
+            exerciseAmount: testExerciseAmount,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: uint40(block.timestamp + 90 days)
+        });
+
+        for (i = 0; i < 90; i++) {
+            // loop until expiry
+            unchecked {
+                _writeExerciseOptions(seed, option1M, optionId1M, claimIds1, opt1);
+                seed += 10;
+                _writeExerciseOptions(seed++, option3M, optionId3M, claimIds2, opt2);
+                seed += 10;
+            }
+
+            // advance 1 d
+            vm.warp(block.timestamp + 1 days);
+        }
+
+        // claim
+        for (i = 0; i < opt1.claimsLength - 1; i++) {
+            uint256 claimId = claimIds1[i];
+            _claimAndAssert(ALICE, claimId);
+        }
+
+        for (i = 0; i < opt2.claimsLength - 1; i++) {
+            uint256 claimId = claimIds2[i];
+            _claimAndAssert(ALICE, claimId);
+        }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+    //  Helper Functions -- Working with Options, Claims, etc.
+    //////////////////////////////////////////////////////////////*/
+
+    function _writeExerciseOptions(
+        uint32 seed,
+        IOptionSettlementEngine.Option memory option1M,
+        uint256 optionId1M,
+        uint256[] memory claimIds1,
+        FuzzMetadata memory opt1
+    ) internal {
+        (uint256 written, uint256 exercised, bool newClaim) = _writeExercise(
+            ALICE,
+            BOB,
+            seed,
+            5000, // write chance bips
+            1,
+            5000, // exercise chance bips
+            option1M,
+            optionId1M,
+            claimIds1,
+            opt1.claimsLength
+        );
+        if (newClaim) {
+            opt1.claimsLength += 1;
+        }
+        opt1.totalWritten += written;
+        opt1.totalExercised += exercised;
+    }
+
+    function _claimAndAssert(address claimant, uint256 claimId) internal {
+        vm.startPrank(claimant);
+        IOptionSettlementEngine.Underlying memory underlying = engine.underlying(claimId);
+        uint256 exerciseAssetAmount = ERC20(underlying.exerciseAsset).balanceOf(claimant);
+        uint256 underlyingAssetAmount = ERC20(underlying.underlyingAsset).balanceOf(claimant);
+        engine.redeem(claimId);
+
+        assertEq(
+            ERC20(underlying.underlyingAsset).balanceOf(claimant),
+            underlyingAssetAmount + uint256(underlying.underlyingPosition)
+        );
+        assertEq(
+            ERC20(underlying.exerciseAsset).balanceOf(claimant),
+            exerciseAssetAmount + uint256(underlying.exercisePosition)
+        );
+        vm.stopPrank();
+    }
+
+    function _writeExercise(
+        address writer,
+        address exerciser,
+        uint32 seed,
+        uint16 writeChanceBips,
+        uint16 maxWrite,
+        uint16 exerciseChanceBips,
+        IOptionSettlementEngine.Option memory option,
+        uint256 optionId,
+        uint256[] memory claimIds,
+        uint256 claimIdLength
+    ) internal returns (uint256 written, uint256 exercised, bool newClaim) {
+        if (option.expiryTimestamp <= uint40(block.timestamp)) {
+            return (0, 0, false);
+        }
+
+        // with X pctg chance, write some amount of options
+        unchecked {
+            // allow seed to overflow
+            if (_coinflip(seed++, writeChanceBips)) {
+                uint16 toWrite = uint16(1 + _randBetween(seed++, maxWrite));
+                emit log_named_uint("WRITING", optionId);
+                emit log_named_uint("amount", toWrite);
+                vm.startPrank(writer);
+                // 50/50 to add to existing claim lot or create new claim lot
+                if (claimIdLength == 0 || _coinflip(seed++, 5000)) {
+                    newClaim = true;
+                    uint256 claimId = engine.write(optionId, toWrite);
+                    emit log_named_uint("ADD NEW CLAIM", claimId);
+                    claimIds[claimIdLength] = claimId;
+                } else {
+                    uint256 claimId = claimIds[_randBetween(seed++, claimIdLength)];
+                    emit log_named_uint("ADD EXISTING CLAIM", claimId);
+                    engine.write(claimId, toWrite);
+                }
+
+                // add to total written
+                written += toWrite;
+
+                // transfer to exerciser
+                engine.safeTransferFrom(writer, exerciser, optionId, written, "");
+                vm.stopPrank();
+            } else {
+                emit log_named_uint("SKIP WRITING", optionId);
+            }
+        }
+
+        if (option.exerciseTimestamp >= uint40(block.timestamp)) {
+            emit log_named_uint("exercise timestamp not hit", option.exerciseTimestamp);
+            return (written, 0, newClaim);
+        }
+
+        uint256 maxToExercise = engine.balanceOf(exerciser, optionId);
+        // with Y pctg chance, exercise some amount of options
+        unchecked {
+            // allow seed to overflow
+            if (maxToExercise != 0 && _coinflip(seed++, exerciseChanceBips)) {
+                // check that we're not exercising more than have been written
+                emit log_named_uint("EXERCISING", optionId);
+                uint16 toExercise = uint16(1 + _randBetween(seed++, maxToExercise));
+                emit log_named_uint("amount", toExercise);
+
+                vm.prank(exerciser);
+                engine.exercise(optionId, toExercise);
+
+                // add to total exercised
+                exercised += toExercise;
+            } else {
+                emit log_named_uint("SKIP EXERCISING", optionId);
+            }
+        }
+    }
+}

@@ -161,7 +161,7 @@ contract OptionSettlementTest is Test, NftReceiver {
         assertEq(claimLot.optionId, testOptionId);
         assertTrue(claimLot.unredeemed);
 
-        vm.warp(testExerciseTimestamp + 1);
+        _warpToNextBucketWindow();
 
         // Alice would probably never exercise her own option irl
         engine.exercise(testOptionId, 1);
@@ -2045,6 +2045,10 @@ contract OptionSettlementTest is Test, NftReceiver {
         uint160 optionKey = uint160(bytes20(keccak256(abi.encode(optionInfo))));
 
         return uint256(optionKey) << 96;
+    }
+
+    function _warpToNextBucketWindow() internal {
+        vm.warp(block.timestamp + 12 hours);
     }
 
     function assertEq(IOptionSettlementEngine.Option memory actual, IOptionSettlementEngine.Option memory expected)

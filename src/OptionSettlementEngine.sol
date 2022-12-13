@@ -354,7 +354,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             tokenId = _encodeTokenId(optionKey, nextClaimKey);
 
             // Add claim bucket indices
-            _addOrUpdateClaimIndex(optionKey, nextClaimKey, bucketIndex, amount);
+            _addOrUpdateClaimIndex(optionTypeStates[optionKey], nextClaimKey, bucketIndex, amount);
 
             // Emit event about options written on a new claim.
             emit OptionsWritten(encodedOptionId, msg.sender, tokenId, amount);
@@ -379,7 +379,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             }
 
             // Add claim bucket indices
-            _addOrUpdateClaimIndex(optionKey, claimKey, bucketIndex, amount);
+            _addOrUpdateClaimIndex(optionTypeStates[optionKey], claimKey, bucketIndex, amount);
 
             // Emit event about options written on existing claim.
             emit OptionsWritten(encodedOptionId, msg.sender, tokenId, amount);
@@ -773,27 +773,33 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         optionTypeStates[optionKey].bucketInfo.bucketHasCollateral[bucketIndex] = true;
     }
 
-    /// @dev Help with internal claim bucket accounting
-    function _addOrUpdateClaimIndex(uint160 optionKey, uint96 claimKey, uint16 bucketIndex, uint112 amount) internal {
-        ClaimIndex storage lastIndex;
-        ClaimIndex[] storage claimIndices = optionTypeStates[optionKey].claimIndices[claimKey];
+    /**
+     * @notice Updates claimIndices for a given claim key.
+     */
+    function _addOrUpdateClaimIndex(
+        OptionTypeState storage optionTypeState,
+        uint96 claimKey,
+        uint16 bucketIndex,
+        uint112 amount
+    ) internal {
+        ClaimIndex[] storage claimIndices = optionTypeState.claimIndices[claimKey];
         uint256 arrayLength = claimIndices.length;
 
-        // if no indices have been created previously, create one
+        // If the array is empty, create a new index and return.
         if (arrayLength == 0) {
             claimIndices.push(ClaimIndex({amountWritten: amount, bucketIndex: bucketIndex}));
             return;
         }
 
-        lastIndex = claimIndices[arrayLength - 1];
+        ClaimIndex storage lastIndex = claimIndices[arrayLength - 1];
 
-        // create a new claim index if we're writing to a new index
+        // If we are writing to an index that doesn't yet exist, create it and return.
         if (lastIndex.bucketIndex < bucketIndex) {
             claimIndices.push(ClaimIndex({amountWritten: amount, bucketIndex: bucketIndex}));
             return;
         }
 
-        // update the amount written on the existing bucket index
+        // Else, we are writing to an index that already exists. Update the amount written.
         lastIndex.amountWritten += amount;
     }
 }

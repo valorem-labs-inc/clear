@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import "./utils/BaseEngineTest.sol";
 
 /// @notice Unit tests for OptionSettlementEngine
-contract OptionSettlementTest is BaseEngineTest {
+contract OptionSettlementEngineUnitTest is BaseEngineTest {
     // function setUp() public override {
     //     super.setUp();
 

@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import "./utils/BaseEngineTest.sol";
 
 /// @notice Fuzz tests for OptionSettlementEngine
-contract OptionSettlementFuzzTest is BaseEngineTest {
+contract OptionSettlementEngineFuzzTest is BaseEngineTest {
     struct FuzzMetadata {
         uint256 claimsLength;
         uint256 totalWritten;

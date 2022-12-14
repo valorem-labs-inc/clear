@@ -288,9 +288,9 @@ interface IOptionSettlementEngine {
      * and what portion of this claim was assigned exercise, if any, before expiry.
      */
     struct Claim {
-        /// @custom:member amountWritten The number of option contracts written against this claim.
+        /// @custom:member amountWritten The number of option contracts written against this claim expressed as a 1e18 scalar value.
         uint256 amountWritten;
-        /// @custom:member amountExercised The amount of option contracts exercised against this claim.
+        /// @custom:member amountExercised The amount of option contracts exercised against this claim expressed as a 1e18 scalar value.
         uint256 amountExercised;
         /// @custom:member optionId The option ID of the option type this claim is for.
         uint256 optionId;

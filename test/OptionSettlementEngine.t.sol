@@ -540,7 +540,7 @@ contract OptionSettlementTest is Test, NftReceiver {
         vm.startPrank(BOB);
 
         // assign a single option on day 2
-        engine.exercise(optionId, 7);
+        engine.exercise(optionId, 3);
         _assertClaimAmountExercised(claimIds[0], 1);
         _assertClaimAmountExercised(claimIds[1], 0);
         _assertClaimAmountExercised(claimIds[2], 0);
@@ -1883,7 +1883,6 @@ contract OptionSettlementTest is Test, NftReceiver {
 
     function _assertClaimAmountExercised(uint256 claimId, uint112 amount) internal {
         IOptionSettlementEngine.Underlying memory underlying = engine.underlying(claimId);
-        IOptionSettlementEngine.Option memory option = engine.option(claimId);
         uint112 amountExercised = uint112(uint256(underlying.exercisePosition));
         assertEq(amount, amountExercised);
     }

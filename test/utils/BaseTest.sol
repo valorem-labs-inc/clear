@@ -9,7 +9,7 @@ import "./MockERC20.sol";
 import "../../src/OptionSettlementEngine.sol";
 
 /// @notice Base for OptionSettlementEngine test suite
-abstract contract BaseEngineTest is Test {
+abstract contract BaseTest is Test {
     using stdStorage for StdStorage;
 
     OptionSettlementEngine internal engine;
@@ -85,7 +85,7 @@ abstract contract BaseEngineTest is Test {
         for (uint256 i = 0; i < recipients.length; i++) {
             address recipient = recipients[i];
 
-            // Now we have 1B in stables and 10M WETH
+            // Mint 10M WETH and 1B in stables and other ERC20s
             _mint(recipient, MockERC20(address(WETHLIKE)), STARTING_BALANCE_WETH * 1e18);
             _mint(recipient, MockERC20(address(DAILIKE)), STARTING_BALANCE_OTHER * 1e18);
             _mint(recipient, MockERC20(address(USDCLIKE)), STARTING_BALANCE_OTHER * 1e6);
@@ -117,8 +117,8 @@ abstract contract BaseEngineTest is Test {
         }
 
         // Setup test option
-        testUnderlyingAsset = address(WETHLIKE);       
-        testExerciseAsset = address(DAILIKE); 
+        testUnderlyingAsset = address(WETHLIKE);
+        testExerciseAsset = address(DAILIKE);
         testExerciseTimestamp = uint40(block.timestamp);
         testExpiryTimestamp = uint40(block.timestamp + testDuration);
         (testOptionId, testOption) = _createNewOptionType({

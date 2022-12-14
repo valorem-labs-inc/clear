@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL 1.1
 pragma solidity 0.8.16;
 
-import "./utils/BaseEngineTest.sol";
+import "./utils/BaseTest.sol";
 
 /// @notice Fuzz tests for OptionSettlementEngine
-contract OptionSettlementEngineFuzzTest is BaseEngineTest {
+contract OptionSettlementEngineFuzzTest is BaseTest {
     struct FuzzMetadata {
         uint256 claimsLength;
         uint256 totalWritten;

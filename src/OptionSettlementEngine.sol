@@ -115,7 +115,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         optionInfo = optionTypeStates[optionKey].option;
     }
 
-    // TODO(Verify/add fuzz assertions)
     /// @inheritdoc IOptionSettlementEngine
     function claim(uint256 claimId) public view returns (Claim memory claimInfo) {
         (uint160 optionKey, uint96 claimKey) = _decodeTokenId(claimId);
@@ -135,7 +134,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         for (uint256 i = 0; i < len; i++) {
             ClaimIndex storage claimIndex = claimIndexArray[i];
             Bucket storage bucket = optionTypeState.bucketInfo.buckets[claimIndex.bucketIndex];
-            amountWritten += FixedPointMathLib.divWadDown(claimIndex.amountWritten, bucket.amountWritten);
+            amountWritten += claimIndex.amountWritten;
             amountExercised += FixedPointMathLib.divWadDown(
                 (bucket.amountExercised * claimIndex.amountWritten), bucket.amountWritten ** 2
             );

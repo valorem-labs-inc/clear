@@ -450,13 +450,13 @@ contract OptionSettlementTest is Test, NftReceiver {
         vm.warp(block.timestamp + (1 days + 1));
         uint256 claimId2 = engine.write(optionId, 100);
 
-        assertEq(169, engine.balanceOf(ALICE, optionId));
+        assertEq(engine.balanceOf(ALICE, optionId), 169);
 
         // Alice 'sells' half the written options to Bob, half to Carol
         uint112 bobOptionAmount = 85;
         engine.safeTransferFrom(ALICE, BOB, optionId, bobOptionAmount, "");
         engine.safeTransferFrom(ALICE, CAROL, optionId, 84, "");
-        assertEq(0, engine.balanceOf(ALICE, optionId));
+        assertEq(engine.balanceOf(ALICE, optionId), 0);
 
         vm.stopPrank();
 
@@ -497,10 +497,9 @@ contract OptionSettlementTest is Test, NftReceiver {
         // Alice's first claim should be completely exercised
         engine.redeem(claimId1);
         assertEq(ERC20(option.exerciseAsset).balanceOf(ALICE), aliceBalanceExerciseAsset + 69 * option.exerciseAmount);
-        assertEq(aliceBalanceUnderlyingAsset, ERC20(option.underlyingAsset).balanceOf(ALICE));
+        assertEq(ERC20(option.underlyingAsset).balanceOf(ALICE), aliceBalanceUnderlyingAsset);
 
         aliceBalanceExerciseAsset = ERC20(option.exerciseAsset).balanceOf(ALICE);
-        aliceBalanceUnderlyingAsset = ERC20(option.underlyingAsset).balanceOf(ALICE);
 
         // BOB exercised 70 options
         // ALICE should retrieve 70 * exerciseAmount of the exercise asset
@@ -1882,9 +1881,8 @@ contract OptionSettlementTest is Test, NftReceiver {
     }
 
     function _assertClaimAmountExercised(uint256 claimId, uint112 amount) internal {
-        IOptionSettlementEngine.Underlying memory underlying = engine.underlying(claimId);
-        uint112 amountExercised = uint112(uint256(underlying.exercisePosition));
-        assertEq(amount, amountExercised);
+        IOptionSettlementEngine.Claim memory claim = engine.claim(claimId);
+        assertEq(claim.amountExercised, amount);
     }
 
     function _writeAndExerciseNewOption(

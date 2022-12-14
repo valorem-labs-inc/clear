@@ -232,6 +232,13 @@ interface IOptionSettlementEngine {
         Claim
     }
 
+    /// @dev Store the exercise state of a given collateral bucket
+    enum BucketExerciseState {
+        Exercised,
+        PartiallyExercised,
+        Unexercised
+    }
+
     /// @notice Data comprising the unique tuple of an option type associated with an ERC-1155 option token.
     struct Option {
         /// @custom:member underlyingAsset The underlying ERC20 asset which the option is collateralized with.
@@ -257,9 +264,9 @@ interface IOptionSettlementEngine {
         /// @custom:member An array of buckets for a given option type.
         Bucket[] buckets;
         /// @custom:member An array of bucket indices with collateral available for exercise.
-        uint16[] bucketsWithCollateral;
+        uint96[] bucketsWithCollateral;
         /// @custom:member A mapping of bucket indices to a boolean indicating if the bucket has any collateral available for exercise.
-        mapping(uint16 => bool) bucketHasCollateral;
+        mapping(uint96 => BucketExerciseState) bucketExerciseStates;
     }
 
     /// @notice A storage container for the engine state of a given option type.
@@ -300,7 +307,7 @@ interface IOptionSettlementEngine {
         /// @custom:member amountWritten The amount of option contracts written into claim for given period/bucket.
         uint112 amountWritten;
         /// @custom:member bucketIndex The index of the Bucket into which the options collateral was deposited.
-        uint16 bucketIndex;
+        uint96 bucketIndex;
     }
 
     /**
@@ -313,8 +320,6 @@ interface IOptionSettlementEngine {
         uint112 amountWritten;
         /// @custom:member amountExercised The number of option contracts exercised from this bucket.
         uint112 amountExercised;
-        /// @custom:member daysAfterEpoch Which period this bucket falls on, in offset from epoch.
-        uint16 daysAfterEpoch;
     }
 
     /**

@@ -333,7 +333,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
 
         // Update internal bucket accounting.
-        uint16 bucketIndex = _addOrUpdateClaimBucket(optionTypeState, amount);
+        uint96 bucketIndex = _addOrUpdateClaimBucket(optionTypeState, amount);
 
         // Calculate the amount to transfer in.
         uint256 rxAmount = optionTypeState.option.underlyingAmount * amount;
@@ -625,11 +625,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         return optionTypeStates[optionKey].claimIndices[claimKey].length > 0;
     }
 
-    /// @return settlementPeriods The number of settlement bucket periods after the epoch.
-    function _getDaysBucket() private view returns (uint16 settlementPeriods) {
-        return uint16(block.timestamp / 1 days);
-    }
-
     /**
      * @notice Returns the exercised and unexercised amounts for a given claim index.
      */
@@ -678,13 +673,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     {
         // Setup pointers to buckets and buckets with collateral available for exercise.
         Bucket[] storage claimBuckets = optionTypeState.bucketInfo.buckets;
-        uint16[] storage unexercisedBucketIndices = optionTypeState.bucketInfo.bucketsWithCollateral;
-        uint16 unexercisedBucketsMod = uint16(unexercisedBucketIndices.length);
-        uint16 unexercisedBucketsIndex = uint16(optionRecord.settlementSeed % unexercisedBucketsMod);
+        uint96[] storage unexercisedBucketIndices = optionTypeState.bucketInfo.bucketsWithCollateral;
+        uint96 unexercisedBucketsMod = uint96(unexercisedBucketIndices.length);
+        uint96 unexercisedBucketsIndex = uint96(optionRecord.settlementSeed % unexercisedBucketsMod);
 
         while (amount > 0) {
             // Get the claim bucket to assign exercise to.
-            uint16 bucketIndex = unexercisedBucketIndices[unexercisedBucketsIndex];
+            uint96 bucketIndex = unexercisedBucketIndices[unexercisedBucketsIndex];
             Bucket storage claimBucketInfo = claimBuckets[bucketIndex];
 
             uint112 amountAvailable = claimBucketInfo.amountWritten - claimBucketInfo.amountExercised;
@@ -693,15 +688,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 amount -= amountAvailable;
                 amountPresentlyExercised = amountAvailable;
                 // Perform "swap and pop" index management.
-                uint16 overwrite = unexercisedBucketIndices[unexercisedBucketIndices.length - 1];
+                uint96 overwrite = unexercisedBucketIndices[unexercisedBucketIndices.length - 1];
                 unexercisedBucketIndices[unexercisedBucketsIndex] = overwrite;
                 unexercisedBucketIndices.pop();
                 unexercisedBucketsMod -= 1;
 
-                optionTypeState.bucketInfo.bucketHasCollateral[bucketIndex] = false;
+                optionTypeState.bucketInfo.bucketExerciseStates[bucketIndex] = BucketExerciseState.Exercised;
             } else {
                 amountPresentlyExercised = amount;
                 amount = 0;
+                optionTypeState.bucketInfo.bucketExerciseStates[bucketIndex] = BucketExerciseState.PartiallyExercised;
             }
             claimBucketInfo.amountExercised += amountPresentlyExercised;
 
@@ -752,52 +748,44 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      */
     function _addOrUpdateClaimBucket(OptionTypeState storage optionTypeState, uint112 amount)
         private
-        returns (uint16)
+        returns (uint96 bucketIndex)
     {
         BucketInfo storage bucketInfo = optionTypeState.bucketInfo;
         Bucket[] storage claimBuckets = bucketInfo.buckets;
-        uint16 daysAfterEpoch = _getDaysBucket();
-        uint16 bucketIndex = uint16(claimBuckets.length);
+        uint96 writtenBucketIndex = uint96(claimBuckets.length);
 
         if (claimBuckets.length == 0) {
             // Then add a new claim bucket to this option type, because none exist.
-            claimBuckets.push(Bucket(amount, 0, daysAfterEpoch));
-            _updateUnexercisedBucketIndices(bucketInfo, bucketIndex);
+            claimBuckets.push(Bucket(amount, 0));
+            _updateUnexercisedBucketIndices(bucketInfo, writtenBucketIndex);
 
-            return bucketIndex;
+            return writtenBucketIndex;
         }
 
         // Else, get the currentBucket.
-        Bucket storage currentBucket = claimBuckets[bucketIndex - 1];
+        uint96 currentBucketIndex = writtenBucketIndex - 1;
+        Bucket storage currentBucket = claimBuckets[currentBucketIndex];
 
-        if (currentBucket.daysAfterEpoch < daysAfterEpoch) {
-            // Then we are out of the time range for currentBucket, so we need to
-            // create a new bucket
-            claimBuckets.push(Bucket(amount, 0, daysAfterEpoch));
-            _updateUnexercisedBucketIndices(bucketInfo, bucketIndex);
+        if (bucketInfo.bucketExerciseStates[currentBucketIndex] != BucketExerciseState.Unexercised) {
+            // Create a new claim, because the last was exercised.
+            claimBuckets.push(Bucket(amount, 0));
+            _updateUnexercisedBucketIndices(bucketInfo, writtenBucketIndex);
         } else {
-            // Then we are still in the time range for currentBucket, and thus
-            // need to update it's state.
+            // Write to the existing unexercised bucket
             currentBucket.amountWritten += amount;
-            bucketIndex -= 1;
-
-            // This block is executed if a bucket has been previously fully exercised
-            // and now more options are being written into it.
-            if (!bucketInfo.bucketHasCollateral[bucketIndex]) {
-                _updateUnexercisedBucketIndices(bucketInfo, bucketIndex);
-            }
+            writtenBucketIndex = currentBucketIndex;
         }
 
-        return bucketIndex;
+        return writtenBucketIndex;
     }
 
     /**
      * @notice Adds the bucket index to the list of buckets with collateral
      * and sets the mapping for that bucket having collateral to true.
      */
-    function _updateUnexercisedBucketIndices(BucketInfo storage bucketInfo, uint16 bucketIndex) internal {
+    function _updateUnexercisedBucketIndices(BucketInfo storage bucketInfo, uint96 bucketIndex) internal {
         bucketInfo.bucketsWithCollateral.push(bucketIndex);
-        bucketInfo.bucketHasCollateral[bucketIndex] = true;
+        bucketInfo.bucketExerciseStates[bucketIndex] = BucketExerciseState.Unexercised;
     }
 
     /**
@@ -806,7 +794,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     function _addOrUpdateClaimIndex(
         OptionTypeState storage optionTypeState,
         uint96 claimKey,
-        uint16 bucketIndex,
+        uint96 bucketIndex,
         uint112 amount
     ) private {
         ClaimIndex[] storage claimIndices = optionTypeState.claimIndices[claimKey];

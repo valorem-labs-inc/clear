@@ -682,8 +682,9 @@ contract OptionSettlementTest is BaseEngineTest {
 
     function testEncodeTokenId() public {
         // Create new option type
-        uint256 oTokenId =
-            engine.newOptionType(address(DAILIKE), 1, address(USDCLIKE), 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
+        uint256 oTokenId = engine.newOptionType(
+            address(DAILIKE), 1, address(USDCLIKE), 100, uint40(block.timestamp), uint40(block.timestamp + 30 days)
+        );
 
         // Write 2 separate options lots
         vm.prank(ALICE);
@@ -713,8 +714,9 @@ contract OptionSettlementTest is BaseEngineTest {
 
     function testDecodeTokenId() public {
         // Create new option type
-        uint256 oTokenId =
-            engine.newOptionType(address(DAILIKE), 1, address(USDCLIKE), 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
+        uint256 oTokenId = engine.newOptionType(
+            address(DAILIKE), 1, address(USDCLIKE), 100, uint40(block.timestamp), uint40(block.timestamp + 30 days)
+        );
 
         // Write 2 separate options lots
         vm.prank(ALICE);
@@ -758,8 +760,9 @@ contract OptionSettlementTest is BaseEngineTest {
             settlementSeed: 0,
             nextClaimKey: 0
         });
-        uint256 optionId =
-            engine.newOptionType(address(DAILIKE), 1, address(USDCLIKE), 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
+        uint256 optionId = engine.newOptionType(
+            address(DAILIKE), 1, address(USDCLIKE), 100, uint40(block.timestamp), uint40(block.timestamp + 30 days)
+        );
 
         // Update struct values to match stored option data structure
         uint160 optionKey = uint160(bytes20(keccak256(abi.encode(option))));
@@ -771,8 +774,9 @@ contract OptionSettlementTest is BaseEngineTest {
     }
 
     function testGetClaimForTokenId() public {
-        uint256 optionId =
-            engine.newOptionType(address(DAILIKE), 1, address(USDCLIKE), 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
+        uint256 optionId = engine.newOptionType(
+            address(DAILIKE), 1, address(USDCLIKE), 100, uint40(block.timestamp), uint40(block.timestamp + 30 days)
+        );
 
         vm.prank(ALICE);
         uint256 claimId = engine.write(optionId, 7);
@@ -783,8 +787,9 @@ contract OptionSettlementTest is BaseEngineTest {
     }
 
     function testIsOptionInitialized() public {
-        uint256 oTokenId =
-            engine.newOptionType(address(DAILIKE), 1, address(USDCLIKE), 100, uint40(block.timestamp), uint40(block.timestamp + 30 days));
+        uint256 oTokenId = engine.newOptionType(
+            address(DAILIKE), 1, address(USDCLIKE), 100, uint40(block.timestamp), uint40(block.timestamp + 30 days)
+        );
 
         _assertTokenIsOption(oTokenId);
         _assertTokenIsNone(1337);
@@ -820,7 +825,12 @@ contract OptionSettlementTest is BaseEngineTest {
             );
 
         engine.newOptionType(
-            address(DAILIKE), testUnderlyingAmount, address(WETHLIKE), testExerciseAmount, testExerciseTimestamp, testExpiryTimestamp
+            address(DAILIKE),
+            testUnderlyingAmount,
+            address(WETHLIKE),
+            testExerciseAmount,
+            testExerciseTimestamp,
+            testExpiryTimestamp
         );
     }
 
@@ -1155,7 +1165,9 @@ contract OptionSettlementTest is BaseEngineTest {
     }
 
     function testRevertNewOptionTypeWhenInvalidAssets() public {
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(DAILIKE), address(DAILIKE)));
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(DAILIKE), address(DAILIKE))
+        );
         _createNewOptionType({
             underlyingAsset: address(DAILIKE),
             underlyingAmount: testUnderlyingAmount,
@@ -1169,7 +1181,9 @@ contract OptionSettlementTest is BaseEngineTest {
     function testRevertNewOptionTypeWhenTotalSuppliesAreTooLowToExercise() public {
         uint96 underlyingAmountExceedsTotalSupply = uint96(IERC20(address(DAILIKE)).totalSupply() + 1);
 
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(DAILIKE), address(WETHLIKE)));
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(DAILIKE), address(WETHLIKE))
+        );
 
         _createNewOptionType({
             underlyingAsset: address(DAILIKE),
@@ -1182,7 +1196,9 @@ contract OptionSettlementTest is BaseEngineTest {
 
         uint96 exerciseAmountExceedsTotalSupply = uint96(IERC20(address(USDCLIKE)).totalSupply() + 1);
 
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(USDCLIKE), address(WETHLIKE)));
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(USDCLIKE), address(WETHLIKE))
+        );
 
         _createNewOptionType({
             underlyingAsset: address(USDCLIKE),

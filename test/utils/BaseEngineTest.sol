@@ -117,8 +117,8 @@ abstract contract BaseEngineTest is Test {
         }
 
         // Setup test option
-        testUnderlyingAsset = address(WETHLIKE);       
-        testExerciseAsset = address(DAILIKE); 
+        testUnderlyingAsset = address(WETHLIKE);
+        testExerciseAsset = address(DAILIKE);
         testExerciseTimestamp = uint40(block.timestamp);
         testExpiryTimestamp = uint40(block.timestamp + testDuration);
         (testOptionId, testOption) = _createNewOptionType({

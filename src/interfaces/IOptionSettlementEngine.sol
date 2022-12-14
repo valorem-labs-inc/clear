@@ -300,11 +300,11 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Claims can be used to write multiple times. This struct is used to keep track
-     * of how many options are written against a claim in each period, in order to
+     * of how many options are written against a claim in each bucket, in order to
      * correctly perform fair exercise assignment.
      */
     struct ClaimIndex {
-        /// @custom:member amountWritten The amount of option contracts written into claim for given period/bucket.
+        /// @custom:member amountWritten The amount of option contracts written into claim for given bucket.
         uint112 amountWritten;
         /// @custom:member bucketIndex The index of the Bucket into which the options collateral was deposited.
         uint96 bucketIndex;
@@ -312,7 +312,7 @@ interface IOptionSettlementEngine {
 
     /**
      * @notice Represents the total amount of options written and exercised for a group of
-     * claims bucketed by period. Used in fair assignment to calculate the ratio of
+     * claims bucketed. Used in fair assignment to calculate the ratio of
      * underlying to exercise assets to be transferred to claimants.
      */
     struct Bucket {

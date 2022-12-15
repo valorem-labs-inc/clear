@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL 1.1
 pragma solidity 0.8.16;
 
+import "solmate/utils/FixedPointMathLib.sol";
 import "forge-std/Test.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
@@ -486,9 +487,6 @@ contract OptionSettlementTest is Test, NftReceiver {
         emit log_named_int("claimId1 exercise", engine.underlying(claimId1).exercisePosition);
         emit log_named_int("claimId1 underlying", engine.underlying(claimId1).underlyingPosition);
 
-        _assertClaimAmountExercised(claimId1, 69);
-        _assertClaimAmountExercised(claimId2, 1);
-
         // Jump ahead to option expiry
         vm.warp(1 + option.expiryTimestamp);
         vm.startPrank(ALICE);
@@ -496,8 +494,18 @@ contract OptionSettlementTest is Test, NftReceiver {
         uint256 aliceBalanceUnderlyingAsset = ERC20(option.underlyingAsset).balanceOf(ALICE);
         // Alice's first claim should be completely exercised
         engine.redeem(claimId1);
-        assertEq(ERC20(option.exerciseAsset).balanceOf(ALICE), aliceBalanceExerciseAsset + 69 * option.exerciseAmount);
-        assertEq(ERC20(option.underlyingAsset).balanceOf(ALICE), aliceBalanceUnderlyingAsset);
+        // Paid claim amount (69) times amount exercised (70) divided by total amount written in
+        // bucket (169)
+        assertEq(
+            ERC20(option.exerciseAsset).balanceOf(ALICE) * 1e18, 
+            FixedPointMathLib.divWadDown(69 * 70, 169) * option.exerciseAmount
+        );
+        // Paid claim amount (69) times amount unexercised (99) divided by total amount written in
+        // bucket (169)
+        assertEq(
+            ERC20(option.underlyingAsset).balanceOf(ALICE) * 1e18, 
+            FixedPointMathLib.divWadDown(69 * 99, 169) * option.exerciseAmount
+        );
 
         aliceBalanceExerciseAsset = ERC20(option.exerciseAsset).balanceOf(ALICE);
 
@@ -537,36 +545,6 @@ contract OptionSettlementTest is Test, NftReceiver {
         vm.stopPrank();
 
         vm.startPrank(BOB);
-
-        // assign a single option on day 2
-        engine.exercise(optionId, 3);
-        _assertClaimAmountExercised(claimIds[0], 1);
-        _assertClaimAmountExercised(claimIds[1], 0);
-        _assertClaimAmountExercised(claimIds[2], 0);
-        _assertClaimAmountExercised(claimIds[3], 0);
-        _assertClaimAmountExercised(claimIds[4], 0);
-        _assertClaimAmountExercised(claimIds[5], 0);
-        _assertClaimAmountExercised(claimIds[6], 0);
-
-        // assigns a single option on day 4
-        //engine.exercise(optionId, 1);
-        //_assertClaimAmountExercised(claimIds[0], 0);
-        //_assertClaimAmountExercised(claimIds[1], 0);
-        //_assertClaimAmountExercised(claimIds[2], 0);
-        //_assertClaimAmountExercised(claimIds[3], 1);
-        //_assertClaimAmountExercised(claimIds[4], 1);
-        //_assertClaimAmountExercised(claimIds[5], 0);
-        //_assertClaimAmountExercised(claimIds[6], 0);
-
-        // assigns a single option on day 1
-        //engine.exercise(optionId, 1);
-        //_assertClaimAmountExercised(claimIds[0], 0);
-        //_assertClaimAmountExercised(claimIds[1], 1);
-        //_assertClaimAmountExercised(claimIds[2], 0);
-        //_assertClaimAmountExercised(claimIds[3], 1);
-        //_assertClaimAmountExercised(claimIds[4], 1);
-        //_assertClaimAmountExercised(claimIds[5], 0);
-        //_assertClaimAmountExercised(claimIds[6], 0);
     }
 
     function testWriteRecordFees() public {

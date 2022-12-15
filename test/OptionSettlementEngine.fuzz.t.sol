@@ -146,16 +146,12 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
 
         engine.redeem(claimId);
 
-        IOptionSettlementEngine.Underlying memory claimUnderlying = engine.underlying(claimId);
-
         assertEq(WETHLIKE.balanceOf(address(engine)), wethBalanceEngine + writeFee);
         assertEq(WETHLIKE.balanceOf(ALICE), wethBalance - writeFee);
         assertEq(DAILIKE.balanceOf(address(engine)), daiBalanceEngine + exerciseFee);
         assertEq(DAILIKE.balanceOf(ALICE), daiBalance - exerciseFee);
         assertEq(engine.balanceOf(ALICE, testOptionId), amountWrite - amountExercise);
         assertEq(engine.balanceOf(ALICE, claimId), 0);
-        assertEq(claimUnderlying.underlyingPosition, 0);
-        assertEq(claimUnderlying.exercisePosition, 0);
 
         _assertTokenIsNone(claimId);
     }

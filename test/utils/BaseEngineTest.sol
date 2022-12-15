@@ -21,7 +21,7 @@ abstract contract BaseEngineTest is Test {
     address internal constant CAROL = address(0xC);
 
     // Admin
-    address internal constant FEE_TO = 0x2dbd50A4Ef9B172698596217b7DB0163D3607b41;
+    address internal constant FEE_TO = address(0xBEEF);
 
     // Tokens
     IERC20 internal WETHLIKE;
@@ -38,13 +38,6 @@ abstract contract BaseEngineTest is Test {
     uint256 internal constant STARTING_BALANCE_WETH = 10_000_000;
     uint256 internal constant STARTING_BALANCE_OTHER = 1_000_000_000;
 
-    // address internal constant address(WETHLIKE) = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    // address internal constant address(DAILIKE) = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-    // address internal constant address(USDCLIKE) = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    // IERC20 internal constant DAI = IERC20(address(DAILIKE));
-    // IERC20 internal constant WETH = IERC20(address(WETHLIKE));
-    // IERC20 internal constant USDC = IERC20(address(USDCLIKE));
-
     // Test option
     uint256 internal testOptionId;
     address internal testUnderlyingAsset;
@@ -57,9 +50,6 @@ abstract contract BaseEngineTest is Test {
     IOptionSettlementEngine.Option internal testOption;
 
     function setUp() public virtual {
-        // Fork mainnet
-        // vm.createSelectFork(vm.envString("RPC_URL"), 15_000_000);
-
         // Deploy OptionSettlementEngine
         generator = new TokenURIGenerator();
         engine = new OptionSettlementEngine(FEE_TO, address(generator));
@@ -372,8 +362,6 @@ abstract contract BaseEngineTest is Test {
         uint256 indexed claimId,
         uint256 indexed optionId,
         address indexed redeemer,
-        address exerciseAsset,
-        address underlyingAsset,
         uint256 exerciseAmountRedeemed,
         uint256 underlyingAmountRedeemed
     );
@@ -387,4 +375,6 @@ abstract contract BaseEngineTest is Test {
     event FeeSwitchUpdated(address feeTo, bool enabled);
 
     event FeeToUpdated(address indexed newFeeTo);
+
+    event TokenURIGeneratorUpdated(address indexed newTokenURIGenerator);
 }

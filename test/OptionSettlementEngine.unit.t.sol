@@ -114,22 +114,16 @@ contract OptionSettlementTest is BaseEngineTest {
         // This should be written into a new bucket, and so the ratio of exercised to written in
         // this bucket should be zero
         uint256 claimId3 = engine.write(testOptionId, 2);
-        
+
         IOptionSettlementEngine.Claim memory claim1 = engine.claim(claimId1);
         IOptionSettlementEngine.Claim memory claim2 = engine.claim(claimId2);
         IOptionSettlementEngine.Claim memory claim3 = engine.claim(claimId3);
 
         assertEq(claim1.amountWritten, 1e18);
-        assertEq(
-            claim1.amountExercised,
-            FixedPointMathLib.divWadDown(1 * 1, 2)
-        );
+        assertEq(claim1.amountExercised, FixedPointMathLib.divWadDown(1 * 1, 2));
 
         assertEq(claim2.amountWritten, 1e18);
-        assertEq(
-            claim2.amountExercised,
-            FixedPointMathLib.divWadDown(1 * 1, 2)
-        );
+        assertEq(claim2.amountExercised, FixedPointMathLib.divWadDown(1 * 1, 2));
 
         assertEq(claim3.amountWritten, 2e18);
         assertEq(claim3.amountExercised, 0);

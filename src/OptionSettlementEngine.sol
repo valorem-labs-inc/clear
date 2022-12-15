@@ -136,12 +136,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             Bucket storage bucket = optionTypeState.bucketInfo.buckets[claimIndex.bucketIndex];
             amountWritten += claimIndex.amountWritten;
             amountExercised += FixedPointMathLib.divWadDown(
-                (bucket.amountExercised * claimIndex.amountWritten), bucket.amountWritten ** 2
+                (bucket.amountExercised * claimIndex.amountWritten), bucket.amountWritten
             );
         }
 
         claimInfo = Claim({
-            amountWritten: amountWritten,
+            // scale the amount written by WAD for consistency
+            amountWritten: amountWritten * 1e18,
             amountExercised: amountExercised,
             optionId: uint256(optionKey) << OPTION_ID_PADDING,
             // If the claim is initialized, it is unredeemed.

@@ -203,9 +203,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             ClaimIndex storage claimIndex = claimIndexArray[i];
             Bucket storage bucket = optionTypeState.bucketInfo.buckets[claimIndex.bucketIndex];
             amountWritten += claimIndex.amountWritten;
-            amountExercised += FixedPointMathLib.divWadDown(
-                (bucket.amountExercised * claimIndex.amountWritten), bucket.amountWritten
-            );
+            amountExercised +=
+                FixedPointMathLib.divWadDown((bucket.amountExercised * claimIndex.amountWritten), bucket.amountWritten);
         }
 
         claimInfo = Claim({

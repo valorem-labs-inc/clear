@@ -145,6 +145,38 @@ contract OptionSettlementTest is BaseEngineTest {
 
         assertEq(claim3.amountWritten, 2e18);
         assertEq(claim3.amountExercised, 0);
+
+        // First bucket is fully exercised, this will be performed on the second
+        engine.exercise(testOptionId, 1);
+
+        claim1 = engine.claim(claimId1);
+        claim2 = engine.claim(claimId2);
+        claim3 = engine.claim(claimId3);
+
+        assertEq(claim1.amountWritten, 1e18);
+        assertEq(claim1.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
+
+        assertEq(claim2.amountWritten, 1e18);
+        assertEq(claim2.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
+
+        assertEq(claim3.amountWritten, 2e18);
+        assertEq(claim3.amountExercised, FixedPointMathLib.divWadDown(2 * 1, 2));
+
+        // Both buckets are fully exercised
+        engine.exercise(testOptionId, 1);
+
+        claim1 = engine.claim(claimId1);
+        claim2 = engine.claim(claimId2);
+        claim3 = engine.claim(claimId3);
+
+        assertEq(claim1.amountWritten, 1e18);
+        assertEq(claim1.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
+
+        assertEq(claim2.amountWritten, 1e18);
+        assertEq(claim2.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
+
+        assertEq(claim3.amountWritten, 2e18);
+        assertEq(claim3.amountExercised, FixedPointMathLib.divWadDown(2 * 2, 2));
     }
 
     function testWriteMultipleWriteSameOptionType() public {

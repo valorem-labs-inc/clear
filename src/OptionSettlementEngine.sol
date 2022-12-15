@@ -728,8 +728,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     ) private view returns (uint256 underlyingAmount, uint256 exerciseAmount) {
         ClaimIndex storage claimIndex = claimIndexArray[index];
         Bucket storage bucket = optionTypeState.bucketInfo.buckets[claimIndex.bucketIndex];
-        // Accumulate the amount exercised and unexercised in these variables
-        // for later multiplication by optionRecord.exerciseAmount/underlyingAmount.
         underlyingAmount += FixedPointMathLib.mulDivDown(
             (bucket.amountWritten - bucket.amountExercised) * underlyingAssetAmount,
             claimIndex.amountWritten,

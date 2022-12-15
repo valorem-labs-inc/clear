@@ -342,9 +342,9 @@ contract OptionSettlementTest is BaseEngineTest {
         testExpiryTimestamp = uint40(block.timestamp + 5 * 1 days);
 
         (uint256 optionId, IOptionSettlementEngine.Option memory option) = _createNewOptionType({
-            underlyingAsset: WETH_A,
+            underlyingAsset: address(WETHLIKE),
             underlyingAmount: testUnderlyingAmount,
-            exerciseAsset: DAI_A,
+            exerciseAsset: address(DAILIKE),
             exerciseAmount: testExerciseAmount,
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp

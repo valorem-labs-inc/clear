@@ -63,42 +63,42 @@ contract OptionSettlementTest is BaseEngineTest {
 
         uint256 claimId1 = engine.write(testOptionId, 1);
         IOptionSettlementEngine.Claim memory claim1 = engine.claim(claimId1);
-        assertEq(1e18, claim1.amountWritten);
-        assertEq(0, claim1.amountExercised);
+        assertEq(claim1.amountWritten, 1e18);
+        assertEq(claim1.amountExercised, 0);
 
         uint256 claimId2 = engine.write(testOptionId, 1);
         IOptionSettlementEngine.Claim memory claim2 = engine.claim(claimId2);
-        assertEq(1e18, claim1.amountWritten);
-        assertEq(0, claim1.amountExercised);
-        assertEq(1e18, claim2.amountWritten);
-        assertEq(0, claim2.amountExercised);
+        assertEq(claim1.amountWritten, 1e18);
+        assertEq(claim1.amountExercised, 0);
+        assertEq(claim2.amountWritten, 1e18);
+        assertEq(claim2.amountExercised, 0);
 
         engine.write(claimId2, 1);
         claim2 = engine.claim(claimId2);
-        assertEq(1e18, claim1.amountWritten);
-        assertEq(0, claim1.amountExercised);
-        assertEq(2e18, claim2.amountWritten);
-        assertEq(0, claim2.amountExercised);
+        assertEq(claim1.amountWritten, 1e18);
+        assertEq(claim1.amountExercised, 0);
+        assertEq(claim2.amountWritten, 2e18);
+        assertEq(claim2.amountExercised, 0);
 
         vm.warp(testExerciseTimestamp);
 
         engine.exercise(testOptionId, 2);
         claim1 = engine.claim(claimId1);
         claim2 = engine.claim(claimId2);
-        assertEq(1e18, claim1.amountWritten);
+        assertEq(claim1.amountWritten, 1e18);
         // exercised ratio in the bucket is 2/3
         assertEq(
             // 1 option is written in this claim, two options are exercised in the bucket, and in
             // total, 3 options are written
-            FixedPointMathLib.divWadDown(1 * 2, 3),
-            claim1.amountExercised
+            claim1.amountExercised,
+            FixedPointMathLib.divWadDown(1 * 2, 3)
         );
-        assertEq(2e18, claim2.amountWritten);
+        assertEq(claim2.amountWritten, 2e18);
         assertEq(
             // 2 options are written in this claim, two options are exercised in the bucket, and in
             // total, 3 options are written
-            FixedPointMathLib.divWadDown(2 * 2, 3),
-            claim2.amountExercised
+            claim2.amountExercised,
+            FixedPointMathLib.divWadDown(2 * 2, 3)
         );
     }
 

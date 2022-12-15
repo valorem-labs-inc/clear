@@ -102,6 +102,39 @@ contract OptionSettlementTest is BaseEngineTest {
         );
     }
 
+    function testFairAssignment() public {
+        // write 2, exercise 1, write 2 should create two buckets
+        vm.startPrank(ALICE);
+
+        uint256 claimId1 = engine.write(testOptionId, 1);
+        uint256 claimId2 = engine.write(testOptionId, 1);
+
+        engine.exercise(testOptionId, 1);
+
+        // This should be written into a new bucket, and so the ratio of exercised to written in
+        // this bucket should be zero
+        uint256 claimId3 = engine.write(testOptionId, 2);
+        
+        IOptionSettlementEngine.Claim memory claim1 = engine.claim(claimId1);
+        IOptionSettlementEngine.Claim memory claim2 = engine.claim(claimId2);
+        IOptionSettlementEngine.Claim memory claim3 = engine.claim(claimId3);
+
+        assertEq(claim1.amountWritten, 1e18);
+        assertEq(
+            claim1.amountExercised,
+            FixedPointMathLib.divWadDown(1 * 1, 2)
+        );
+
+        assertEq(claim2.amountWritten, 1e18);
+        assertEq(
+            claim2.amountExercised,
+            FixedPointMathLib.divWadDown(1 * 1, 2)
+        );
+
+        assertEq(claim3.amountWritten, 2e18);
+        assertEq(claim3.amountExercised, 0);
+    }
+
     function testWriteMultipleWriteSameOptionType() public {
         // Alice writes a few options and later decides to write more
         vm.startPrank(ALICE);

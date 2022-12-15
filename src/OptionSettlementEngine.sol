@@ -40,6 +40,61 @@ import "./TokenURIGenerator.sol";
  */
 contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /*//////////////////////////////////////////////////////////////
+    // Internal Data Structures
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Store the exercise state of a given collateral bucket
+    enum BucketExerciseState {
+        Exercised,
+        PartiallyExercised,
+        Unexercised
+    }
+
+    /**
+     * @notice Claims can be used to write multiple times. This struct is used to keep track
+     * of how many options are written against a claim in each bucket, in order to
+     * correctly perform fair exercise assignment.
+     */
+    struct ClaimIndex {
+        /// @custom:member amountWritten The amount of option contracts written into claim for given bucket.
+        uint112 amountWritten;
+        /// @custom:member bucketIndex The index of the Bucket into which the options collateral was deposited.
+        uint96 bucketIndex;
+    }
+
+    /**
+     * @notice Represents the total amount of options written and exercised for a group of
+     * claims bucketed. Used in fair assignment to calculate the ratio of
+     * underlying to exercise assets to be transferred to claimants.
+     */
+    struct Bucket {
+        /// @custom:member amountWritten The number of option contracts written into this bucket.
+        uint112 amountWritten;
+        /// @custom:member amountExercised The number of option contracts exercised from this bucket.
+        uint112 amountExercised;
+    }
+
+    /// @notice The claim bucket information for a given option type.
+    struct BucketInfo {
+        /// @custom:member An array of buckets for a given option type.
+        Bucket[] buckets;
+        /// @custom:member An array of bucket indices with collateral available for exercise.
+        uint96[] unexercisedBucketIndices;
+        /// @custom:member A mapping of bucket indices to a boolean indicating if the bucket has any collateral available for exercise.
+        mapping(uint96 => BucketExerciseState) bucketExerciseStates;
+    }
+
+    /// @notice A storage container for the engine state of a given option type.
+    struct OptionTypeState {
+        /// @custom:member State for this option type.
+        Option option;
+        /// @custom:member State for assignment buckets on this option type.
+        BucketInfo bucketInfo;
+        /// @custom:member A mapping to an array of bucket indices per claim token for this option type.
+        mapping(uint96 => ClaimIndex[]) claimIndices;
+    }
+
+    /*//////////////////////////////////////////////////////////////
     //  Immutable/Constant - Private
     //////////////////////////////////////////////////////////////*/
 
@@ -710,7 +765,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     {
         // Setup pointers to buckets and buckets with collateral available for exercise.
         Bucket[] storage buckets = optionTypeState.bucketInfo.buckets;
-        uint96[] storage unexercisedBucketIndices = optionTypeState.bucketInfo.bucketsWithCollateral;
+        uint96[] storage unexercisedBucketIndices = optionTypeState.bucketInfo.unexercisedBucketIndices;
         uint96 numUnexercisedBuckets = uint96(unexercisedBucketIndices.length);
         uint96 exerciseIndex = uint96(optionRecord.settlementSeed % numUnexercisedBuckets);
 
@@ -795,7 +850,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * and sets the mapping for that bucket having collateral to true.
      */
     function _updateUnexercisedBucketIndices(BucketInfo storage bucketInfo, uint96 bucketIndex) internal {
-        bucketInfo.bucketsWithCollateral.push(bucketIndex);
+        bucketInfo.unexercisedBucketIndices.push(bucketIndex);
         bucketInfo.bucketExerciseStates[bucketIndex] = BucketExerciseState.Unexercised;
     }
 

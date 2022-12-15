@@ -183,7 +183,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         optionInfo = optionTypeStates[optionKey].option;
     }
 
-    // TODO(Verify/add fuzz assertions)
     /// @inheritdoc IOptionSettlementEngine
     function claim(uint256 claimId) public view returns (Claim memory claimInfo) {
         (uint160 optionKey, uint96 claimKey) = _decodeTokenId(claimId);

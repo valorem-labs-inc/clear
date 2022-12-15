@@ -13,7 +13,6 @@ interface IOptionSettlementEngine {
     // Write/Redeem events
     //
 
-    // TODO(Do we need exercise and underlying asset here?)
     /**
      * @notice Emitted when a claim is redeemed.
      * @param optionId The token id of the option type of the claim being redeemed.

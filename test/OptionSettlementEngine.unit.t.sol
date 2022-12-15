@@ -127,6 +127,24 @@ contract OptionSettlementTest is BaseEngineTest {
 
         assertEq(claim3.amountWritten, 2e18);
         assertEq(claim3.amountExercised, 0);
+
+        engine.exercise(testOptionId, 1);
+
+        claim1 = engine.claim(claimId1);
+        claim2 = engine.claim(claimId2);
+        claim3 = engine.claim(claimId3);
+
+        // 50/50 chance of exercising in first (claim 1 & 2) bucket or second bucket (claim 3)
+        // 1 option is written in this claim, two options are exercised in the bucket, and in
+        // total, 2 options are written
+        assertEq(claim1.amountWritten, 1e18);
+        assertEq(claim1.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
+
+        assertEq(claim2.amountWritten, 1e18);
+        assertEq(claim2.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
+
+        assertEq(claim3.amountWritten, 2e18);
+        assertEq(claim3.amountExercised, 0);
     }
 
     function testWriteMultipleWriteSameOptionType() public {

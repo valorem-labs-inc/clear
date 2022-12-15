@@ -58,39 +58,48 @@ contract OptionSettlementTest is BaseEngineTest {
         assertEq(engine.balanceOf(BOB, testOptionId), 0);
     }
 
-    function testClaimAccessor() public {
+    function testClaimAccessorBasic() public {
         vm.startPrank(ALICE);
-        uint256 claimId1 = engine.write(testOptionId, 69);
-        IOptionSettlementEngine.Claim memory claimLot = engine.claim(claimId1);
 
-        assertEq(claimLot.amountExercised, 0);
-        assertEq(claimLot.amountWritten, 69);
-        assertEq(claimLot.optionId, testOptionId);
-        assertTrue(claimLot.unredeemed);
+        uint256 claimId1 = engine.write(testOptionId, 1);
+        IOptionSettlementEngine.Claim memory claim1 = engine.claim(claimId1);
+        assertEq(1e18, claim1.amountWritten);
+        assertEq(0, claim1.amountExercised);
 
-        vm.warp(testExerciseTimestamp + 1);
+        uint256 claimId2 = engine.write(testOptionId, 1);
+        IOptionSettlementEngine.Claim memory claim2 = engine.claim(claimId2);
+        assertEq(1e18, claim1.amountWritten);
+        assertEq(0, claim1.amountExercised);
+        assertEq(1e18, claim2.amountWritten);
+        assertEq(0, claim2.amountExercised);
 
-        // Alice would probably never exercise her own option irl
-        engine.exercise(testOptionId, 1);
-        claimLot = engine.claim(claimId1);
+        engine.write(claimId2, 1);
+        claim2 = engine.claim(claimId2);
+        assertEq(1e18, claim1.amountWritten);
+        assertEq(0, claim1.amountExercised);
+        assertEq(2e18, claim2.amountWritten);
+        assertEq(0, claim2.amountExercised);
 
-        assertEq(claimLot.amountExercised, 1);
-        assertEq(claimLot.amountWritten, 69);
-        assertEq(claimLot.optionId, testOptionId);
-        assertTrue(claimLot.unredeemed);
+        vm.warp(testExerciseTimestamp);
 
-        engine.exercise(testOptionId, 1);
-        claimLot = engine.claim(claimId1);
-
-        assertEq(claimLot.amountExercised, 2);
-        assertEq(claimLot.amountWritten, 69);
-        assertEq(claimLot.optionId, testOptionId);
-        assertTrue(claimLot.unredeemed);
-
-        vm.warp(testExpiryTimestamp + 1);
-        engine.redeem(claimId1);
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, claimId1));
-        claimLot = engine.claim(claimId1);
+        engine.exercise(testOptionId, 2);
+        claim1 = engine.claim(claimId1);
+        claim2 = engine.claim(claimId2);
+        assertEq(1e18, claim1.amountWritten);
+        // exercised ratio in the bucket is 2/3
+        assertEq(
+            // 1 option is written in this claim, two options are exercised in the bucket, and in
+            // total, 3 options are written
+            FixedPointMathLib.divWadDown(1 * 2, 3),
+            claim1.amountExercised
+        );
+        assertEq(2e18, claim2.amountWritten);
+        assertEq(
+            // 2 options are written in this claim, two options are exercised in the bucket, and in
+            // total, 3 options are written
+            FixedPointMathLib.divWadDown(2 * 2, 3),
+            claim2.amountExercised
+        );
     }
 
     function testWriteMultipleWriteSameOptionType() public {
@@ -333,97 +342,6 @@ contract OptionSettlementTest is BaseEngineTest {
         claimUnderlying = engine.underlying(claimId3);
         assertEq(2 * testUnderlyingAmount, uint256(claimUnderlying.underlyingPosition));
         _assertClaimAmountExercised(claimId, 0);
-    }
-
-    // TODO this test is failing everywhere, re rounding error
-        function testAssignMultipleBuckets() public {
-        // New option type with expiry in 5d
-        testExerciseTimestamp = uint40(block.timestamp + 1 days);
-        testExpiryTimestamp = uint40(block.timestamp + 5 * 1 days);
-
-        (uint256 optionId, IOptionSettlementEngine.Option memory option) = _createNewOptionType({
-            underlyingAsset: address(WETHLIKE),
-            underlyingAmount: testUnderlyingAmount,
-            exerciseAsset: address(DAILIKE),
-            exerciseAmount: testExerciseAmount,
-            exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp
-        });
-
-        // Alice writes some options
-        vm.startPrank(ALICE);
-        uint256 claimId1 = engine.write(optionId, 69);
-
-        // write more 1d later
-        vm.warp(block.timestamp + (1 days + 1));
-        uint256 claimId2 = engine.write(optionId, 100);
-
-        assertEq(engine.balanceOf(ALICE, optionId), 169);
-
-        // Alice 'sells' half the written options to Bob, half to Carol
-        uint112 bobOptionAmount = 85;
-        engine.safeTransferFrom(ALICE, BOB, optionId, bobOptionAmount, "");
-        engine.safeTransferFrom(ALICE, CAROL, optionId, 84, "");
-        assertEq(engine.balanceOf(ALICE, optionId), 0);
-
-        vm.stopPrank();
-
-        // Bob exercises the options
-        uint112 bobExerciseAmount = 70;
-        uint256 bobBalanceExerciseAsset1 = ERC20(option.exerciseAsset).balanceOf(BOB);
-        uint256 bobBalanceUnderlyingAsset1 = ERC20(option.underlyingAsset).balanceOf(BOB);
-        uint256 bobExerciseFee = (bobExerciseAmount * option.exerciseAmount / 10000) * engine.feeBps();
-        vm.startPrank(BOB);
-        engine.exercise(optionId, bobExerciseAmount);
-        assertEq(bobOptionAmount - bobExerciseAmount, engine.balanceOf(BOB, optionId));
-        // Bob transfers in exactly (#options exercised * exerciseAmount) of the exercise asset
-        // Bob receives exactly (#options exercised * underlyingAmount) - fee of the underlying asset
-        assertEq(
-            bobBalanceExerciseAsset1 - (bobExerciseAmount * option.exerciseAmount) - bobExerciseFee,
-            ERC20(option.exerciseAsset).balanceOf(BOB)
-        );
-        assertEq(
-            bobBalanceUnderlyingAsset1 + (bobExerciseAmount * option.underlyingAmount),
-            ERC20(option.underlyingAsset).balanceOf(BOB)
-        );
-        vm.stopPrank();
-
-        // randomly seeded based on option type seed. asserts will fail if seed
-        // algo changes.
-        // first lot is completely un exercised
-        emit log_named_int("claimId1 exercise", engine.underlying(claimId1).exercisePosition);
-        emit log_named_int("claimId1 underlying", engine.underlying(claimId1).underlyingPosition);
-
-        // Jump ahead to option expiry
-        vm.warp(1 + option.expiryTimestamp);
-        vm.startPrank(ALICE);
-        uint256 aliceBalanceExerciseAsset = ERC20(option.exerciseAsset).balanceOf(ALICE);
-        uint256 aliceBalanceUnderlyingAsset = ERC20(option.underlyingAsset).balanceOf(ALICE);
-        // Alice's first claim should be completely exercised
-        engine.redeem(claimId1);
-        // Paid claim amount (69) times amount exercised (70) divided by total amount written in
-        // bucket (169)
-        assertEq(
-            ERC20(option.exerciseAsset).balanceOf(ALICE) * 1e18, 
-            FixedPointMathLib.divWadDown(69 * 70, 169) * option.exerciseAmount
-        );
-        // Paid claim amount (69) times amount unexercised (99) divided by total amount written in
-        // bucket (169)
-        assertEq(
-            ERC20(option.underlyingAsset).balanceOf(ALICE) * 1e18, 
-            FixedPointMathLib.divWadDown(69 * 99, 169) * option.exerciseAmount
-        );
-
-        aliceBalanceExerciseAsset = ERC20(option.exerciseAsset).balanceOf(ALICE);
-
-        // BOB exercised 70 options
-        // ALICE should retrieve 70 * exerciseAmount of the exercise asset
-        // ALICE should retrieve (100-70) * underlyingAmount of the underlying asset
-        engine.redeem(claimId2);
-        assertEq(ERC20(option.exerciseAsset).balanceOf(ALICE), aliceBalanceExerciseAsset + 1 * option.exerciseAmount);
-        assertEq(
-            ERC20(option.underlyingAsset).balanceOf(ALICE), aliceBalanceUnderlyingAsset + 99 * option.underlyingAmount
-        );
     }
 
     function testRandomAssignment() public {

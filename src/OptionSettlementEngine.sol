@@ -709,25 +709,25 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         private
     {
         // Setup pointers to buckets and buckets with collateral available for exercise.
-        Bucket[] storage claimBuckets = optionTypeState.bucketInfo.buckets;
+        Bucket[] storage buckets = optionTypeState.bucketInfo.buckets;
         uint96[] storage unexercisedBucketIndices = optionTypeState.bucketInfo.bucketsWithCollateral;
-        uint96 unexercisedBucketsMod = uint96(unexercisedBucketIndices.length);
-        uint96 unexercisedBucketsIndex = uint96(optionRecord.settlementSeed % unexercisedBucketsMod);
+        uint96 numUnexercisedBuckets = uint96(unexercisedBucketIndices.length);
+        uint96 exerciseIndex = uint96(optionRecord.settlementSeed % numUnexercisedBuckets);
 
         while (amount > 0) {
             // Get the claim bucket to assign exercise to.
-            uint96 bucketIndex = unexercisedBucketIndices[unexercisedBucketsIndex];
-            Bucket storage claimBucketInfo = claimBuckets[bucketIndex];
+            uint96 bucketIndex = unexercisedBucketIndices[exerciseIndex];
+            Bucket storage bucketInfo = buckets[bucketIndex];
 
-            uint112 amountAvailable = claimBucketInfo.amountWritten - claimBucketInfo.amountExercised;
-            uint112 amountPresentlyExercised;
+            uint112 amountAvailable = bucketInfo.amountWritten - bucketInfo.amountExercised;
+            uint112 amountPresentlyExercised = 0;
             if (amountAvailable <= amount) {
                 amount -= amountAvailable;
                 amountPresentlyExercised = amountAvailable;
                 // Perform "swap and pop" index management.
-                unexercisedBucketsMod--;
-                uint96 overwrite = unexercisedBucketIndices[unexercisedBucketsMod];
-                unexercisedBucketIndices[unexercisedBucketsIndex] = overwrite;
+                numUnexercisedBuckets--;
+                uint96 overwrite = unexercisedBucketIndices[numUnexercisedBuckets];
+                unexercisedBucketIndices[exerciseIndex] = overwrite;
                 unexercisedBucketIndices.pop();
 
                 optionTypeState.bucketInfo.bucketExerciseStates[bucketIndex] = BucketExerciseState.Exercised;
@@ -736,16 +736,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 amount = 0;
                 optionTypeState.bucketInfo.bucketExerciseStates[bucketIndex] = BucketExerciseState.PartiallyExercised;
             }
-            claimBucketInfo.amountExercised += amountPresentlyExercised;
+            bucketInfo.amountExercised += amountPresentlyExercised;
 
             if (amount != 0) {
-                unexercisedBucketsIndex = (unexercisedBucketsIndex + 1) % unexercisedBucketsMod;
+                exerciseIndex = (exerciseIndex + 1) % numUnexercisedBuckets;
             }
         }
 
         // Update the seed for the next exercise.
         optionRecord.settlementSeed =
-            uint160(uint256(keccak256(abi.encode(optionRecord.settlementSeed, unexercisedBucketsIndex))));
+            uint160(uint256(keccak256(abi.encode(optionRecord.settlementSeed, exerciseIndex))));
     }
 
     /*//////////////////////////////////////////////////////////////

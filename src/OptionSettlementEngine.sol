@@ -11,6 +11,19 @@ import "solmate/utils/FixedPointMathLib.sol";
 import "./interfaces/IOptionSettlementEngine.sol";
 import "./TokenURIGenerator.sol";
 
+/*//////////////////////////////////////////////////////////////////////////////////////////////////
+//                                                                                                //
+//   $$$$$$$$$$                                                                                   //
+//    $$$$$$$$                                  _|                                                //
+//     $$$$$$ $$$$$$$$$$   _|      _|   _|_|_|  _|    _|_|    _|  _|_|   _|_|    _|_|_|  _|_|     //
+//       $$    $$$$$$$$    _|      _| _|    _|  _|  _|    _|  _|_|     _|_|_|_|  _|    _|    _|   //
+//   $$$$$$$$$$ $$$$$$       _|  _|   _|    _|  _|  _|    _|  _|       _|        _|    _|    _|   //
+//    $$$$$$$$    $$           _|       _|_|_|  _|    _|_|    _|         _|_|_|  _|    _|    _|   //
+//     $$$$$$                                                                                     //
+//       $$                                                                                       //
+//                                                                                                //
+//////////////////////////////////////////////////////////////////////////////////////////////////*/
+
 /**
  * @title A settlement engine for options on ERC20 tokens
  * @author 0xAlcibiades
@@ -26,6 +39,61 @@ import "./TokenURIGenerator.sol";
  * option exercise assignment.
  */
 contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
+    /*//////////////////////////////////////////////////////////////
+    // Internal Data Structures
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Store the exercise state of a given collateral bucket
+    enum BucketExerciseState {
+        Exercised,
+        PartiallyExercised,
+        Unexercised
+    }
+
+    /**
+     * @notice Claims can be used to write multiple times. This struct is used to keep track
+     * of how many options are written against a claim in each bucket, in order to
+     * correctly perform fair exercise assignment.
+     */
+    struct ClaimIndex {
+        /// @custom:member amountWritten The amount of option contracts written into claim for given bucket.
+        uint112 amountWritten;
+        /// @custom:member bucketIndex The index of the Bucket into which the options collateral was deposited.
+        uint96 bucketIndex;
+    }
+
+    /**
+     * @notice Represents the total amount of options written and exercised for a group of
+     * claims bucketed. Used in fair assignment to calculate the ratio of
+     * underlying to exercise assets to be transferred to claimants.
+     */
+    struct Bucket {
+        /// @custom:member amountWritten The number of option contracts written into this bucket.
+        uint112 amountWritten;
+        /// @custom:member amountExercised The number of option contracts exercised from this bucket.
+        uint112 amountExercised;
+    }
+
+    /// @notice The claim bucket information for a given option type.
+    struct BucketInfo {
+        /// @custom:member An array of buckets for a given option type.
+        Bucket[] buckets;
+        /// @custom:member An array of bucket indices with collateral available for exercise.
+        uint96[] unexercisedBucketIndices;
+        /// @custom:member A mapping of bucket indices to a boolean indicating if the bucket has any collateral available for exercise.
+        mapping(uint96 => BucketExerciseState) bucketExerciseStates;
+    }
+
+    /// @notice A storage container for the engine state of a given option type.
+    struct OptionTypeState {
+        /// @custom:member State for this option type.
+        Option option;
+        /// @custom:member State for assignment buckets on this option type.
+        BucketInfo bucketInfo;
+        /// @custom:member A mapping to an array of bucket indices per claim token for this option type.
+        mapping(uint96 => ClaimIndex[]) claimIndices;
+    }
+
     /*//////////////////////////////////////////////////////////////
     //  Immutable/Constant - Private
     //////////////////////////////////////////////////////////////*/
@@ -696,25 +764,25 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         private
     {
         // Setup pointers to buckets and buckets with collateral available for exercise.
-        Bucket[] storage claimBuckets = optionTypeState.bucketInfo.buckets;
-        uint96[] storage unexercisedBucketIndices = optionTypeState.bucketInfo.bucketsWithCollateral;
-        uint96 unexercisedBucketsMod = uint96(unexercisedBucketIndices.length);
-        uint96 unexercisedBucketsIndex = uint96(optionRecord.settlementSeed % unexercisedBucketsMod);
+        Bucket[] storage buckets = optionTypeState.bucketInfo.buckets;
+        uint96[] storage unexercisedBucketIndices = optionTypeState.bucketInfo.unexercisedBucketIndices;
+        uint96 numUnexercisedBuckets = uint96(unexercisedBucketIndices.length);
+        uint96 exerciseIndex = uint96(optionRecord.settlementSeed % numUnexercisedBuckets);
 
         while (amount > 0) {
             // Get the claim bucket to assign exercise to.
-            uint96 bucketIndex = unexercisedBucketIndices[unexercisedBucketsIndex];
-            Bucket storage claimBucketInfo = claimBuckets[bucketIndex];
+            uint96 bucketIndex = unexercisedBucketIndices[exerciseIndex];
+            Bucket storage bucketInfo = buckets[bucketIndex];
 
-            uint112 amountAvailable = claimBucketInfo.amountWritten - claimBucketInfo.amountExercised;
-            uint112 amountPresentlyExercised;
+            uint112 amountAvailable = bucketInfo.amountWritten - bucketInfo.amountExercised;
+            uint112 amountPresentlyExercised = 0;
             if (amountAvailable <= amount) {
                 amount -= amountAvailable;
                 amountPresentlyExercised = amountAvailable;
                 // Perform "swap and pop" index management.
-                unexercisedBucketsMod--;
-                uint96 overwrite = unexercisedBucketIndices[unexercisedBucketsMod];
-                unexercisedBucketIndices[unexercisedBucketsIndex] = overwrite;
+                numUnexercisedBuckets--;
+                uint96 overwrite = unexercisedBucketIndices[numUnexercisedBuckets];
+                unexercisedBucketIndices[exerciseIndex] = overwrite;
                 unexercisedBucketIndices.pop();
 
                 optionTypeState.bucketInfo.bucketExerciseStates[bucketIndex] = BucketExerciseState.Exercised;
@@ -723,16 +791,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 amount = 0;
                 optionTypeState.bucketInfo.bucketExerciseStates[bucketIndex] = BucketExerciseState.PartiallyExercised;
             }
-            claimBucketInfo.amountExercised += amountPresentlyExercised;
+            bucketInfo.amountExercised += amountPresentlyExercised;
 
             if (amount != 0) {
-                unexercisedBucketsIndex = (unexercisedBucketsIndex + 1) % unexercisedBucketsMod;
+                exerciseIndex = (exerciseIndex + 1) % numUnexercisedBuckets;
             }
         }
 
         // Update the seed for the next exercise.
         optionRecord.settlementSeed =
-            uint160(uint256(keccak256(abi.encode(optionRecord.settlementSeed, unexercisedBucketsIndex))));
+            uint160(uint256(keccak256(abi.encode(optionRecord.settlementSeed, exerciseIndex))));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -782,7 +850,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * and sets the mapping for that bucket having collateral to true.
      */
     function _updateUnexercisedBucketIndices(BucketInfo storage bucketInfo, uint96 bucketIndex) internal {
-        bucketInfo.bucketsWithCollateral.push(bucketIndex);
+        bucketInfo.unexercisedBucketIndices.push(bucketIndex);
         bucketInfo.bucketExerciseStates[bucketIndex] = BucketExerciseState.Unexercised;
     }
 

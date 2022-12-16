@@ -289,19 +289,34 @@ interface IOptionSettlementEngine {
     //  Accessors
     //////////////////////////////////////////////////////////////*/
 
+    //
+    // Option Information
+    //
+
+    /**
+     * @notice Gets option type information for a given tokenId.
+     * @param optionId The tokenId of the option.
+     * @return optionInfo The Option struct for tokenId if the optionKey for tokenId is initialized.
+     */
+    function option(uint256 optionId) external view returns (Option memory optionInfo);
+
     /**
      * @notice Gets information for a given claim token id.
-     * @param claimId The id of the claim
+     * @param claimId The tokenId of the claim.
      * @return claimInfo The Claim struct for claimId if the tokenId is Type.Claim.
      */
     function claim(uint256 claimId) external view returns (Claim memory claimInfo);
 
     /**
-     * @notice Gets option type information for a given tokenId.
-     * @param tokenId The token id for which to get option inf.
-     * @return optionInfo The Option struct for tokenId if the optionKey for tokenId is initialized.
+     * @notice Gets information about the ERC20 token positions represented by a tokenId.
+     * @param tokenId The token id for which to retrieve the Underlying position.
+     * @return position The Underlying struct for the supplied tokenId.
      */
-    function option(uint256 tokenId) external view returns (Option memory optionInfo);
+    function underlying(uint256 tokenId) external view returns (Underlying memory position);
+
+    //
+    // Token Information
+    //
 
     /**
      * @notice Gets the TokenType for a given tokenId.
@@ -328,13 +343,6 @@ interface IOptionSettlementEngine {
      * @return uriGenerator the address of the URI generator contract.
      */
     function tokenURIGenerator() external view returns (ITokenURIGenerator uriGenerator);
-
-    /**
-     * @notice Gets information about the ERC20 token positions represented by a tokenId.
-     * @param tokenId The token id for which to retrieve the Underlying position.
-     * @return position The Underlying struct for the supplied tokenId.
-     */
-    function underlying(uint256 tokenId) external view returns (Underlying memory position);
 
     //
     // Fee Information

@@ -13,7 +13,6 @@ interface IOptionSettlementEngine {
     // Write/Redeem events
     //
 
-    // TODO(Do we need exercise and underlying asset here?)
     /**
      * @notice Emitted when a claim is redeemed.
      * @param optionId The token id of the option type of the claim being redeemed.
@@ -225,7 +224,7 @@ interface IOptionSettlementEngine {
     //  Data structures
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev This enumeration is used to determine the type of an ERC1155 subtoken in the engine.
+    /// @notice This enumeration is used to convey the type of an ERC1155 subtoken in the engine.
     enum TokenType {
         None,
         Option,
@@ -252,26 +251,6 @@ interface IOptionSettlementEngine {
         uint96 nextClaimKey;
     }
 
-    /// @notice The claim bucket information for a given option type.
-    struct BucketInfo {
-        /// @custom:member An array of buckets for a given option type.
-        Bucket[] buckets;
-        /// @custom:member An array of bucket indices with collateral available for exercise.
-        uint16[] bucketsWithCollateral;
-        /// @custom:member A mapping of bucket indices to a boolean indicating if the bucket has any collateral available for exercise.
-        mapping(uint16 => bool) bucketHasCollateral;
-    }
-
-    /// @notice A storage container for the engine state of a given option type.
-    struct OptionTypeState {
-        /// @custom:member State for this option type.
-        Option option;
-        /// @custom:member State for assignment buckets on this option type.
-        BucketInfo bucketInfo;
-        /// @custom:member A mapping to an array of bucket indices per claim token for this option type.
-        mapping(uint96 => ClaimIndex[]) claimIndices;
-    }
-
     /**
      * @notice This struct contains the data about a claim to a short position written on an option type.
      * When writing an amount of options of a particular type, the writer will be issued an ERC 1155 NFT
@@ -281,40 +260,14 @@ interface IOptionSettlementEngine {
      * and what portion of this claim was assigned exercise, if any, before expiry.
      */
     struct Claim {
-        /// @custom:member amountWritten The number of option contracts written against this claim.
+        /// @custom:member amountWritten The number of option contracts written against this claim expressed as a 1e18 scalar value.
         uint256 amountWritten;
-        /// @custom:member amountExercised The amount of option contracts exercised against this claim.
+        /// @custom:member amountExercised The amount of option contracts exercised against this claim expressed as a 1e18 scalar value.
         uint256 amountExercised;
         /// @custom:member optionId The option ID of the option type this claim is for.
         uint256 optionId;
         /// @custom:member unredeemed Whether or not this claim has been redeemed.
         bool unredeemed;
-    }
-
-    /**
-     * @notice Claims can be used to write multiple times. This struct is used to keep track
-     * of how many options are written against a claim in each period, in order to
-     * correctly perform fair exercise assignment.
-     */
-    struct ClaimIndex {
-        /// @custom:member amountWritten The amount of option contracts written into claim for given period/bucket.
-        uint112 amountWritten;
-        /// @custom:member bucketIndex The index of the Bucket into which the options collateral was deposited.
-        uint16 bucketIndex;
-    }
-
-    /**
-     * @notice Represents the total amount of options written and exercised for a group of
-     * claims bucketed by period. Used in fair assignment to calculate the ratio of
-     * underlying to exercise assets to be transferred to claimants.
-     */
-    struct Bucket {
-        /// @custom:member amountWritten The number of option contracts written into this bucket.
-        uint112 amountWritten;
-        /// @custom:member amountExercised The number of option contracts exercised from this bucket.
-        uint112 amountExercised;
-        /// @custom:member daysAfterEpoch Which period this bucket falls on, in offset from epoch.
-        uint16 daysAfterEpoch;
     }
 
     /**

@@ -17,7 +17,7 @@ contract ValoremDeployScript is Script {
 
         // Create contracts
         TokenURIGenerator generator = new TokenURIGenerator();
-        OptionSettlementEngine engine = new OptionSettlementEngine(feeTo, address(generator));
+        new OptionSettlementEngine(feeTo, address(generator));
 
         // Stop recording
         vm.stopBroadcast();

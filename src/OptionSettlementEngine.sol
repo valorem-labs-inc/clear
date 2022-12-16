@@ -51,8 +51,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /**
-     * @notice Represents the total amount of options written and exercised for a 
-     * group of claims bucketed. Used in fair assignment to calculate the ratio of
+     * @notice Stores the state of options written and exercised for a bucket.
+     * Used in fair exercise assignment assignment to calculate the ratio of
      * underlying assets to exercise assets to be transferred to claimants.
      */
     struct Bucket {
@@ -73,9 +73,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /**
-     * @notice Claims can be used to write multiple times. This struct is used to keep track
-     * of how many options are written against a claim in each bucket, in order to
-     * correctly perform fair exercise assignment.
+     * @notice Claims can be used to write multiple times. This struct is used to
+     * keep track of how many options are written from a claim into each bucket,
+     * in order to correctly perform fair exercise assignment.
      */
     struct ClaimIndex {
         /// @custom:member amountWritten The amount of option contracts written into claim for given bucket.
@@ -115,7 +115,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //  State variables - Internal
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Details about the option, buckets, and claims per option type.
+    /// @notice Details about the option, buckets, and claims per option type.
     mapping(uint160 => OptionTypeState) internal optionTypeStates;
 
     /*//////////////////////////////////////////////////////////////
@@ -174,11 +174,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //
 
     /// @inheritdoc IOptionSettlementEngine
-    function option(uint256 optionId) external view returns (Option memory optionInfo) {
-        (uint160 optionKey,) = _decodeTokenId(optionId);
+    function option(uint256 tokenId) external view returns (Option memory optionInfo) {
+        (uint160 optionKey,) = _decodeTokenId(tokenId);
 
         if (!_isOptionInitialized(optionKey)) {
-            revert TokenNotFound(optionId);
+            revert TokenNotFound(tokenId);
         }
 
         optionInfo = optionTypeStates[optionKey].option;
@@ -396,7 +396,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             nextClaimKey: 1
         });
 
-        // Emit event.
         emit NewOptionType(
             optionId,
             exerciseAsset,
@@ -543,7 +542,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             claimIndices.pop();
         }
 
-        // Emit event.
         emit ClaimRedeemed(
             claimId,
             uint256(optionKey) << OPTION_KEY_PADDING,

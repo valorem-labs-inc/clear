@@ -294,23 +294,23 @@ interface IOptionSettlementEngine {
     //
 
     /**
-     * @notice Gets option type information for a given tokenId.
-     * @param optionId The tokenId of the option.
-     * @return optionInfo The Option struct for tokenId if the optionKey for tokenId is initialized.
+     * @notice Gets information about an option.
+     * @param tokenId The tokenId of an option or claim.
+     * @return optionInfo The Option for the given tokenId.
      */
-    function option(uint256 optionId) external view returns (Option memory optionInfo);
+    function option(uint256 tokenId) external view returns (Option memory optionInfo);
 
     /**
-     * @notice Gets information for a given claim token id.
+     * @notice Gets information about a claim.
      * @param claimId The tokenId of the claim.
-     * @return claimInfo The Claim struct for claimId if the tokenId is Type.Claim.
+     * @return claimInfo The Claim for the given claimId.
      */
     function claim(uint256 claimId) external view returns (Claim memory claimInfo);
 
     /**
-     * @notice Gets information about the ERC20 token positions represented by a tokenId.
-     * @param tokenId The token id for which to retrieve the Underlying position.
-     * @return position The Underlying struct for the supplied tokenId.
+     * @notice Gets information about the ERC20 token positions underlying an option or claim.
+     * @param tokenId The tokenId of the option or claim.
+     * @return position The Underlying position for the given tokenId.
      */
     function underlying(uint256 tokenId) external view returns (Underlying memory position);
 

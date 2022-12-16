@@ -295,7 +295,7 @@ abstract contract BaseEngineTest is Test {
     }
 
     function _assertClaimAmountExercised(uint256 claimId, uint112 amount, string memory where) internal {
-        IOptionSettlementEngine.Underlying memory underlying = engine.underlying(claimId);
+        IOptionSettlementEngine.Position memory underlying = engine.position(claimId);
         IOptionSettlementEngine.Option memory option = engine.option(claimId);
         uint112 amountExercised = uint112(uint256(underlying.exercisePosition) / option.exerciseAmount);
         assertEq(amount, amountExercised, where);

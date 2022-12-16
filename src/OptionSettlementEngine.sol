@@ -219,7 +219,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @inheritdoc IOptionSettlementEngine
-    function underlying(uint256 tokenId) external view returns (Underlying memory underlyingPosition) {
+    function position(uint256 tokenId) external view returns (Position memory position) {
         (uint160 optionKey, uint96 claimKey) = _decodeTokenId(tokenId);
 
         // Check the type of token and if it exists.
@@ -240,7 +240,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 revert ExpiredOption(tokenId, expiry);
             }
 
-            underlyingPosition = Underlying({
+            position = Position({
                 underlyingAsset: optionRecord.underlyingAsset,
                 underlyingPosition: int256(uint256(optionRecord.underlyingAmount)),
                 exerciseAsset: optionRecord.exerciseAsset,
@@ -265,7 +265,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 totalExerciseAmount += indexExerciseAmount;
             }
 
-            underlyingPosition = Underlying({
+            position = Position({
                 underlyingAsset: optionRecord.underlyingAsset,
                 underlyingPosition: int256(totalUnderlyingAmount),
                 exerciseAsset: optionRecord.exerciseAsset,

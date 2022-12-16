@@ -67,7 +67,7 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
 
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, amount);
-        IOptionSettlementEngine.Underlying memory claimUnderlying = engine.underlying(claimId);
+        IOptionSettlementEngine.Position memory claimUnderlying = engine.position(claimId);
 
         assertEq(WETHLIKE.balanceOf(address(engine)), wethBalanceEngine + rxAmount + fee);
         assertEq(WETHLIKE.balanceOf(ALICE), wethBalance - rxAmount - fee);
@@ -241,7 +241,7 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
 
     function _claimAndAssert(address claimant, uint256 claimId) internal {
         vm.startPrank(claimant);
-        IOptionSettlementEngine.Underlying memory underlying = engine.underlying(claimId);
+        IOptionSettlementEngine.Position memory underlying = engine.position(claimId);
         uint256 exerciseAssetAmount = ERC20(underlying.exerciseAsset).balanceOf(claimant);
         uint256 underlyingAssetAmount = ERC20(underlying.underlyingAsset).balanceOf(claimant);
         engine.redeem(claimId);

@@ -274,7 +274,7 @@ interface IOptionSettlementEngine {
      * @notice Data about the ERC20 assets and liabilities for a given option (long) or claim (short) token,
      * in terms of the underlying and exercise ERC20 tokens.
      */
-    struct Underlying {
+    struct Position {
         /// @custom:member underlyingAsset The address of the ERC20 underlying asset.
         address underlyingAsset;
         /// @custom:member underlyingPosition The amount, in wei, of the underlying asset represented by this position.
@@ -310,9 +310,9 @@ interface IOptionSettlementEngine {
     /**
      * @notice Gets information about the ERC20 token positions underlying an option or claim.
      * @param tokenId The tokenId of the option or claim.
-     * @return position The Underlying position for the given tokenId.
+     * @return position The underlying and exercise asset positions for the given tokenId.
      */
-    function underlying(uint256 tokenId) external view returns (Underlying memory position);
+    function position(uint256 tokenId) external view returns (Position memory position);
 
     //
     // Token Information

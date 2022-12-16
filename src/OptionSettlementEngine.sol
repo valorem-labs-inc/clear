@@ -99,10 +99,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     /// @dev The bit padding for optionKey -> optionId.
-    uint8 internal constant OPTION_KEY_PADDING = 96;
+    uint8 private constant OPTION_KEY_PADDING = 96;
 
     /// @dev The mask to mask out a claimKey from a claimId.
-    uint96 internal constant CLAIM_KEY_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFF;
+    uint96 private constant CLAIM_KEY_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFF;
 
     /*//////////////////////////////////////////////////////////////
     //  Immutable/Constant - Public
@@ -112,14 +112,14 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     uint8 public immutable feeBps = 5;
 
     /*//////////////////////////////////////////////////////////////
-    //  State variables - Internal
+    //  State Variables - Private
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Details about the option, buckets, and claims per option type.
-    mapping(uint160 => OptionTypeState) internal optionTypeStates;
+    mapping(uint160 => OptionTypeState) private optionTypeStates;
 
     /*//////////////////////////////////////////////////////////////
-    //  State variables - Public
+    //  State Variables - Public
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IOptionSettlementEngine
@@ -166,7 +166,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
-    //  Public/External Views
+    //  External Views
     //////////////////////////////////////////////////////////////*/
 
     //
@@ -185,7 +185,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @inheritdoc IOptionSettlementEngine
-    function claim(uint256 claimId) public view returns (Claim memory claimInfo) {
+    function claim(uint256 claimId) external view returns (Claim memory claimInfo) {
         (uint160 optionKey, uint96 claimKey) = _decodeTokenId(claimId);
 
         if (!_isClaimInitialized(optionKey, claimKey)) {
@@ -295,7 +295,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
     }
 
-    /// @notice Returns the URI for a given token ID.
+    /// @notice Returns the URI for a given tokenId.
     function uri(uint256 tokenId) public view virtual override returns (string memory) {
         Option memory optionInfo = optionTypeStates[uint160(tokenId >> OPTION_KEY_PADDING)].option;
 
@@ -321,11 +321,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
-    //  Public/External Mutators
+    //  External Mutators
     //////////////////////////////////////////////////////////////*/
 
     //
-    //  Write Options
+    //  Write Options/Claims
     //
 
     /// @inheritdoc IOptionSettlementEngine
@@ -408,7 +408,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @inheritdoc IOptionSettlementEngine
-    function write(uint256 tokenId, uint112 amount) public returns (uint256) {
+    function write(uint256 tokenId, uint112 amount) external returns (uint256) {
         // Amount written must be greater than zero.
         if (amount == 0) {
             revert AmountWrittenCannotBeZero();
@@ -748,6 +748,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         );
     }
 
+    /*//////////////////////////////////////////////////////////////
+    //  Private Mutators
+    //////////////////////////////////////////////////////////////*/
+
     /**
      * @notice Calculates, records, and emits an event for a fee accrual.
      */
@@ -811,10 +815,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             uint160(uint256(keccak256(abi.encode(optionRecord.settlementSeed, exerciseIndex))));
     }
 
-    /*//////////////////////////////////////////////////////////////
-    //  Internal Mutators
-    //////////////////////////////////////////////////////////////*/
-
     /**
      * @notice Adds or updates a bucket as needed for a given option type and
      * amount of options written, based on the present time and bucket state.
@@ -857,7 +857,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * @notice Adds the bucket index to the list of buckets with collateral
      * and sets the mapping for that bucket having collateral to true.
      */
-    function _updateUnexercisedBucketIndices(BucketInfo storage bucketInfo, uint96 bucketIndex) internal {
+    function _updateUnexercisedBucketIndices(BucketInfo storage bucketInfo, uint96 bucketIndex) private {
         bucketInfo.unexercisedBucketIndices.push(bucketIndex);
         bucketInfo.bucketExerciseStates[bucketIndex] = BucketExerciseState.Unexercised;
     }

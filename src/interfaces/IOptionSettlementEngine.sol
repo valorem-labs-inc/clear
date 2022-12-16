@@ -10,7 +10,7 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     //
-    // Write/Redeem events
+    // Write/Redeem Events
     //
 
     /**
@@ -50,7 +50,7 @@ interface IOptionSettlementEngine {
     );
 
     //
-    // Exercise events
+    // Exercise Events
     //
 
     /**
@@ -71,7 +71,7 @@ interface IOptionSettlementEngine {
     event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
 
     //
-    // Fee events
+    // Fee Events
     //
 
     /**
@@ -102,7 +102,7 @@ interface IOptionSettlementEngine {
      */
     event FeeSwitchUpdated(address feeTo, bool enabled);
 
-    // Access control events
+    // Access Control Events
 
     /**
      * @notice Emitted when feeTo address is updated.
@@ -121,7 +121,7 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     //
-    // Access control errors
+    // Access Control Errors
     //
 
     /**
@@ -221,7 +221,7 @@ interface IOptionSettlementEngine {
     error TokenNotFound(uint256 token);
 
     /*//////////////////////////////////////////////////////////////
-    //  Data structures
+    //  Data Structures
     //////////////////////////////////////////////////////////////*/
 
     /// @notice This enumeration is used to convey the type of an ERC1155 subtoken in the engine.
@@ -448,7 +448,7 @@ interface IOptionSettlementEngine {
     function exercise(uint256 optionId, uint112 amount) external;
 
     /*//////////////////////////////////////////////////////////////
-    //  Privileged Functions
+    //  Protocol Admin
     //////////////////////////////////////////////////////////////*/
 
     /**

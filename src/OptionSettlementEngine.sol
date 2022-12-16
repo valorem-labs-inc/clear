@@ -295,7 +295,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
     }
 
-    /// @returns the URI for a given tokenId.
+    /// @notice Returns the URI for a given tokenId.
+    /// @param tokenId The tokenId of an option or claim.
+    /// @return The URI for the tokenId.
     function uri(uint256 tokenId) public view virtual override returns (string memory) {
         Option memory optionInfo = optionTypeStates[uint160(tokenId >> OPTION_KEY_PADDING)].option;
 

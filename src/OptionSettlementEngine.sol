@@ -170,7 +170,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     //
-    // Option Information
+    // Option information
     //
 
     /// @inheritdoc IOptionSettlementEngine
@@ -275,7 +275,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     //
-    // Token Information
+    // Token information
     //
 
     /// @inheritdoc IOptionSettlementEngine
@@ -295,7 +295,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
     }
 
-    /// @notice Returns the URI for a given tokenId.
+    /// @returns the URI for a given tokenId.
     function uri(uint256 tokenId) public view virtual override returns (string memory) {
         Option memory optionInfo = optionTypeStates[uint160(tokenId >> OPTION_KEY_PADDING)].option;
 
@@ -325,7 +325,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     //
-    //  Write Options/Claims
+    //  Write Options
     //
 
     /// @inheritdoc IOptionSettlementEngine

@@ -10,7 +10,7 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     //
-    // Write/Redeem Events
+    // Write/Redeem events
     //
 
     /**
@@ -50,7 +50,7 @@ interface IOptionSettlementEngine {
     );
 
     //
-    // Exercise Events
+    // Exercise events
     //
 
     /**
@@ -71,7 +71,7 @@ interface IOptionSettlementEngine {
     event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
 
     //
-    // Fee Events
+    // Fee events
     //
 
     /**
@@ -102,7 +102,9 @@ interface IOptionSettlementEngine {
      */
     event FeeSwitchUpdated(address feeTo, bool enabled);
 
-    // Access Control Events
+    //
+    // Access control events
+    //
 
     /**
      * @notice Emitted when feeTo address is updated.
@@ -121,7 +123,7 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     //
-    // Access Control Errors
+    // Access control errors
     //
 
     /**
@@ -131,7 +133,9 @@ interface IOptionSettlementEngine {
      */
     error AccessControlViolation(address accessor, address permissioned);
 
-    // Input Errors
+    //
+    // Input errors
+    //
 
     /// @notice The amount of options contracts written must be greater than zero.
     error AmountWrittenCannotBeZero();
@@ -286,11 +290,11 @@ interface IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
-    //  Accessors
+    //  Views
     //////////////////////////////////////////////////////////////*/
 
     //
-    // Option Information
+    // Option information
     //
 
     /**
@@ -315,7 +319,7 @@ interface IOptionSettlementEngine {
     function underlying(uint256 tokenId) external view returns (Underlying memory position);
 
     //
-    // Token Information
+    // Token information
     //
 
     /**
@@ -345,7 +349,7 @@ interface IOptionSettlementEngine {
     function tokenURIGenerator() external view returns (ITokenURIGenerator uriGenerator);
 
     //
-    // Fee Information
+    // Fee information
     //
 
     /**
@@ -373,7 +377,7 @@ interface IOptionSettlementEngine {
     function feeTo() external view returns (address);
 
     /*//////////////////////////////////////////////////////////////
-    //  Write Options/Claims
+    //  Write Options
     //////////////////////////////////////////////////////////////*/
 
     /**

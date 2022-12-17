@@ -102,7 +102,9 @@ interface IOptionSettlementEngine {
      */
     event FeeSwitchUpdated(address feeTo, bool enabled);
 
+    //
     // Access control events
+    //
 
     /**
      * @notice Emitted when feeTo address is updated.
@@ -131,7 +133,9 @@ interface IOptionSettlementEngine {
      */
     error AccessControlViolation(address accessor, address permissioned);
 
-    // Input Errors
+    //
+    // Input errors
+    //
 
     /// @notice The amount of options contracts written must be greater than zero.
     error AmountWrittenCannotBeZero();
@@ -221,7 +225,7 @@ interface IOptionSettlementEngine {
     error TokenNotFound(uint256 token);
 
     /*//////////////////////////////////////////////////////////////
-    //  Data structures
+    //  Data Structures
     //////////////////////////////////////////////////////////////*/
 
     /// @notice This enumeration is used to convey the type of an ERC1155 subtoken in the engine.
@@ -286,22 +290,37 @@ interface IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
-    //  Accessors
+    //  Views
     //////////////////////////////////////////////////////////////*/
 
+    //
+    // Option information
+    //
+
     /**
-     * @notice Gets information for a given claim token id.
-     * @param claimId The id of the claim
-     * @return claimInfo The Claim struct for claimId if the tokenId is Type.Claim.
+     * @notice Gets information about an option.
+     * @param tokenId The tokenId of an option or claim.
+     * @return optionInfo The Option for the given tokenId.
+     */
+    function option(uint256 tokenId) external view returns (Option memory optionInfo);
+
+    /**
+     * @notice Gets information about a claim.
+     * @param claimId The tokenId of the claim.
+     * @return claimInfo The Claim for the given claimId.
      */
     function claim(uint256 claimId) external view returns (Claim memory claimInfo);
 
     /**
-     * @notice Gets option type information for a given tokenId.
-     * @param tokenId The token id for which to get option inf.
-     * @return optionInfo The Option struct for tokenId if the optionKey for tokenId is initialized.
+     * @notice Gets information about the ERC20 token positions underlying an option or claim.
+     * @param tokenId The tokenId of the option or claim.
+     * @return position The Underlying position for the given tokenId.
      */
-    function option(uint256 tokenId) external view returns (Option memory optionInfo);
+    function underlying(uint256 tokenId) external view returns (Underlying memory position);
+
+    //
+    // Token information
+    //
 
     /**
      * @notice Gets the TokenType for a given tokenId.
@@ -329,15 +348,8 @@ interface IOptionSettlementEngine {
      */
     function tokenURIGenerator() external view returns (ITokenURIGenerator uriGenerator);
 
-    /**
-     * @notice Gets information about the ERC20 token positions represented by a tokenId.
-     * @param tokenId The token id for which to retrieve the Underlying position.
-     * @return position The Underlying struct for the supplied tokenId.
-     */
-    function underlying(uint256 tokenId) external view returns (Underlying memory position);
-
     //
-    // Fee Information
+    // Fee information
     //
 
     /**
@@ -365,7 +377,7 @@ interface IOptionSettlementEngine {
     function feeTo() external view returns (address);
 
     /*//////////////////////////////////////////////////////////////
-    //  Write Options/Claims
+    //  Write Options
     //////////////////////////////////////////////////////////////*/
 
     /**
@@ -440,7 +452,7 @@ interface IOptionSettlementEngine {
     function exercise(uint256 optionId, uint112 amount) external;
 
     /*//////////////////////////////////////////////////////////////
-    //  Privileged Functions
+    //  Protocol Admin
     //////////////////////////////////////////////////////////////*/
 
     /**

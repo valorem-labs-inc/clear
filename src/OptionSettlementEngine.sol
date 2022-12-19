@@ -43,13 +43,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     // Internal Data Structures
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Stores the exercise state of a given collateral bucket.
-    enum BucketExerciseState {
-        Exercised,
-        PartiallyExercised,
-        Unexercised
-    }
-
     /**
      * @notice Stores the state of options written and exercised for a bucket.
      * Used in fair exercise assignment assignment to calculate the ratio of

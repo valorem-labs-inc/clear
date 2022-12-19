@@ -61,8 +61,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         Bucket[] buckets;
         /// @custom:member An array of bucket indices with collateral available for exercise.
         uint96[] unexercisedBucketIndices;
-        /// @custom:member A mapping of bucket indices to a boolean indicating if the bucket has any collateral available for exercise.
-        mapping(uint96 => BucketExerciseState) bucketExerciseStates;
     }
 
     /**
@@ -782,6 +780,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             uint112 amountAvailable = bucketInfo.amountWritten - bucketInfo.amountExercised;
             uint112 amountPresentlyExercised = 0;
             if (amountAvailable <= amount) {
+                // Bucket is fully exercised/assigned
                 amount -= amountAvailable;
                 amountPresentlyExercised = amountAvailable;
                 // Perform "swap and pop" index management.
@@ -789,12 +788,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 uint96 overwrite = unexercisedBucketIndices[numUnexercisedBuckets];
                 unexercisedBucketIndices[exerciseIndex] = overwrite;
                 unexercisedBucketIndices.pop();
-
-                optionTypeState.bucketInfo.bucketExerciseStates[bucketIndex] = BucketExerciseState.Exercised;
             } else {
+                // Bucket is partially exercised/assigned
                 amountPresentlyExercised = amount;
                 amount = 0;
-                optionTypeState.bucketInfo.bucketExerciseStates[bucketIndex] = BucketExerciseState.PartiallyExercised;
             }
             bucketInfo.amountExercised += amountPresentlyExercised;
 
@@ -811,7 +808,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @notice Adds or updates a bucket as needed for a given option type and amount written.
     function _addOrUpdateBucket(OptionTypeState storage optionTypeState, uint112 amount)
         private
-        returns (uint96 bucketIndex)
+        returns (uint96)
     {
         // Setup pointers to buckets.
         BucketInfo storage bucketInfo = optionTypeState.bucketInfo;
@@ -821,7 +818,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         if (buckets.length == 0) {
             // Add a new bucket for this option type, because none exist.
             buckets.push(Bucket(amount, 0));
-            _updateUnexercisedBucketIndices(bucketInfo, writtenBucketIndex);
+            bucketInfo.unexercisedBucketIndices.push(writtenBucketIndex);
 
             return writtenBucketIndex;
         }
@@ -830,10 +827,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint96 currentBucketIndex = writtenBucketIndex - 1;
         Bucket storage currentBucket = buckets[currentBucketIndex];
 
-        if (bucketInfo.bucketExerciseStates[currentBucketIndex] != BucketExerciseState.Unexercised) {
+        if (currentBucket.amountExercised != 0) {
             // Add a new bucket to this option type, because the last was partially or fully exercised.
             buckets.push(Bucket(amount, 0));
-            _updateUnexercisedBucketIndices(bucketInfo, writtenBucketIndex);
+            bucketInfo.unexercisedBucketIndices.push(writtenBucketIndex);
         } else {
             // Write to the existing unexercised bucket.
             currentBucket.amountWritten += amount;
@@ -841,12 +838,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         }
 
         return writtenBucketIndex;
-    }
-
-    /// @notice Adds the bucket index to the list of unexercised buckets and sets state to Unexercised.
-    function _updateUnexercisedBucketIndices(BucketInfo storage bucketInfo, uint96 bucketIndex) private {
-        bucketInfo.unexercisedBucketIndices.push(bucketIndex);
-        bucketInfo.bucketExerciseStates[bucketIndex] = BucketExerciseState.Unexercised;
     }
 
     /// @notice Updates claimIndices for a given claim key.

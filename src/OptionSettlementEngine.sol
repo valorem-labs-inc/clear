@@ -219,7 +219,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @inheritdoc IOptionSettlementEngine
-    function position(uint256 tokenId) external view returns (Position memory position) {
+    function position(uint256 tokenId) external view returns (Position memory positionInfo) {
         (uint160 optionKey, uint96 claimKey) = _decodeTokenId(tokenId);
 
         // Check the type of token and if it exists.
@@ -240,11 +240,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 revert ExpiredOption(tokenId, expiry);
             }
 
-            position = Position({
+            positionInfo = Position({
                 underlyingAsset: optionRecord.underlyingAsset,
-                underlyingPosition: int256(uint256(optionRecord.underlyingAmount)),
+                underlyingAmount: int256(uint256(optionRecord.underlyingAmount)),
                 exerciseAsset: optionRecord.exerciseAsset,
-                exercisePosition: -int256(uint256(optionRecord.exerciseAmount))
+                exerciseAmount: -int256(uint256(optionRecord.exerciseAmount))
             });
         } else {
             // Then tokenId is an initialized/unredeemed claim.
@@ -265,11 +265,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 totalExerciseAmount += indexExerciseAmount;
             }
 
-            position = Position({
+            positionInfo = Position({
                 underlyingAsset: optionRecord.underlyingAsset,
-                underlyingPosition: int256(totalUnderlyingAmount),
+                underlyingAmount: int256(totalUnderlyingAmount),
                 exerciseAsset: optionRecord.exerciseAsset,
-                exercisePosition: int256(totalExerciseAmount)
+                exerciseAmount: int256(totalExerciseAmount)
             });
         }
     }

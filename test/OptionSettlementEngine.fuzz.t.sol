@@ -67,14 +67,14 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
 
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, amount);
-        IOptionSettlementEngine.Position memory claimUnderlying = engine.position(claimId);
+        IOptionSettlementEngine.Position memory claimPosition = engine.position(claimId);
 
         assertEq(WETHLIKE.balanceOf(address(engine)), wethBalanceEngine + rxAmount + fee);
         assertEq(WETHLIKE.balanceOf(ALICE), wethBalance - rxAmount - fee);
 
         assertEq(engine.balanceOf(ALICE, testOptionId), amount);
         assertEq(engine.balanceOf(ALICE, claimId), 1);
-        assertEq(uint256(claimUnderlying.underlyingPosition), testUnderlyingAmount * amount);
+        assertEq(uint256(claimPosition.underlyingAmount), testUnderlyingAmount * amount);
 
         (uint160 optionId, uint96 claimIdx) = decodeTokenId(claimId);
         assertEq(uint256(optionId) << 96, testOptionId);
@@ -241,18 +241,17 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
 
     function _claimAndAssert(address claimant, uint256 claimId) internal {
         vm.startPrank(claimant);
-        IOptionSettlementEngine.Position memory underlying = engine.position(claimId);
-        uint256 exerciseAssetAmount = ERC20(underlying.exerciseAsset).balanceOf(claimant);
-        uint256 underlyingAssetAmount = ERC20(underlying.underlyingAsset).balanceOf(claimant);
+        IOptionSettlementEngine.Position memory position = engine.position(claimId);
+        uint256 exerciseAssetAmount = ERC20(position.exerciseAsset).balanceOf(claimant);
+        uint256 underlyingAssetAmount = ERC20(position.underlyingAsset).balanceOf(claimant);
         engine.redeem(claimId);
 
         assertEq(
-            ERC20(underlying.underlyingAsset).balanceOf(claimant),
-            underlyingAssetAmount + uint256(underlying.underlyingPosition)
+            ERC20(position.underlyingAsset).balanceOf(claimant),
+            underlyingAssetAmount + uint256(position.underlyingAmount)
         );
         assertEq(
-            ERC20(underlying.exerciseAsset).balanceOf(claimant),
-            exerciseAssetAmount + uint256(underlying.exercisePosition)
+            ERC20(position.exerciseAsset).balanceOf(claimant), exerciseAssetAmount + uint256(position.exerciseAmount)
         );
         vm.stopPrank();
     }

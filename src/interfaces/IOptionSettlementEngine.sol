@@ -102,7 +102,9 @@ interface IOptionSettlementEngine {
      */
     event FeeSwitchUpdated(address feeTo, bool enabled);
 
+    //
     // Access control events
+    //
 
     /**
      * @notice Emitted when feeTo address is updated.
@@ -131,7 +133,9 @@ interface IOptionSettlementEngine {
      */
     error AccessControlViolation(address accessor, address permissioned);
 
-    // Input Errors
+    //
+    // Input errors
+    //
 
     /// @notice The amount of options contracts written must be greater than zero.
     error AmountWrittenCannotBeZero();
@@ -221,7 +225,7 @@ interface IOptionSettlementEngine {
     error TokenNotFound(uint256 token);
 
     /*//////////////////////////////////////////////////////////////
-    //  Data structures
+    //  Data Structures
     //////////////////////////////////////////////////////////////*/
 
     /// @notice This enumeration is used to convey the type of an ERC1155 subtoken in the engine.
@@ -286,11 +290,11 @@ interface IOptionSettlementEngine {
     }
 
     /*//////////////////////////////////////////////////////////////
-    //  Accessors
+    //  Views
     //////////////////////////////////////////////////////////////*/
 
     //
-    // Option Information
+    // Option information
     //
 
     /**
@@ -345,7 +349,7 @@ interface IOptionSettlementEngine {
     function tokenURIGenerator() external view returns (ITokenURIGenerator uriGenerator);
 
     //
-    // Fee Information
+    // Fee information
     //
 
     /**
@@ -373,7 +377,7 @@ interface IOptionSettlementEngine {
     function feeTo() external view returns (address);
 
     /*//////////////////////////////////////////////////////////////
-    //  Write Options/Claims
+    //  Write Options
     //////////////////////////////////////////////////////////////*/
 
     /**
@@ -448,7 +452,7 @@ interface IOptionSettlementEngine {
     function exercise(uint256 optionId, uint112 amount) external;
 
     /*//////////////////////////////////////////////////////////////
-    //  Privileged Functions
+    //  Protocol Admin
     //////////////////////////////////////////////////////////////*/
 
     /**

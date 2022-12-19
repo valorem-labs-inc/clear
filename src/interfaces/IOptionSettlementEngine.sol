@@ -228,7 +228,7 @@ interface IOptionSettlementEngine {
     //  Data Structures
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice This enumeration is used to convey the type of an ERC1155 subtoken in the engine.
+    /// @notice The type of an ERC1155 subtoken in the engine.
     enum TokenType {
         None,
         Option,
@@ -256,7 +256,7 @@ interface IOptionSettlementEngine {
     }
 
     /**
-     * @notice This struct contains the data about a claim to a short position written on an option type.
+     * @notice Data about a claim to a short position written on an option type.
      * When writing an amount of options of a particular type, the writer will be issued an ERC 1155 NFT
      * that represents a claim to the underlying and exercise assets, to be claimed after
      * expiry of the option. The amount of each (underlying asset and exercise asset) paid to the claimant upon
@@ -278,15 +278,15 @@ interface IOptionSettlementEngine {
      * @notice Data about the ERC20 assets and liabilities for a given option (long) or claim (short) token,
      * in terms of the underlying and exercise ERC20 tokens.
      */
-    struct Underlying {
+    struct Position {
         /// @custom:member underlyingAsset The address of the ERC20 underlying asset.
         address underlyingAsset;
-        /// @custom:member underlyingPosition The amount, in wei, of the underlying asset represented by this position.
-        int256 underlyingPosition;
+        /// @custom:member underlyingAmount The amount, in wei, of the underlying asset represented by this position.
+        int256 underlyingAmount;
         /// @custom:member exerciseAsset The address of the ERC20 exercise asset.
         address exerciseAsset;
-        /// @custom:member exercisePosition The amount, in wei, of the exercise asset represented by this position.
-        int256 exercisePosition;
+        /// @custom:member exerciseAmount The amount, in wei, of the exercise asset represented by this position.
+        int256 exerciseAmount;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -312,14 +312,14 @@ interface IOptionSettlementEngine {
     function claim(uint256 claimId) external view returns (Claim memory claimInfo);
 
     /**
-     * @notice Gets information about the ERC20 token positions underlying an option or claim.
+     * @notice Gets information about the ERC20 token positions of an option or claim.
      * @param tokenId The tokenId of the option or claim.
-     * @return position The Underlying position for the given tokenId.
+     * @return positionInfo The underlying and exercise token positions for the given tokenId.
      */
-    function underlying(uint256 tokenId) external view returns (Underlying memory position);
+    function position(uint256 tokenId) external view returns (Position memory positionInfo);
 
     //
-    // Token information
+    // Token Information
     //
 
     /**

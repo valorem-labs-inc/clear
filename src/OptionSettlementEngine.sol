@@ -806,10 +806,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @notice Adds or updates a bucket as needed for a given option type and amount written.
-    function _addOrUpdateBucket(OptionTypeState storage optionTypeState, uint112 amount)
-        private
-        returns (uint96)
-    {
+    function _addOrUpdateBucket(OptionTypeState storage optionTypeState, uint112 amount) private returns (uint96) {
         // Setup pointers to buckets.
         BucketInfo storage bucketInfo = optionTypeState.bucketInfo;
         Bucket[] storage buckets = bucketInfo.buckets;

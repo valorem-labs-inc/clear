@@ -9,12 +9,6 @@ import "./utils/BaseEngineTest.sol";
 
 /// @notice Unit tests for OptionSettlementEngine
 contract OptionSettlementTest is BaseEngineTest {
-    // function setUp() public override {
-    //     super.setUp();
-
-    //     //
-    // }
-
     function testInitial() public {
         assertEq(engine.feeTo(), FEE_TO);
         assertEq(engine.feesEnabled(), true);

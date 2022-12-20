@@ -5,7 +5,17 @@ libs = ['lib']
 remappings = ['forge-std/=lib/forge-std/src/', 'solmate/=lib/solmate/src/']
 
 [fuzz]
+seed = 7
 max_test_rejects = 100000
+
+[invariant]
+runs = 10                   # The number of times to run the invariant tests
+depth = 1000                # The number of calls to make in the invariant tests
+call_override = false       # Override calls
+fail_on_revert = false      # Fail the test if the contract reverts
+dictionary_weight = 80
+include_storage = true
+include_push_bytes = true
 
 [fmt]
 line_length = 120

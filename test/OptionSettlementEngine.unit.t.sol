@@ -7,14 +7,7 @@ import "forge-std/Test.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import "./utils/BaseEngineTest.sol";
 
-/// @notice Unit tests for OptionSettlementEngine
-contract OptionSettlementUnitTest is BaseEngineTest {
-    // function setUp() public override {
-    //     super.setUp();
-
-    //     //
-    // }
-
+contract OptionSettlementTest is BaseEngineTest {
     function testInitial() public {
         assertEq(engine.feeTo(), FEE_TO);
         assertEq(engine.feesEnabled(), true);

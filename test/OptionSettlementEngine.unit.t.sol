@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: BUSL 1.1
+// Valorem Labs Inc. (c) 2022.
 pragma solidity 0.8.16;
 
-import "./utils/BaseTest.sol";
+import "solmate/utils/FixedPointMathLib.sol";
+import "forge-std/Test.sol";
+import {IERC20} from "forge-std/interfaces/IERC20.sol";
+import "./utils/BaseEngineTest.sol";
 
 /// @notice Unit tests for OptionSettlementEngine
-contract OptionSettlementEngineUnitTest is BaseTest {
-    // function setUp() public override {
-    //     super.setUp();
-
-    //     //
-    // }
-
+contract OptionSettlementTest is BaseEngineTest {
     function testInitial() public {
         assertEq(engine.feeTo(), FEE_TO);
         assertEq(engine.feesEnabled(), true);
@@ -54,39 +52,164 @@ contract OptionSettlementEngineUnitTest is BaseTest {
         assertEq(engine.balanceOf(BOB, testOptionId), 0);
     }
 
-    function testClaimAccessor() public {
+    function testClaimAccessorBasic() public {
         vm.startPrank(ALICE);
-        uint256 claimId1 = engine.write(testOptionId, 69);
-        IOptionSettlementEngine.Claim memory claimLot = engine.claim(claimId1);
 
-        assertEq(claimLot.amountExercised, 0);
-        assertEq(claimLot.amountWritten, 69);
-        assertEq(claimLot.optionId, testOptionId);
-        assertTrue(claimLot.unredeemed);
+        uint256 claimId1 = engine.write(testOptionId, 1);
+        IOptionSettlementEngine.Claim memory claim1 = engine.claim(claimId1);
+        assertEq(claim1.amountWritten, 1e18);
+        assertEq(claim1.amountExercised, 0);
 
-        vm.warp(testExerciseTimestamp + 1);
+        uint256 claimId2 = engine.write(testOptionId, 1);
+        IOptionSettlementEngine.Claim memory claim2 = engine.claim(claimId2);
+        assertEq(claim1.amountWritten, 1e18);
+        assertEq(claim1.amountExercised, 0);
+        assertEq(claim2.amountWritten, 1e18);
+        assertEq(claim2.amountExercised, 0);
 
-        // Alice would probably never exercise her own option irl
+        engine.write(claimId2, 1);
+        claim2 = engine.claim(claimId2);
+        assertEq(claim1.amountWritten, 1e18);
+        assertEq(claim1.amountExercised, 0);
+        assertEq(claim2.amountWritten, 2e18);
+        assertEq(claim2.amountExercised, 0);
+
+        vm.warp(testExerciseTimestamp);
+
+        engine.exercise(testOptionId, 2);
+        claim1 = engine.claim(claimId1);
+        claim2 = engine.claim(claimId2);
+        assertEq(claim1.amountWritten, 1e18);
+        // exercised ratio in the bucket is 2/3
+        assertEq(
+            // 1 option is written in this claim, two options are exercised in the bucket, and in
+            // total, 3 options are written
+            claim1.amountExercised,
+            FixedPointMathLib.divWadDown(1 * 2, 3)
+        );
+        assertEq(claim2.amountWritten, 2e18);
+        assertEq(
+            // 2 options are written in this claim, two options are exercised in the bucket, and in
+            // total, 3 options are written
+            claim2.amountExercised,
+            FixedPointMathLib.divWadDown(2 * 2, 3)
+        );
+    }
+
+    function testFairAssignment() public {
+        // write 2, exercise 1, write 2 should create two buckets
+        vm.startPrank(ALICE);
+
+        uint256 claimId1 = engine.write(testOptionId, 1);
+        uint256 claimId2 = engine.write(testOptionId, 1);
+
         engine.exercise(testOptionId, 1);
-        claimLot = engine.claim(claimId1);
 
-        assertEq(claimLot.amountExercised, 1);
-        assertEq(claimLot.amountWritten, 69);
-        assertEq(claimLot.optionId, testOptionId);
-        assertTrue(claimLot.unredeemed);
+        // This should be written into a new bucket, and so the ratio of exercised to written in
+        // this bucket should be zero
+        uint256 claimId3 = engine.write(testOptionId, 2);
+
+        IOptionSettlementEngine.Claim memory claim1 = engine.claim(claimId1);
+        IOptionSettlementEngine.Claim memory claim2 = engine.claim(claimId2);
+        IOptionSettlementEngine.Claim memory claim3 = engine.claim(claimId3);
+
+        assertEq(claim1.amountWritten, 1e18);
+        assertEq(claim1.amountExercised, FixedPointMathLib.divWadDown(1 * 1, 2));
+
+        assertEq(claim2.amountWritten, 1e18);
+        assertEq(claim2.amountExercised, FixedPointMathLib.divWadDown(1 * 1, 2));
+
+        assertEq(claim3.amountWritten, 2e18);
+        assertEq(claim3.amountExercised, 0);
 
         engine.exercise(testOptionId, 1);
-        claimLot = engine.claim(claimId1);
 
-        assertEq(claimLot.amountExercised, 2);
-        assertEq(claimLot.amountWritten, 69);
-        assertEq(claimLot.optionId, testOptionId);
-        assertTrue(claimLot.unredeemed);
+        claim1 = engine.claim(claimId1);
+        claim2 = engine.claim(claimId2);
+        claim3 = engine.claim(claimId3);
 
-        vm.warp(testExpiryTimestamp + 1);
-        engine.redeem(claimId1);
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, claimId1));
-        claimLot = engine.claim(claimId1);
+        // 50/50 chance of exercising in first (claim 1 & 2) bucket or second bucket (claim 3)
+        // 1 option is written in this claim, two options are exercised in the bucket, and in
+        // total, 2 options are written
+        assertEq(claim1.amountWritten, 1e18);
+        assertEq(claim1.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
+
+        assertEq(claim2.amountWritten, 1e18);
+        assertEq(claim2.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
+
+        assertEq(claim3.amountWritten, 2e18);
+        assertEq(claim3.amountExercised, 0);
+
+        // First bucket is fully exercised, this will be performed on the second
+        engine.exercise(testOptionId, 1);
+
+        claim1 = engine.claim(claimId1);
+        claim2 = engine.claim(claimId2);
+        claim3 = engine.claim(claimId3);
+
+        assertEq(claim1.amountWritten, 1e18);
+        assertEq(claim1.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
+
+        assertEq(claim2.amountWritten, 1e18);
+        assertEq(claim2.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
+
+        assertEq(claim3.amountWritten, 2e18);
+        assertEq(claim3.amountExercised, FixedPointMathLib.divWadDown(2 * 1, 2));
+
+        // Both buckets are fully exercised
+        engine.exercise(testOptionId, 1);
+
+        claim1 = engine.claim(claimId1);
+        claim2 = engine.claim(claimId2);
+        claim3 = engine.claim(claimId3);
+
+        assertEq(claim1.amountWritten, 1e18);
+        assertEq(claim1.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
+
+        assertEq(claim2.amountWritten, 1e18);
+        assertEq(claim2.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
+
+        assertEq(claim3.amountWritten, 2e18);
+        assertEq(claim3.amountExercised, FixedPointMathLib.divWadDown(2 * 2, 2));
+    }
+
+    function testWriteExerciseAddBuckets() public {
+        vm.startPrank(ALICE);
+        uint256[7] memory claimRatios;
+        uint112 targetBuckets = 7;
+        uint256 i;
+        for (i = 0; i < targetBuckets; i++) {
+            engine.write(testOptionId, targetBuckets);
+            engine.exercise(testOptionId, 1);
+        }
+
+        // 49 written, 7 exercised
+        for (i = 1; i <= targetBuckets; i++) {
+            IOptionSettlementEngine.Claim memory claimData = engine.claim(testOptionId + i);
+            uint256 claimRatio = FixedPointMathLib.divWadDown(claimData.amountExercised, claimData.amountWritten);
+            emit log_named_uint("amount written WAD     ", claimData.amountWritten);
+            emit log_named_uint("amount exercised WAD   ", claimData.amountExercised);
+            // dividing by the amount written in the claim recovers the bucket ratio WAD
+            emit log_named_uint("claim ratio WAD        ", claimRatio);
+            claimRatios[i - 1] = claimRatio;
+        }
+
+        uint256 bucketRatio0 = FixedPointMathLib.divWadDown(3, 7);
+        uint256 bucketRatio1 = FixedPointMathLib.divWadDown(2, 7);
+        uint256 bucketRatio2 = 0;
+
+        // Claim 1 is exercised in a ratio of 3/7
+        assertEq(claimRatios[0], bucketRatio0);
+
+        // Claims 2 and 3 are exercised in a ratio of 2/7
+        assertEq(claimRatios[1], bucketRatio1);
+        assertEq(claimRatios[2], bucketRatio1);
+
+        // Claims 4, 5, 6, and 7 are not exercised (0/7)
+        assertEq(claimRatios[3], bucketRatio2);
+        assertEq(claimRatios[4], bucketRatio2);
+        assertEq(claimRatios[5], bucketRatio2);
+        assertEq(claimRatios[6], bucketRatio2);
     }
 
     function testWriteMultipleWriteSameOptionType() public {
@@ -101,20 +224,20 @@ contract OptionSettlementEngineUnitTest is BaseTest {
         assertEq(engine.balanceOf(ALICE, claimId1), 1);
         assertEq(engine.balanceOf(ALICE, claimId2), 1);
 
-        IOptionSettlementEngine.Underlying memory claimUnderlying = engine.underlying(claimId1);
+        IOptionSettlementEngine.Position memory claimPosition = engine.position(claimId1);
         (uint160 _optionId, uint96 claimIdx) = decodeTokenId(claimId1);
         uint256 optionId = uint256(_optionId) << 96;
         assertEq(optionId, testOptionId);
         assertEq(claimIdx, 1);
-        assertEq(uint256(claimUnderlying.underlyingPosition), 69 * testUnderlyingAmount);
+        assertEq(uint256(claimPosition.underlyingAmount), 69 * testUnderlyingAmount);
         _assertClaimAmountExercised(claimId1, 0);
 
-        claimUnderlying = engine.underlying(claimId2);
+        claimPosition = engine.position(claimId2);
         (optionId, claimIdx) = decodeTokenId(claimId2);
         optionId = uint256(_optionId) << 96;
         assertEq(optionId, testOptionId);
         assertEq(claimIdx, 2);
-        assertEq(uint256(claimUnderlying.underlyingPosition), 100 * testUnderlyingAmount);
+        assertEq(uint256(claimPosition.underlyingAmount), 100 * testUnderlyingAmount);
         _assertClaimAmountExercised(claimId2, 0);
     }
 
@@ -186,7 +309,7 @@ contract OptionSettlementEngineUnitTest is BaseTest {
 
     // NOTE: This test needed as testFuzz_redeem does not check if exerciseAmount == 0
     function testRedeemNotExercised() public {
-        IOptionSettlementEngine.Underlying memory claimUnderlying;
+        IOptionSettlementEngine.Position memory claimPosition;
         uint256 wethBalanceEngine = WETHLIKE.balanceOf(address(engine));
         uint256 wethBalanceA = WETHLIKE.balanceOf(ALICE);
         // Alice writes 7 and no one exercises
@@ -195,12 +318,12 @@ contract OptionSettlementEngineUnitTest is BaseTest {
 
         vm.warp(testExpiryTimestamp + 1);
 
-        claimUnderlying = engine.underlying(claimId);
-        assertTrue(claimUnderlying.underlyingPosition != 0);
+        claimPosition = engine.position(claimId);
+        assertTrue(claimPosition.underlyingAmount != 0);
 
         engine.redeem(claimId);
-        claimUnderlying = engine.underlying(claimId);
-        assertEq(claimUnderlying.underlyingPosition, 0);
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, claimId));
+        engine.position(claimId);
 
         // Fees
         uint256 writeAmount = 7 * testUnderlyingAmount;
@@ -241,65 +364,65 @@ contract OptionSettlementEngineUnitTest is BaseTest {
         assertEq(engine.balanceOf(BOB, newOptionId), 0);
     }
 
-    function testUnderlyingWhenNotExercised() public {
+    function testPositionWhenNotExercised() public {
         // Alice writes 7 and no one exercises
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 7);
 
         vm.warp(testExpiryTimestamp + 1);
 
-        IOptionSettlementEngine.Underlying memory underlyingPositions = engine.underlying(claimId);
+        IOptionSettlementEngine.Position memory position = engine.position(claimId);
 
-        assertEq(underlyingPositions.underlyingAsset, address(WETHLIKE));
-        _assertPosition(underlyingPositions.underlyingPosition, 7 * testUnderlyingAmount);
-        assertEq(underlyingPositions.exerciseAsset, address(DAILIKE));
-        assertEq(underlyingPositions.exercisePosition, 0);
+        assertEq(position.underlyingAsset, address(WETHLIKE));
+        _assertPosition(position.underlyingAmount, 7 * testUnderlyingAmount);
+        assertEq(position.exerciseAsset, address(DAILIKE));
+        assertEq(position.exerciseAmount, 0);
     }
 
-    function testUnderlyingAfterExercise() public {
+    function testPositionAfterExercise() public {
         uint256 claimId = _writeAndExerciseOption(testOptionId, ALICE, BOB, 2, 0);
-        IOptionSettlementEngine.Underlying memory underlyingPositions = engine.underlying(claimId);
-        _assertPosition(underlyingPositions.underlyingPosition, 2 * testUnderlyingAmount);
-        assertEq(underlyingPositions.exercisePosition, 0);
+        IOptionSettlementEngine.Position memory position = engine.position(claimId);
+        _assertPosition(position.underlyingAmount, 2 * testUnderlyingAmount);
+        assertEq(position.exerciseAmount, 0);
 
         _writeAndExerciseOption(testOptionId, ALICE, BOB, 0, 1);
-        underlyingPositions = engine.underlying(claimId);
-        _assertPosition(underlyingPositions.underlyingPosition, testUnderlyingAmount);
-        _assertPosition(underlyingPositions.exercisePosition, testExerciseAmount);
+        position = engine.position(claimId);
+        _assertPosition(position.underlyingAmount, testUnderlyingAmount);
+        _assertPosition(position.exerciseAmount, testExerciseAmount);
 
         _writeAndExerciseOption(testOptionId, ALICE, BOB, 0, 1);
-        underlyingPositions = engine.underlying(claimId);
-        _assertPosition(underlyingPositions.underlyingPosition, 0);
-        _assertPosition(underlyingPositions.exercisePosition, 2 * testExerciseAmount);
+        position = engine.position(claimId);
+        _assertPosition(position.underlyingAmount, 0);
+        _assertPosition(position.exerciseAmount, 2 * testExerciseAmount);
     }
 
     function testWriteAfterFullyExercisingDay() public {
         uint256 claim1 = _writeAndExerciseOption(testOptionId, ALICE, BOB, 1, 1);
         uint256 claim2 = _writeAndExerciseOption(testOptionId, ALICE, BOB, 1, 1);
 
-        IOptionSettlementEngine.Underlying memory underlyingPositions = engine.underlying(claim1);
-        _assertPosition(underlyingPositions.underlyingPosition, 0);
-        _assertPosition(underlyingPositions.exercisePosition, testExerciseAmount);
+        IOptionSettlementEngine.Position memory position = engine.position(claim1);
+        _assertPosition(position.underlyingAmount, 0);
+        _assertPosition(position.exerciseAmount, testExerciseAmount);
 
-        underlyingPositions = engine.underlying(claim2);
-        _assertPosition(underlyingPositions.underlyingPosition, 0);
-        _assertPosition(underlyingPositions.exercisePosition, testExerciseAmount);
+        position = engine.position(claim2);
+        _assertPosition(position.underlyingAmount, 0);
+        _assertPosition(position.exerciseAmount, testExerciseAmount);
     }
 
-    function testUnderlyingForFungibleOptionToken() public {
-        IOptionSettlementEngine.Underlying memory underlying = engine.underlying(testOptionId);
+    function testPositionForFungibleOptionToken() public {
+        IOptionSettlementEngine.Position memory position = engine.position(testOptionId);
         // before expiry, position is entirely the underlying amount
-        _assertPosition(underlying.underlyingPosition, testUnderlyingAmount);
-        _assertPosition(-1 * underlying.exercisePosition, testExerciseAmount);
-        assertEq(testExerciseAsset, underlying.exerciseAsset);
-        assertEq(testUnderlyingAsset, underlying.underlyingAsset);
+        _assertPosition(position.underlyingAmount, testUnderlyingAmount);
+        _assertPosition(-1 * position.exerciseAmount, testExerciseAmount);
+        assertEq(testExerciseAsset, position.exerciseAsset);
+        assertEq(testUnderlyingAsset, position.underlyingAsset);
 
         vm.warp(testOption.expiryTimestamp);
-        underlying = engine.underlying(testOptionId);
-        _assertPosition(underlying.underlyingPosition, 0);
-        _assertPosition(underlying.exercisePosition, 0);
-        assertEq(testExerciseAsset, underlying.exerciseAsset);
-        assertEq(testUnderlyingAsset, underlying.underlyingAsset);
+        // The token is now expired/worthless, and this should revert.
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
+        );
+        position = engine.position(testOptionId);
     }
 
     function testAddOptionsToExistingClaim() public {
@@ -307,9 +430,9 @@ contract OptionSettlementEngineUnitTest is BaseTest {
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
 
-        IOptionSettlementEngine.Underlying memory claimUnderlying = engine.underlying(claimId);
+        IOptionSettlementEngine.Position memory claimPosition = engine.position(claimId);
 
-        assertEq(testUnderlyingAmount, uint256(claimUnderlying.underlyingPosition));
+        assertEq(testUnderlyingAmount, uint256(claimPosition.underlyingAmount));
         _assertClaimAmountExercised(claimId, 0);
         assertEq(1, engine.balanceOf(ALICE, claimId));
         assertEq(1, engine.balanceOf(ALICE, testOptionId));
@@ -326,93 +449,9 @@ contract OptionSettlementEngineUnitTest is BaseTest {
         assertEq(1, engine.balanceOf(ALICE, claimId3));
         assertEq(3, engine.balanceOf(ALICE, testOptionId));
 
-        claimUnderlying = engine.underlying(claimId3);
-        assertEq(2 * testUnderlyingAmount, uint256(claimUnderlying.underlyingPosition));
+        claimPosition = engine.position(claimId3);
+        assertEq(2 * testUnderlyingAmount, uint256(claimPosition.underlyingAmount));
         _assertClaimAmountExercised(claimId, 0);
-    }
-
-    function testAssignMultipleBuckets() public {
-        // New option type with expiry in 5d
-        testExerciseTimestamp = uint40(block.timestamp + 1 days);
-        testExpiryTimestamp = uint40(block.timestamp + 5 * 1 days);
-
-        (uint256 optionId, IOptionSettlementEngine.Option memory option) = _createNewOptionType({
-            underlyingAsset: address(WETHLIKE),
-            underlyingAmount: testUnderlyingAmount,
-            exerciseAsset: address(DAILIKE),
-            exerciseAmount: testExerciseAmount,
-            exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp
-        });
-
-        // Alice writes some options
-        vm.startPrank(ALICE);
-        uint256 claimId1 = engine.write(optionId, 69);
-
-        // write more 1d later
-        vm.warp(block.timestamp + (1 days + 1));
-        uint256 claimId2 = engine.write(optionId, 100);
-
-        assertEq(169, engine.balanceOf(ALICE, optionId));
-
-        // Alice 'sells' half the written options to Bob, half to Carol
-        uint112 bobOptionAmount = 85;
-        engine.safeTransferFrom(ALICE, BOB, optionId, bobOptionAmount, "");
-        engine.safeTransferFrom(ALICE, CAROL, optionId, 84, "");
-        assertEq(0, engine.balanceOf(ALICE, optionId));
-
-        vm.stopPrank();
-
-        // Bob exercises the options
-        uint112 bobExerciseAmount = 70;
-        uint256 bobBalanceExerciseAsset1 = ERC20(option.exerciseAsset).balanceOf(BOB);
-        uint256 bobBalanceUnderlyingAsset1 = ERC20(option.underlyingAsset).balanceOf(BOB);
-        uint256 bobExerciseFee = (bobExerciseAmount * option.exerciseAmount / 10000) * engine.feeBps();
-        vm.startPrank(BOB);
-        engine.exercise(optionId, bobExerciseAmount);
-        assertEq(bobOptionAmount - bobExerciseAmount, engine.balanceOf(BOB, optionId));
-        // Bob transfers in exactly (#options exercised * exerciseAmount) of the exercise asset
-        // Bob receives exactly (#options exercised * underlyingAmount) - fee of the underlying asset
-        assertEq(
-            bobBalanceExerciseAsset1 - (bobExerciseAmount * option.exerciseAmount) - bobExerciseFee,
-            ERC20(option.exerciseAsset).balanceOf(BOB)
-        );
-        assertEq(
-            bobBalanceUnderlyingAsset1 + (bobExerciseAmount * option.underlyingAmount),
-            ERC20(option.underlyingAsset).balanceOf(BOB)
-        );
-        vm.stopPrank();
-
-        // randomly seeded based on option type seed. asserts will fail if seed
-        // algo changes.
-        // first lot is completely un exercised
-        emit log_named_int("claimId1 exercise", engine.underlying(claimId1).exercisePosition);
-        emit log_named_int("claimId1 underlying", engine.underlying(claimId1).underlyingPosition);
-
-        _assertClaimAmountExercised(claimId1, 69);
-        _assertClaimAmountExercised(claimId2, 1);
-
-        // Jump ahead to option expiry
-        vm.warp(1 + option.expiryTimestamp);
-        vm.startPrank(ALICE);
-        uint256 aliceBalanceExerciseAsset = ERC20(option.exerciseAsset).balanceOf(ALICE);
-        uint256 aliceBalanceUnderlyingAsset = ERC20(option.underlyingAsset).balanceOf(ALICE);
-        // Alice's first claim should be completely exercised
-        engine.redeem(claimId1);
-        assertEq(ERC20(option.exerciseAsset).balanceOf(ALICE), aliceBalanceExerciseAsset + 69 * option.exerciseAmount);
-        assertEq(aliceBalanceUnderlyingAsset, ERC20(option.underlyingAsset).balanceOf(ALICE));
-
-        aliceBalanceExerciseAsset = ERC20(option.exerciseAsset).balanceOf(ALICE);
-        aliceBalanceUnderlyingAsset = ERC20(option.underlyingAsset).balanceOf(ALICE);
-
-        // BOB exercised 70 options
-        // ALICE should retrieve 70 * exerciseAmount of the exercise asset
-        // ALICE should retrieve (100-70) * underlyingAmount of the underlying asset
-        engine.redeem(claimId2);
-        assertEq(ERC20(option.exerciseAsset).balanceOf(ALICE), aliceBalanceExerciseAsset + 1 * option.exerciseAmount);
-        assertEq(
-            ERC20(option.underlyingAsset).balanceOf(ALICE), aliceBalanceUnderlyingAsset + 99 * option.underlyingAmount
-        );
     }
 
     function testRandomAssignment() public {
@@ -442,36 +481,6 @@ contract OptionSettlementEngineUnitTest is BaseTest {
         vm.stopPrank();
 
         vm.startPrank(BOB);
-
-        // assign a single option on day 2
-        engine.exercise(optionId, 1);
-        _assertClaimAmountExercised(claimIds[0], 0, "Exercise 1 Claim 0");
-        _assertClaimAmountExercised(claimIds[1], 0, "Exercise 1 Claim 1");
-        _assertClaimAmountExercised(claimIds[2], 0, "Exercise 1 Claim 2");
-        _assertClaimAmountExercised(claimIds[3], 1, "Exercise 1 Claim 3");
-        _assertClaimAmountExercised(claimIds[4], 0, "Exercise 1 Claim 4");
-        _assertClaimAmountExercised(claimIds[5], 0, "Exercise 1 Claim 5");
-        _assertClaimAmountExercised(claimIds[6], 0, "Exercise 1 Claim 6");
-
-        // assigns a single option on day 4
-        engine.exercise(optionId, 1);
-        _assertClaimAmountExercised(claimIds[0], 0, "Exercise 2 Claim 0");
-        _assertClaimAmountExercised(claimIds[1], 0, "Exercise 2 Claim 1");
-        _assertClaimAmountExercised(claimIds[2], 0, "Exercise 2 Claim 2");
-        _assertClaimAmountExercised(claimIds[3], 1, "Exercise 2 Claim 3");
-        _assertClaimAmountExercised(claimIds[4], 1, "Exercise 2 Claim 4");
-        _assertClaimAmountExercised(claimIds[5], 0, "Exercise 2 Claim 5");
-        _assertClaimAmountExercised(claimIds[6], 0, "Exercise 2 Claim 6");
-
-        // assigns a single option on day 1
-        engine.exercise(optionId, 1);
-        _assertClaimAmountExercised(claimIds[0], 0, "Exercise 3 Claim 0");
-        _assertClaimAmountExercised(claimIds[1], 1, "Exercise 3 Claim 1"); // failing with actual 0 when expected 1
-        _assertClaimAmountExercised(claimIds[2], 0, "Exercise 3 Claim 2");
-        _assertClaimAmountExercised(claimIds[3], 1, "Exercise 3 Claim 3");
-        _assertClaimAmountExercised(claimIds[4], 1, "Exercise 3 Claim 4");
-        _assertClaimAmountExercised(claimIds[5], 0, "Exercise 3 Claim 5"); // failing with actual 1 when expected 0
-        _assertClaimAmountExercised(claimIds[6], 0, "Exercise 3 Claim 6");
     }
 
     function testWriteRecordFees() public {
@@ -659,9 +668,22 @@ contract OptionSettlementEngineUnitTest is BaseTest {
     }
 
     function testSetTokenURIGenerator() public {
+        TokenURIGenerator newTokenURIGenerator = new TokenURIGenerator();
+
         vm.prank(FEE_TO);
-        engine.setTokenURIGenerator(address(0xCAFE));
-        assertEq(address(engine.tokenURIGenerator()), address(0xCAFE));
+        engine.setTokenURIGenerator(address(newTokenURIGenerator));
+
+        assertEq(address(engine.tokenURIGenerator()), address(newTokenURIGenerator));
+    }
+
+    function testEventSetTokenURIGenerator() public {
+        TokenURIGenerator newTokenURIGenerator = new TokenURIGenerator();
+
+        vm.expectEmit(true, true, true, true);
+        emit TokenURIGeneratorUpdated(address(newTokenURIGenerator));
+
+        vm.prank(FEE_TO);
+        engine.setTokenURIGenerator(address(newTokenURIGenerator));
     }
 
     function testRevertSetTokenURIGeneratorWhenNotCurrentFeeTo() public {
@@ -781,9 +803,9 @@ contract OptionSettlementEngineUnitTest is BaseTest {
         vm.prank(ALICE);
         uint256 claimId = engine.write(optionId, 7);
 
-        IOptionSettlementEngine.Underlying memory claimUnderlying = engine.underlying(claimId);
+        IOptionSettlementEngine.Position memory claimPosition = engine.position(claimId);
 
-        assertEq(uint256(claimUnderlying.underlyingPosition), 7 * 1);
+        assertEq(uint256(claimPosition.underlyingAmount), 7 * 1);
     }
 
     function testIsOptionInitialized() public {
@@ -897,8 +919,6 @@ contract OptionSettlementEngineUnitTest is BaseTest {
             claimId,
             testOptionId,
             ALICE,
-            address(DAILIKE),
-            address(WETHLIKE),
             0, // no one has exercised
             expectedUnderlyingAmount
             );
@@ -1287,6 +1307,8 @@ contract OptionSettlementEngineUnitTest is BaseTest {
         engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
         vm.stopPrank();
 
+        vm.warp(testExerciseTimestamp - 1 seconds);
+
         // Bob immediately exercises before exerciseTimestamp
         vm.startPrank(BOB);
         vm.expectRevert(
@@ -1423,7 +1445,7 @@ contract OptionSettlementEngineUnitTest is BaseTest {
 
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, badOptionId));
 
-        engine.underlying(badOptionId);
+        engine.position(badOptionId);
     }
 
     function testRevertUriWhenTokenNotFound() public {

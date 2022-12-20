@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BUSL 1.1
+// Valorem Labs Inc. (c) 2022.
 pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
@@ -9,7 +10,7 @@ import "./MockERC20.sol";
 import "../../src/OptionSettlementEngine.sol";
 
 /// @notice Base for OptionSettlementEngine test suite
-abstract contract BaseTest is Test {
+abstract contract BaseEngineTest is Test {
     using stdStorage for StdStorage;
 
     OptionSettlementEngine internal engine;
@@ -21,7 +22,7 @@ abstract contract BaseTest is Test {
     address internal constant CAROL = address(0xC);
 
     // Admin
-    address internal constant FEE_TO = 0x2dbd50A4Ef9B172698596217b7DB0163D3607b41;
+    address internal constant FEE_TO = address(0xBEEF);
 
     // Tokens
     IERC20 internal WETHLIKE;
@@ -38,13 +39,6 @@ abstract contract BaseTest is Test {
     uint256 internal constant STARTING_BALANCE_WETH = 10_000_000;
     uint256 internal constant STARTING_BALANCE_OTHER = 1_000_000_000;
 
-    // address internal constant address(WETHLIKE) = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    // address internal constant address(DAILIKE) = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-    // address internal constant address(USDCLIKE) = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    // IERC20 internal constant DAI = IERC20(address(DAILIKE));
-    // IERC20 internal constant WETH = IERC20(address(WETHLIKE));
-    // IERC20 internal constant USDC = IERC20(address(USDCLIKE));
-
     // Test option
     uint256 internal testOptionId;
     address internal testUnderlyingAsset;
@@ -57,9 +51,6 @@ abstract contract BaseTest is Test {
     IOptionSettlementEngine.Option internal testOption;
 
     function setUp() public virtual {
-        // Fork mainnet
-        // vm.createSelectFork(vm.envString("RPC_URL"), 15_000_000);
-
         // Deploy OptionSettlementEngine
         generator = new TokenURIGenerator();
         engine = new OptionSettlementEngine(FEE_TO, address(generator));
@@ -85,7 +76,7 @@ abstract contract BaseTest is Test {
         for (uint256 i = 0; i < recipients.length; i++) {
             address recipient = recipients[i];
 
-            // Mint 10M WETH and 1B in stables and other ERC20s
+            // Now we have 1B in stables and 10M WETH
             _mint(recipient, MockERC20(address(WETHLIKE)), STARTING_BALANCE_WETH * 1e18);
             _mint(recipient, MockERC20(address(DAILIKE)), STARTING_BALANCE_OTHER * 1e18);
             _mint(recipient, MockERC20(address(USDCLIKE)), STARTING_BALANCE_OTHER * 1e6);
@@ -304,9 +295,9 @@ abstract contract BaseTest is Test {
     }
 
     function _assertClaimAmountExercised(uint256 claimId, uint112 amount, string memory where) internal {
-        IOptionSettlementEngine.Underlying memory underlying = engine.underlying(claimId);
+        IOptionSettlementEngine.Position memory position = engine.position(claimId);
         IOptionSettlementEngine.Option memory option = engine.option(claimId);
-        uint112 amountExercised = uint112(uint256(underlying.exercisePosition) / option.exerciseAmount);
+        uint112 amountExercised = uint112(uint256(position.exerciseAmount) / option.exerciseAmount);
         assertEq(amount, amountExercised, where);
     }
 
@@ -372,8 +363,6 @@ abstract contract BaseTest is Test {
         uint256 indexed claimId,
         uint256 indexed optionId,
         address indexed redeemer,
-        address exerciseAsset,
-        address underlyingAsset,
         uint256 exerciseAmountRedeemed,
         uint256 underlyingAmountRedeemed
     );
@@ -387,4 +376,6 @@ abstract contract BaseTest is Test {
     event FeeSwitchUpdated(address feeTo, bool enabled);
 
     event FeeToUpdated(address indexed newFeeTo);
+
+    event TokenURIGeneratorUpdated(address indexed newTokenURIGenerator);
 }

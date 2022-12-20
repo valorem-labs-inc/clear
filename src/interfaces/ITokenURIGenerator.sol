@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: BUSL 1.1
+// Valorem Labs Inc. (c) 2022.
 pragma solidity 0.8.16;
 
 import "./IOptionSettlementEngine.sol";
 
-/// @title A token URI generator for Claim NFTs
-/// @author 0xAlcibiades
-/// @author Flip-Liquid
-/// @author neodaoist
 interface ITokenURIGenerator {
     struct TokenURIParams {
         /// @param underlyingAsset The underlying asset to be received

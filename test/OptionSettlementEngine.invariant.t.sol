@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL 1.1
+// Valorem Labs Inc. (c) 2022.
 pragma solidity 0.8.16;
 
-import "./utils/BaseTest.sol";
+import "./utils/BaseEngineTest.sol";
 import "./utils/InvariantTest.sol";
 
 import {OptionWriter} from "./actors/OptionWriter.sol";
@@ -10,7 +11,7 @@ import {ProtocolAdmin} from "./actors/ProtocolAdmin.sol";
 import {Timekeeper} from "./actors/Timekeeper.sol";
 
 /// @notice Invariant tests for OptionSettlementEngine
-contract OptionSettlementEngineInvariantTest is BaseTest, InvariantTest {
+contract OptionSettlementEngineInvariantTest is BaseEngineTest, InvariantTest {
     OptionWriter internal writer;
     OptionHolder internal holder;
     ProtocolAdmin internal admin;
@@ -35,11 +36,6 @@ contract OptionSettlementEngineInvariantTest is BaseTest, InvariantTest {
         targetSender(address(0xDEAD));
 
         console.logString("setUp");
-    }
-
-    function testInitial() public {
-        assertEq(engine.feeTo(), FEE_TO);
-        assertEq(engine.feesEnabled(), true);
     }
 
     function invariant_alwaysBlue() public {

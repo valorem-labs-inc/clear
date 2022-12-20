@@ -36,8 +36,9 @@ abstract contract BaseEngineTest is Test {
     IERC20 internal ERC20E;
     IERC20 internal ERC20F;
 
-    uint256 internal constant STARTING_BALANCE_WETH = 10_000_000;
-    uint256 internal constant STARTING_BALANCE_OTHER = 1_000_000_000;
+    uint256 internal constant STARTING_BALANCE = 1_000_000_000 ether;
+    uint256 internal constant STARTING_BALANCE_WETH = 10_000_000 ether;
+    uint256 internal constant STARTING_BALANCE_USDC = 1_000_000_000 * 1e6;
 
     // Test option
     uint256 internal testOptionId;
@@ -77,16 +78,16 @@ abstract contract BaseEngineTest is Test {
             address recipient = recipients[i];
 
             // Now we have 1B in stables and 10M WETH
-            _mint(recipient, MockERC20(address(WETHLIKE)), STARTING_BALANCE_WETH * 1e18);
-            _mint(recipient, MockERC20(address(DAILIKE)), STARTING_BALANCE_OTHER * 1e18);
-            _mint(recipient, MockERC20(address(USDCLIKE)), STARTING_BALANCE_OTHER * 1e6);
-            _mint(recipient, MockERC20(address(UNILIKE)), STARTING_BALANCE_OTHER * 1e18);
-            _mint(recipient, MockERC20(address(ERC20A)), STARTING_BALANCE_OTHER * 1e18);
-            _mint(recipient, MockERC20(address(ERC20B)), STARTING_BALANCE_OTHER * 1e18);
-            _mint(recipient, MockERC20(address(ERC20C)), STARTING_BALANCE_OTHER * 1e18);
-            _mint(recipient, MockERC20(address(ERC20D)), STARTING_BALANCE_OTHER * 1e18);
-            _mint(recipient, MockERC20(address(ERC20E)), STARTING_BALANCE_OTHER * 1e18);
-            _mint(recipient, MockERC20(address(ERC20F)), STARTING_BALANCE_OTHER * 1e18);
+            _mint(recipient, MockERC20(address(WETHLIKE)), STARTING_BALANCE_WETH);
+            _mint(recipient, MockERC20(address(DAILIKE)), STARTING_BALANCE);
+            _mint(recipient, MockERC20(address(USDCLIKE)), STARTING_BALANCE_USDC);
+            _mint(recipient, MockERC20(address(UNILIKE)), STARTING_BALANCE);
+            _mint(recipient, MockERC20(address(ERC20A)), STARTING_BALANCE);
+            _mint(recipient, MockERC20(address(ERC20B)), STARTING_BALANCE);
+            _mint(recipient, MockERC20(address(ERC20C)), STARTING_BALANCE);
+            _mint(recipient, MockERC20(address(ERC20D)), STARTING_BALANCE);
+            _mint(recipient, MockERC20(address(ERC20E)), STARTING_BALANCE);
+            _mint(recipient, MockERC20(address(ERC20F)), STARTING_BALANCE);
 
             // _writeTokenBalance(recipient, address(DAILIKE), 1000000000 * 1e18);
             // _writeTokenBalance(recipient, address(USDCLIKE), 1000000000 * 1e6);
@@ -265,6 +266,14 @@ abstract contract BaseEngineTest is Test {
         uint160 optionKey = uint160(bytes20(keccak256(abi.encode(optionInfo))));
 
         return uint256(optionKey) << 96;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+    //  Test Helpers -- Protocol Fee
+    //////////////////////////////////////////////////////////////*/
+
+    function _calculateFee(uint256 amount) internal view returns (uint256) {
+        return (amount * engine.feeBps()) / 10_000;
     }
 
     /*//////////////////////////////////////////////////////////////

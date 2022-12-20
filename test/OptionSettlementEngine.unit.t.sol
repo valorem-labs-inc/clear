@@ -79,16 +79,18 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
         // Check balances after redeeming just 3
         // Alice +underlying +exercise, No change to Bob
-        uint256 underlyingRedeemed = FixedPointMathLib.mulDivDown(1 ether, 4, 7); // 4 partially exercised claims worth of underlyingAsset
-        underlyingRedeemed += 2 ether; // + 2 unexercised claims worth
-        uint256 exerciseRedeemed = FixedPointMathLib.mulDivDown(15 ether, 3, 7); // 3 partially exercised claims worth of exerciseAsset
+        uint256 underlyingRedeemedJust3 = FixedPointMathLib.mulDivDown(1 ether, 4, 7); // 4 partially exercised claims worth of underlyingAsset
+        underlyingRedeemedJust3 += 2 ether; // + 2 unexercised claims worth
+        uint256 exerciseRedeemedJust3 = FixedPointMathLib.mulDivDown(15 ether, 3, 7); // 3 partially exercised claims worth of exerciseAsset
         assertEq(
             ERC20A.balanceOf(ALICE),
-            STARTING_BALANCE - (costToWrite * 7) + underlyingRedeemed,
+            STARTING_BALANCE - (costToWrite * 7) + underlyingRedeemedJust3,
             "Alice underlying balance after redeem just 3"
         ); // TODO dust from writes on 2 claims
         assertEq(
-            ERC20B.balanceOf(ALICE), STARTING_BALANCE + exerciseRedeemed, "Alice exercise balance after redeem just 3"
+            ERC20B.balanceOf(ALICE),
+            STARTING_BALANCE + exerciseRedeemedJust3,
+            "Alice exercise balance after redeem just 3"
         );
 
         // Alice redeems remaining 4 claims
@@ -102,15 +104,17 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
         // Check balances after redeeming all 7
         // Alice +underlying +exercise, No change to Bob
-        underlyingRedeemed = 1 ether * 6; // 6 claims worth of underlyingAsset
-        exerciseRedeemed = 15 ether; // 1 claim worth of exerciseAsset
+        uint256 underlyingRedeemedAll7 = 1 ether * 6; // 6 claims worth of underlyingAsset
+        uint256 exerciseRedeemedAll7 = 15 ether; // 1 claim worth of exerciseAsset
         assertEq(
             ERC20A.balanceOf(ALICE),
-            STARTING_BALANCE - (costToWrite * 7) + underlyingRedeemed,
+            STARTING_BALANCE - (costToWrite * 7) + underlyingRedeemedAll7,
             "Alice underlying balance after redeem all 7"
         ); // TODO dust from 6 writes
         assertEq(
-            ERC20B.balanceOf(ALICE), STARTING_BALANCE + exerciseRedeemed, "Alice exercise balance after redeem all 7"
+            ERC20B.balanceOf(ALICE),
+            STARTING_BALANCE + exerciseRedeemedAll7,
+            "Alice exercise balance after redeem all 7"
         ); // TODO dust from 1 exercise
     }
 

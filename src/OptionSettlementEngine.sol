@@ -709,14 +709,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint256 claimIndexAmountWritten = claimIndex.amountWritten;
         uint256 bucketAmountWritten = bucket.amountWritten;
         uint256 bucketAmountExercised = bucket.amountExercised;
-        underlyingAmount += FixedPointMathLib.mulDivDown(
-            (bucketAmountWritten - bucketAmountExercised) * underlyingAssetAmount,
-            claimIndexAmountWritten,
-            bucketAmountWritten
-        );
-        exerciseAmount += FixedPointMathLib.mulDivDown(
-            bucketAmountExercised * exerciseAssetAmount, claimIndexAmountWritten, bucketAmountWritten
-        );
+        underlyingAmount += (
+            (bucketAmountWritten - bucketAmountExercised) * underlyingAssetAmount * claimIndexAmountWritten
+        ) / bucketAmountWritten;
+        exerciseAmount += (bucketAmountExercised * exerciseAssetAmount * claimIndexAmountWritten) / bucketAmountWritten;
     }
 
     //

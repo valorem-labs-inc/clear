@@ -49,7 +49,7 @@ contract OptionSettlementEngineInvariantTest is BaseEngineTest, InvariantTest {
     }
 
     // balances between the actors and engine should always add up to their original sums
-    function invariant_balances() public {
+    function invariant_erc20_balances() public {
         for (uint256 i = 0; i < ERC20S.length; i++) {
             IERC20 erc20 = ERC20S[i];
             uint256 minted = erc20.balanceOf(address(writer));

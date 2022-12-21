@@ -4,8 +4,7 @@ pragma solidity 0.8.16;
 import "./BaseActor.sol";
 
 contract OptionWriter is BaseActor {
-    constructor(OptionSettlementEngine _engine, OptionSettlementEngineInvariantTest _test) BaseActor(_engine, _test) {
-    }
+    constructor(OptionSettlementEngine _engine, OptionSettlementEngineInvariantTest _test) BaseActor(_engine, _test) {}
 
     function newOptionType() external {
         console.logString("newOptionType");

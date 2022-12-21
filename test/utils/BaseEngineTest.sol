@@ -109,7 +109,7 @@ abstract contract BaseEngineTest is Test {
         _mint(recipient, MockERC20(address(USDCLIKE)), STARTING_BALANCE_OTHER * 1e6);
         _mint(recipient, MockERC20(address(UNILIKE)), STARTING_BALANCE_OTHER * 1e18);
 
-        for (uint i = 0; i < ERC20S.length; i++) {
+        for (uint256 i = 0; i < ERC20S.length; i++) {
             _mint(recipient, MockERC20(address(ERC20S[i])), STARTING_BALANCE_OTHER * 1e18);
         }
 
@@ -120,7 +120,7 @@ abstract contract BaseEngineTest is Test {
         USDCLIKE.approve(address(engine), type(uint256).max);
         UNILIKE.approve(address(engine), type(uint256).max);
 
-        for (uint i = 0; i < ERC20S.length; i++) {
+        for (uint256 i = 0; i < ERC20S.length; i++) {
             ERC20S[i].approve(address(engine), type(uint256).max);
         }
         vm.stopPrank();

@@ -72,7 +72,7 @@ contract OptionSettlementEngineInvariantTest is BaseEngineTest, InvariantTest {
             // get option type balance from checking all claims sequentially
             uint256 claimIndex = 1;
             uint256 totalWrittenFromClaims = 0;
-            while(true) {
+            while (true) {
                 IOptionSettlementEngine.Claim memory claim = engine.claim(optionTypeId + claimIndex);
                 if (claim.amountWritten == 0) {
                     // claim isn't initialized
@@ -84,7 +84,6 @@ contract OptionSettlementEngineInvariantTest is BaseEngineTest, InvariantTest {
             // assert equality
             assertEq(totalWrittenFromClaims, totalWrittenERC20);
         }
-
     }
 
     // writers will register the option types they create with this callback

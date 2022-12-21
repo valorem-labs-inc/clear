@@ -9,6 +9,7 @@ import "../OptionSettlementEngine.invariant.t.sol";
 abstract contract BaseActor is StdUtils, CommonBase {
     OptionSettlementEngine internal engine;
     OptionSettlementEngineInvariantTest private test;
+
     constructor(OptionSettlementEngine _engine, OptionSettlementEngineInvariantTest _test) {
         engine = _engine;
         test = _test;

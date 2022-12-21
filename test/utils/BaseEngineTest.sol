@@ -36,6 +36,8 @@ abstract contract BaseEngineTest is Test {
     IERC20 internal ERC20E;
     IERC20 internal ERC20F;
 
+    IERC20[6] internal ERC20S;
+
     uint256 internal constant STARTING_BALANCE_WETH = 10_000_000;
     uint256 internal constant STARTING_BALANCE_OTHER = 1_000_000_000;
 
@@ -70,41 +72,12 @@ abstract contract BaseEngineTest is Test {
         ERC20D = IERC20(address(new MockERC20("Mock ERC20 D", "ERC20D", 18)));
         ERC20E = IERC20(address(new MockERC20("Mock ERC20 E", "ERC20E", 18)));
         ERC20F = IERC20(address(new MockERC20("Mock ERC20 F", "ERC20F", 18)));
+        ERC20S = [ERC20A, ERC20B, ERC20C, ERC20D, ERC20E, ERC20F];
 
         // Setup token balances and approvals
         address[3] memory recipients = [ALICE, BOB, CAROL];
         for (uint256 i = 0; i < recipients.length; i++) {
-            address recipient = recipients[i];
-
-            // Now we have 1B in stables and 10M WETH
-            _mint(recipient, MockERC20(address(WETHLIKE)), STARTING_BALANCE_WETH * 1e18);
-            _mint(recipient, MockERC20(address(DAILIKE)), STARTING_BALANCE_OTHER * 1e18);
-            _mint(recipient, MockERC20(address(USDCLIKE)), STARTING_BALANCE_OTHER * 1e6);
-            _mint(recipient, MockERC20(address(UNILIKE)), STARTING_BALANCE_OTHER * 1e18);
-            _mint(recipient, MockERC20(address(ERC20A)), STARTING_BALANCE_OTHER * 1e18);
-            _mint(recipient, MockERC20(address(ERC20B)), STARTING_BALANCE_OTHER * 1e18);
-            _mint(recipient, MockERC20(address(ERC20C)), STARTING_BALANCE_OTHER * 1e18);
-            _mint(recipient, MockERC20(address(ERC20D)), STARTING_BALANCE_OTHER * 1e18);
-            _mint(recipient, MockERC20(address(ERC20E)), STARTING_BALANCE_OTHER * 1e18);
-            _mint(recipient, MockERC20(address(ERC20F)), STARTING_BALANCE_OTHER * 1e18);
-
-            // _writeTokenBalance(recipient, address(DAILIKE), 1000000000 * 1e18);
-            // _writeTokenBalance(recipient, address(USDCLIKE), 1000000000 * 1e6);
-            // _writeTokenBalance(recipient, address(WETHLIKE), 10000000 * 1e18);
-
-            // Approve settlement engine to spend ERC20 token balances on behalf of user
-            vm.startPrank(recipient);
-            WETHLIKE.approve(address(engine), type(uint256).max);
-            DAILIKE.approve(address(engine), type(uint256).max);
-            USDCLIKE.approve(address(engine), type(uint256).max);
-            UNILIKE.approve(address(engine), type(uint256).max);
-            ERC20A.approve(address(engine), type(uint256).max);
-            ERC20B.approve(address(engine), type(uint256).max);
-            ERC20C.approve(address(engine), type(uint256).max);
-            ERC20D.approve(address(engine), type(uint256).max);
-            ERC20E.approve(address(engine), type(uint256).max);
-            ERC20F.approve(address(engine), type(uint256).max);
-            vm.stopPrank();
+            _mintTokensForAddress(recipients[i]);
         }
 
         // Setup test option
@@ -129,6 +102,29 @@ abstract contract BaseEngineTest is Test {
     // function _mockTotalSupply(address token)  {
     //     vm.mock
     // }
+    function _mintTokensForAddress(address recipient) internal {
+        // Now we have 1B in stables and 10M WETH
+        _mint(recipient, MockERC20(address(WETHLIKE)), STARTING_BALANCE_WETH * 1e18);
+        _mint(recipient, MockERC20(address(DAILIKE)), STARTING_BALANCE_OTHER * 1e18);
+        _mint(recipient, MockERC20(address(USDCLIKE)), STARTING_BALANCE_OTHER * 1e6);
+        _mint(recipient, MockERC20(address(UNILIKE)), STARTING_BALANCE_OTHER * 1e18);
+
+        for (uint i = 0; i < ERC20S.length; i++) {
+            _mint(recipient, MockERC20(address(ERC20S[i])), STARTING_BALANCE_OTHER * 1e18);
+        }
+
+        // Approve settlement engine to spend ERC20 token balances on behalf of user
+        vm.startPrank(recipient);
+        WETHLIKE.approve(address(engine), type(uint256).max);
+        DAILIKE.approve(address(engine), type(uint256).max);
+        USDCLIKE.approve(address(engine), type(uint256).max);
+        UNILIKE.approve(address(engine), type(uint256).max);
+
+        for (uint i = 0; i < ERC20S.length; i++) {
+            ERC20S[i].approve(address(engine), type(uint256).max);
+        }
+        vm.stopPrank();
+    }
 
     function _mint(address who, MockERC20 token, uint256 amount) internal {
         token.mint(who, amount);

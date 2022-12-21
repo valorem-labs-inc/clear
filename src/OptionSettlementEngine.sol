@@ -85,6 +85,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         mapping(uint96 => ClaimIndex[]) claimIndices;
     }
 
+    struct TokenCounters {
+        uint128 feeBalance;
+        uint128 dustBalance;
+    }
+
     /*//////////////////////////////////////////////////////////////
     //  Immutable/Constant - Private
     //////////////////////////////////////////////////////////////*/
@@ -94,6 +99,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
     /// @dev The mask to mask out a claimKey from a claimId.
     uint96 private constant CLAIM_KEY_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFF;
+
+    /// @dev The scalar used for precision in fixed point math.
+    uint256 private constant SCALAR = 1e6;
 
     /*//////////////////////////////////////////////////////////////
     //  Immutable/Constant - Public
@@ -109,12 +117,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @notice Details about the option, buckets, and claims per option type.
     mapping(uint160 => OptionTypeState) private optionTypeStates;
 
+    // @notice Details about global token balances.
+    mapping(address => TokenCounters) private tokenCounters;
+
     /*//////////////////////////////////////////////////////////////
     //  State Variables - Public
     //////////////////////////////////////////////////////////////*/
-
-    /// @inheritdoc IOptionSettlementEngine
-    mapping(address => uint256) public feeBalance;
 
     /// @inheritdoc IOptionSettlementEngine
     address public feeTo;
@@ -195,18 +203,24 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             ClaimIndex storage claimIndex = claimIndexArray[i];
             Bucket storage bucket = optionTypeState.bucketInfo.buckets[claimIndex.bucketIndex];
             amountWritten += claimIndex.amountWritten;
-            amountExercised +=
-                FixedPointMathLib.divWadDown((bucket.amountExercised * claimIndex.amountWritten), bucket.amountWritten);
+            amountExercised += FixedPointMathLib.mulDivDown(
+                (bucket.amountExercised * claimIndex.amountWritten), 1e18, bucket.amountWritten
+            );
         }
 
         claimInfo = Claim({
-            // scale the amount written by WAD for consistency
+            // scale the amount written by SCALAR for consistency
             amountWritten: amountWritten * 1e18,
             amountExercised: amountExercised,
             optionId: uint256(optionKey) << OPTION_KEY_PADDING,
             // If the claim is initialized, it is unredeemed.
             unredeemed: true
         });
+    }
+
+    /// @inheritdoc IOptionSettlementEngine
+    function feeBalance(address token) external view returns (uint256) {
+        return uint256(tokenCounters[token].feeBalance);
     }
 
     /// @inheritdoc IOptionSettlementEngine
@@ -249,11 +263,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             uint256 exerciseAssetAmount = optionTypeState.option.exerciseAmount;
 
             for (uint256 i = 0; i < len; i++) {
-                (uint256 indexUnderlyingAmount, uint256 indexExerciseAmount) = _getAssetAmountsForClaimIndex(
+                uint256 indexUnderlyingAmount;
+                uint256 indexExerciseAmount;
+                (indexUnderlyingAmount, indexExerciseAmount) = _getAssetAmountsForClaimIndex(
                     underlyingAssetAmount, exerciseAssetAmount, optionTypeState, claimIndices, i
                 );
-                totalUnderlyingAmount += indexUnderlyingAmount;
-                totalExerciseAmount += indexExerciseAmount;
+                totalUnderlyingAmount += indexUnderlyingAmount / SCALAR;
+                totalExerciseAmount += indexExerciseAmount / SCALAR;
             }
 
             positionInfo = Position({
@@ -537,6 +553,32 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             claimIndices.pop();
         }
 
+        address underlyingAsset = optionRecord.underlyingAsset;
+        {
+            uint256 underlyingDust = tokenCounters[optionRecord.underlyingAsset].dustBalance;
+            underlyingDust += totalUnderlyingAssetAmount % SCALAR;
+            if (underlyingDust >= SCALAR) {
+                uint256 sweep = underlyingDust / SCALAR;
+                underlyingDust -= sweep * SCALAR;
+                totalUnderlyingAssetAmount += sweep * SCALAR;
+            }
+            tokenCounters[underlyingAsset].dustBalance = uint128(underlyingDust);
+            totalUnderlyingAssetAmount /= SCALAR;
+        }
+
+        address exerciseAsset = optionRecord.exerciseAsset;
+        {
+            uint256 exerciseDust = tokenCounters[optionRecord.exerciseAsset].dustBalance;
+            exerciseDust += totalExerciseAssetAmount % SCALAR;
+            if (exerciseDust >= SCALAR) {
+                uint256 sweep = exerciseDust / SCALAR;
+                exerciseDust -= sweep * SCALAR;
+                totalExerciseAssetAmount += sweep * SCALAR;
+            }
+            tokenCounters[exerciseAsset].dustBalance = uint128(exerciseDust);
+            totalExerciseAssetAmount /= SCALAR;
+        }
+
         emit ClaimRedeemed(
             claimId,
             uint256(optionKey) << OPTION_KEY_PADDING,
@@ -548,12 +590,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         // Burn the claim NFT and make transfers.
         _burn(msg.sender, claimId, 1);
 
-        if (totalExerciseAssetAmount > 0) {
-            SafeTransferLib.safeTransfer(ERC20(optionRecord.exerciseAsset), msg.sender, totalExerciseAssetAmount);
+        if (totalUnderlyingAssetAmount > 0) {
+            SafeTransferLib.safeTransfer(ERC20(underlyingAsset), msg.sender, totalUnderlyingAssetAmount);
         }
 
-        if (totalUnderlyingAssetAmount > 0) {
-            SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, totalUnderlyingAssetAmount);
+        if (totalExerciseAssetAmount > 0) {
+            SafeTransferLib.safeTransfer(ERC20(exerciseAsset), msg.sender, totalExerciseAssetAmount);
         }
     }
 
@@ -635,6 +677,15 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         emit FeeToUpdated(newFeeTo);
     }
 
+    function sweepDust(address token) external {
+        uint256 tokenDustBalance = tokenCounters[token].dustBalance;
+        if (tokenDustBalance >= SCALAR) {
+            uint256 sweep = tokenDustBalance / SCALAR;
+            tokenCounters[token].dustBalance -= uint128(sweep * SCALAR);
+            SafeTransferLib.safeTransfer(ERC20(token), msg.sender, sweep);
+        }
+    }
+
     /// @inheritdoc IOptionSettlementEngine
     function sweepFees(address[] memory tokens) external {
         address sendFeeTo = feeTo;
@@ -647,11 +698,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             for (uint256 i = 0; i < numTokens; i++) {
                 // Get the token and balance to sweep
                 token = tokens[i];
-                fee = feeBalance[token];
+                fee = tokenCounters[token].feeBalance;
                 // Leave 1 wei here as a gas optimization
                 if (fee > 1) {
                     sweep = fee - 1;
-                    feeBalance[token] = 1;
+                    tokenCounters[token].feeBalance = 1;
                     emit FeeSwept(token, sendFeeTo, sweep);
                     SafeTransferLib.safeTransfer(ERC20(token), sendFeeTo, sweep);
                 }
@@ -709,13 +760,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         uint256 claimIndexAmountWritten = claimIndex.amountWritten;
         uint256 bucketAmountWritten = bucket.amountWritten;
         uint256 bucketAmountExercised = bucket.amountExercised;
+        uint256 bucketAmountUnexercised = bucketAmountWritten - bucketAmountExercised;
         underlyingAmount += FixedPointMathLib.mulDivDown(
-            (bucketAmountWritten - bucketAmountExercised) * underlyingAssetAmount,
-            claimIndexAmountWritten,
-            bucketAmountWritten
+            bucketAmountUnexercised * underlyingAssetAmount * SCALAR, claimIndexAmountWritten, bucketAmountWritten
         );
         exerciseAmount += FixedPointMathLib.mulDivDown(
-            bucketAmountExercised * exerciseAssetAmount, claimIndexAmountWritten, bucketAmountWritten
+            bucketAmountExercised * exerciseAssetAmount * SCALAR, claimIndexAmountWritten, bucketAmountWritten
         );
     }
 
@@ -880,7 +930,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         returns (uint256 fee)
     {
         fee = (assetAmount * feeBps) / 10_000;
-        feeBalance[assetAddress] += fee;
+        tokenCounters[assetAddress].feeBalance += uint128(fee);
 
         emit FeeAccrued(optionId, assetAddress, msg.sender, fee);
     }

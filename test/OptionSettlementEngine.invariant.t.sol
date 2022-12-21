@@ -17,6 +17,9 @@ contract OptionSettlementEngineInvariantTest is BaseEngineTest, InvariantTest {
     ProtocolAdmin internal admin;
     Timekeeper internal timekeeper;
 
+    uint256[] internal optionTypes;
+    uint256[] internal claimsWritten;
+
     function setUp() public override {
         super.setUp();
 
@@ -35,10 +38,60 @@ contract OptionSettlementEngineInvariantTest is BaseEngineTest, InvariantTest {
 
         targetSender(address(0xDEAD));
 
+        _mintTokensForAddress(address(writer));
+        _mintTokensForAddress(address(holder));
+
         console.logString("setUp");
     }
 
     function invariant_alwaysBlue() public {
         assertTrue(true);
+    }
+
+    // balances between the actors and engine should always add up to their original sums
+    function invariant_balances() public {
+        for (uint256 i = 0; i < ERC20S.length; i++) {
+            IERC20 erc20 = ERC20S[i];
+            uint256 minted = erc20.balanceOf(address(writer));
+            minted += erc20.balanceOf(address(holder));
+            minted += erc20.balanceOf(address(engine));
+            assertEq(minted, erc20.totalSupply());
+        }
+    }
+
+    // check erc1155 issuance against claim() method
+    function invariant_options_written_match_claims() public {
+        for (uint256 i = 0; i < optionTypes.length; i++) {
+            // get option type balance from erc1155 impl
+            uint256 optionTypeId = optionTypes[i];
+            uint256 totalWrittenERC20 = engine.balanceOf(optionTypeId, address(holder));
+            totalWrittenERC20 += engine.balanceOf(optionTypeId, address(writer));
+
+            // get option type balance from checking all claims sequentially
+            uint256 claimIndex = 1;
+            uint256 totalWrittenFromClaims = 0;
+            while(true) {
+                IOptionSettlementEngine.Claim memory claim = engine.claim(optionTypeId + claimIndex);
+                if (claim.amountWritten == 0) {
+                    // claim isn't initialized
+                    break;
+                }
+                totalWrittenFromClaims += claim.amountWritten;
+            }
+
+            // assert equality
+            assertEq(totalWrittenFromClaims, totalWrittenERC20);
+        }
+
+    }
+
+    // writers will register the option types they create with this callback
+    function addOptionType(uint256 optionId) public {
+        optionTypes.push(optionId);
+    }
+
+    // writers will register the claim ids they create with this callback
+    function addClaimId(uint256 claimId) public {
+        claimsWritten.push(claimId);
     }
 }

@@ -95,6 +95,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @dev The mask to mask out a claimKey from a claimId.
     uint96 private constant CLAIM_KEY_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFF;
 
+    /// @dev The minimum amount of underlying/exercise assets required for a new option type.
+    uint256 private constant MIN_ASSET_AMOUNT = 2000;
+
     /*//////////////////////////////////////////////////////////////
     //  Immutable/Constant - Public
     //////////////////////////////////////////////////////////////*/
@@ -377,6 +380,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         ERC20 exerciseToken = ERC20(exerciseAsset);
         if (underlyingToken.totalSupply() < underlyingAmount || exerciseToken.totalSupply() < exerciseAmount) {
             revert InvalidAssets(underlyingAsset, exerciseAsset);
+        }
+
+        // Check that asset amounts are sufficiently large
+        if (underlyingAmount < MIN_ASSET_AMOUNT || exerciseAmount < MIN_ASSET_AMOUNT) {
+            revert InvalidAssetAmounts(underlyingAmount, exerciseAmount);
         }
 
         // Store the option type.

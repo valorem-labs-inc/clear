@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import "./BaseActor.sol";
 
 contract ProtocolAdmin is BaseActor {
-    constructor(OptionSettlementEngine _engine) BaseActor(_engine) {
+    constructor(OptionSettlementEngine _engine, OptionSettlementEngineInvariantTest _test) BaseActor(_engine, _test) {
         //
     }
 

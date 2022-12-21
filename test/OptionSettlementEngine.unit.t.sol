@@ -1339,7 +1339,6 @@ contract OptionSettlementTest is BaseEngineTest {
     }
 
     function testRevertNewOptionTypeWhenInvalidAssetAmounts() public {
-
         vm.expectRevert(
             abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssetAmounts.selector, 1, testExerciseAmount)
         );
@@ -1352,7 +1351,7 @@ contract OptionSettlementTest is BaseEngineTest {
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
-        
+
         vm.expectRevert(
             abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssetAmounts.selector, testUnderlyingAmount, 1)
         );

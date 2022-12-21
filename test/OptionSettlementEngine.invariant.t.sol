@@ -20,9 +20,9 @@ contract OptionSettlementEngineInvariantTest is BaseEngineTest, InvariantTest {
     function setUp() public override {
         super.setUp();
 
-        writer = new OptionWriter(engine);
-        holder = new OptionHolder(engine);
-        admin = new ProtocolAdmin(engine);
+        writer = new OptionWriter(engine, this);
+        holder = new OptionHolder(engine, this);
+        admin = new ProtocolAdmin(engine, this);
         timekeeper = new Timekeeper();
 
         targetContract(address(writer));

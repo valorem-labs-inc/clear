@@ -54,7 +54,9 @@ contract OptionSettlementEngineInvariantTest is BaseEngineTest, InvariantTest {
             IERC20 erc20 = ERC20S[i];
             uint256 minted = erc20.balanceOf(address(writer));
             minted += erc20.balanceOf(address(holder));
+            minted += erc20.balanceOf(address(admin));
             minted += erc20.balanceOf(address(engine));
+
             assertEq(minted, erc20.totalSupply());
         }
     }

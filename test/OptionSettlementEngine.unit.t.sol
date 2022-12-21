@@ -75,11 +75,12 @@ contract OptionSettlementTest is BaseEngineTest {
         uint256 underlyingRedeemedJust3 = FixedPointMathLib.mulDivDown(1 ether, 4, 7); // 4 partially exercised claims worth of underlyingAsset
         underlyingRedeemedJust3 += 2 ether; // + 2 unexercised claims worth
         uint256 exerciseRedeemedJust3 = FixedPointMathLib.mulDivDown(15 ether, 3, 7); // 3 partially exercised claims worth of exerciseAsset
+        // 2 wei lost to dust
         assertEq(
             ERC20A.balanceOf(ALICE),
-            STARTING_BALANCE - (costToWrite * 7) + underlyingRedeemedJust3,
+            STARTING_BALANCE - (costToWrite * 7) + underlyingRedeemedJust3 - 2,
             "Alice underlying balance after redeem just 3"
-        ); // TODO dust from writes on 2 claims
+        );
         assertEq(
             ERC20B.balanceOf(ALICE),
             STARTING_BALANCE + exerciseRedeemedJust3,
@@ -99,14 +100,16 @@ contract OptionSettlementTest is BaseEngineTest {
         // Alice +underlying +exercise, No change to Bob
         uint256 underlyingRedeemedAll7 = 1 ether * 6; // 6 claims worth of underlyingAsset
         uint256 exerciseRedeemedAll7 = 15 ether; // 1 claim worth of exerciseAsset
+        // 6 wei lost to dust.
         assertEq(
             ERC20A.balanceOf(ALICE),
-            STARTING_BALANCE - (costToWrite * 7) + underlyingRedeemedAll7,
+            STARTING_BALANCE - (costToWrite * 7) + underlyingRedeemedAll7 - 6,
             "Alice underlying balance after redeem all 7"
-        ); // TODO dust from 6 writes
+        );
+        // 1 wei lost to dust.
         assertEq(
             ERC20B.balanceOf(ALICE),
-            STARTING_BALANCE + exerciseRedeemedAll7,
+            STARTING_BALANCE + exerciseRedeemedAll7 - 1,
             "Alice exercise balance after redeem all 7"
         ); // TODO dust from 1 exercise
     }

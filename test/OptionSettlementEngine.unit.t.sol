@@ -883,31 +883,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(engine.balanceOf(BOB, testOptionId), 0);
     }
 
-    // NOTE: This test needed as testFuzz_redeem does not check if exerciseAmount == 0
-    function testRedeemNotExercised() public {
-        IOptionSettlementEngine.Position memory claimPosition;
-        uint256 wethBalanceEngine = WETHLIKE.balanceOf(address(engine));
-        uint256 wethBalanceA = WETHLIKE.balanceOf(ALICE);
-        // Alice writes 7 and no one exercises
-        vm.startPrank(ALICE);
-        uint256 claimId = engine.write(testOptionId, 7);
-
-        vm.warp(testExpiryTimestamp + 1);
-
-        claimPosition = engine.position(claimId);
-        assertTrue(claimPosition.underlyingAmount != 0);
-
-        engine.redeem(claimId);
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, claimId));
-        engine.position(claimId);
-
-        // Fees
-        uint256 writeAmount = 7 * testUnderlyingAmount;
-        uint256 writeFee = (writeAmount / 10000) * engine.feeBps();
-        assertEq(WETHLIKE.balanceOf(ALICE), wethBalanceA - writeFee);
-        assertEq(WETHLIKE.balanceOf(address(engine)), wethBalanceEngine + writeFee);
-    }
-
     function testExerciseWithDifferentDecimals() public {
         // Write an option where one of the assets isn't 18 decimals
         (uint256 newOptionId,) = _createNewOptionType({

@@ -1,6 +1,8 @@
 out/
+broadcast/
 cache/
 node_modules/
+.venv/
 package-lock.json
 .env
 .idea

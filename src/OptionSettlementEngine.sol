@@ -454,7 +454,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // Emit event about options written on a new claim.
             emit OptionsWritten(encodedOptionId, msg.sender, tokenId, amount);
 
-            // Mint a new claim token and transfer option tokens.
+            // Transfer in the requisite underlying asset amount.
+            SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
+
+            // Mint a new claim token and option tokens.
             uint256[] memory tokens = new uint256[](2);
             tokens[0] = encodedOptionId;
             tokens[1] = tokenId;
@@ -462,9 +465,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             uint256[] memory amounts = new uint256[](2);
             amounts[0] = amount;
             amounts[1] = 1; // claim NFT
-
-            // Transfer in the requisite underlying asset amount.
-            SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
 
             _batchMint(msg.sender, tokens, amounts, "");
         } else {

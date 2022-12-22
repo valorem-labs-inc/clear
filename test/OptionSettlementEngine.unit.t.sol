@@ -176,6 +176,20 @@ contract OptionSettlementTest is BaseEngineTest {
     //
     // function tokenType(uint256 tokenId) external view returns (TokenType typeOfToken);
     //
+    function test_unitTokenTypeReturnsNone() public view {
+        assert(IOptionSettlementEngine.TokenType.None == engine.tokenType(127));
+    }
+
+    function test_unitTokenTypeReturnsOption() public view {
+        assert(IOptionSettlementEngine.TokenType.Option == engine.tokenType(testOptionId));
+    }
+
+    function test_unitTokenTypeReturnsClaim() public {
+        vm.prank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 1);
+
+        assert(IOptionSettlementEngine.TokenType.Claim == engine.tokenType(claimId));
+    }
 
     //
     // function tokenURIGenerator() external view returns (ITokenURIGenerator uriGenerator);
@@ -232,7 +246,4 @@ contract OptionSettlementTest is BaseEngineTest {
     //
     // function sweepFees(address[] memory tokens) external;
     //
-
-    // position()
-    function test_unitPositionClaim() public {}
 }

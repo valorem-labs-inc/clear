@@ -241,19 +241,18 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //  function tokenType(uint256 tokenId) external view returns (TokenType typeOfToken);
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitTokenTypeReturnsNone() public view {
-        assert(IOptionSettlementEngine.TokenType.None == engine.tokenType(127));
+    function test_unitTokenTypeReturnsNone() public {
+        _assertTokenIsNone(127);
     }
 
-    function test_unitTokenTypeReturnsOption() public view {
-        assert(IOptionSettlementEngine.TokenType.Option == engine.tokenType(testOptionId));
+    function test_unitTokenTypeReturnsOption() public {
+        _assertTokenIsOption(testOptionId);
     }
 
     function test_unitTokenTypeReturnsClaim() public {
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
-
-        assert(IOptionSettlementEngine.TokenType.Claim == engine.tokenType(claimId));
+        _assertTokenIsClaim(claimId);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -267,6 +266,75 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     /*//////////////////////////////////////////////////////////////
     //  function feeBalance(address token) external view returns (uint256);
     //////////////////////////////////////////////////////////////*/
+
+    function test_unitFeeBalanceFeeOn() public {
+        assertEq(engine.feeBalance(testUnderlyingAsset), 0);
+        assertEq(engine.feeBalance(testExerciseAsset), 0);
+
+        vm.prank(ALICE);
+        engine.write(testOptionId, 2);
+
+        // Fee is recorded on the exercise asset
+        uint256 underlyingAmount = 2 * testUnderlyingAmount;
+        uint256 underlyingFee = (underlyingAmount * engine.feeBps()) / 10_000;
+        assertEq(engine.feeBalance(address(WETHLIKE)), underlyingFee);
+
+        vm.prank(ALICE);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 2, "");
+
+        // Bob exercises 2
+        vm.warp(testExerciseTimestamp);
+        vm.prank(BOB);
+        engine.exercise(testOptionId, 2);
+
+        // Fee is recorded on the exercise asset
+        uint256 exerciseAmount = 2 * testExerciseAmount;
+        uint256 exerciseFee = (exerciseAmount * engine.feeBps()) / 10_000;
+        assertEq(engine.feeBalance(address(DAILIKE)), exerciseFee);
+    }
+
+    function test_unitFeeBalanceFeeOff() public {
+        assertEq(engine.feeBalance(testUnderlyingAsset), 0);
+        assertEq(engine.feeBalance(testExerciseAsset), 0);
+
+        vm.prank(FEE_TO);
+        engine.setFeesEnabled(false);
+
+        vm.prank(ALICE);
+        engine.write(testOptionId, 2);
+
+        assertEq(engine.feeBalance(address(WETHLIKE)), 0);
+
+        vm.prank(ALICE);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 2, "");
+
+        // Bob exercises 2
+        vm.warp(testExerciseTimestamp);
+        vm.prank(BOB);
+        engine.exercise(testOptionId, 2);
+
+        assertEq(engine.feeBalance(address(DAILIKE)), 0);
+    }
+
+    function test_unitFeeBalanceMinimum() public {
+        vm.startPrank(ALICE);
+        uint256 optionId = engine.newOptionType(
+            address(ERC20A), 1, address(ERC20B), 15, uint40(block.timestamp), uint40(block.timestamp + 30 days)
+        );
+        engine.write(optionId, 1);
+        assertEq(engine.feeBalance(address(ERC20A)), 1);
+
+        engine.safeTransferFrom(ALICE, BOB, optionId, 1, "");
+        vm.stopPrank();
+
+        // Warp right before expiry time and Bob exercises
+        vm.warp(block.timestamp + 30 days - 1 seconds);
+        vm.prank(BOB);
+        engine.exercise(optionId, 1);
+
+        // Check balances after exercise
+        assertEq(engine.feeBalance(address(ERC20B)), 1);
+    }
 
     /*//////////////////////////////////////////////////////////////
     //  function feeBps() external view returns (uint8 fee);
@@ -645,102 +713,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.startPrank(BOB);
     }
 
-    function testWriteRecordFees() public {
-        // Alice writes 2
-        vm.prank(ALICE);
-        engine.write(testOptionId, 2);
-
-        // Fee is recorded on underlying asset, not on exercise asset
-        uint256 writeAmount = 2 * testUnderlyingAmount;
-        uint256 writeFee = (writeAmount * engine.feeBps()) / 10_000;
-        assertEq(engine.feeBalance(address(WETHLIKE)), writeFee);
-        assertEq(engine.feeBalance(address(DAILIKE)), 0);
-    }
-
-    function testWriteNoFeesRecordedWhenFeeSwitchIsDisabled() public {
-        // precondition check, fee is recorded and emitted on write
-        vm.prank(ALICE);
-        engine.write(testOptionId, 2);
-
-        uint256 writeAmount = 2 * testUnderlyingAmount;
-        uint256 writeFee = (writeAmount * engine.feeBps()) / 10_000;
-        assertEq(engine.feeBalance(address(WETHLIKE)), writeFee);
-
-        // Disable fee switch
-        vm.prank(FEE_TO);
-        engine.setFeesEnabled(false);
-
-        // Write 3 more, no fee is recorded or emitted
-        vm.prank(ALICE);
-        engine.write(testOptionId, 3);
-        assertEq(engine.feeBalance(address(WETHLIKE)), writeFee); // no change
-
-        // Re-enable
-        vm.prank(FEE_TO);
-        engine.setFeesEnabled(true);
-
-        // Write 5 more, fee is again recorded and emitted
-        vm.prank(ALICE);
-        engine.write(testOptionId, 5);
-        writeAmount = 5 * testUnderlyingAmount;
-        writeFee += (writeAmount * engine.feeBps()) / 10_000;
-        assertEq(engine.feeBalance(address(WETHLIKE)), writeFee); // includes fee on writing 5 more
-    }
-
-    function testExerciseRecordFees() public {
-        // Alice writes 2 and transfers to Bob
-        vm.startPrank(ALICE);
-        engine.write(testOptionId, 2);
-        engine.safeTransferFrom(ALICE, BOB, testOptionId, 2, "");
-        vm.stopPrank();
-
-        // Bob exercises 2
-        vm.warp(testExerciseTimestamp + 1 seconds);
-        vm.prank(BOB);
-        engine.exercise(testOptionId, 2);
-
-        // Fee is recorded on exercise asset
-        uint256 exerciseAmount = 2 * testExerciseAmount;
-        uint256 exerciseFee = (exerciseAmount * engine.feeBps()) / 10_000;
-        assertEq(engine.feeBalance(address(DAILIKE)), exerciseFee);
-    }
-
-    function testExerciseNoFeesRecordedWhenFeeSwitchIsDisabled() public {
-        // precondition check, fee is recorded and emitted on exercise
-        vm.startPrank(ALICE);
-        engine.write(testOptionId, 10);
-        engine.safeTransferFrom(ALICE, BOB, testOptionId, 10, "");
-        vm.stopPrank();
-
-        vm.warp(testExerciseTimestamp + 1 seconds);
-        vm.prank(BOB);
-        engine.exercise(testOptionId, 2);
-
-        uint256 exerciseAmount = 2 * testExerciseAmount;
-        uint256 exerciseFee = (exerciseAmount * engine.feeBps()) / 10_000;
-        assertEq(engine.feeBalance(address(DAILIKE)), exerciseFee);
-
-        // Disable fee switch
-        vm.prank(FEE_TO);
-        engine.setFeesEnabled(false);
-
-        // Exercise 3 more, no fee is recorded or emitted
-        vm.prank(BOB);
-        engine.exercise(testOptionId, 3);
-        assertEq(engine.feeBalance(address(DAILIKE)), exerciseFee); // no change
-
-        // Re-enable
-        vm.prank(FEE_TO);
-        engine.setFeesEnabled(true);
-
-        // Exercise 5 more, fee is again recorded and emitted
-        vm.prank(BOB);
-        engine.exercise(testOptionId, 5);
-        exerciseAmount = 5 * testExerciseAmount;
-        exerciseFee += (exerciseAmount * engine.feeBps()) / 10_000;
-        assertEq(engine.feeBalance(address(DAILIKE)), exerciseFee); // includes fee on exercising 5 more
-    }
-
     // **********************************************************************
     //                            PROTOCOL ADMIN
     // **********************************************************************
@@ -919,18 +891,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         (uint160 decodedOptionIdFromCTokenId2, uint96 decodedClaimIndexFromCTokenId2) = decodeTokenId(cTokenId2);
         assertEq(decodedOptionIdFromCTokenId2, oTokenId >> 96);
         assertEq(decodedClaimIndexFromCTokenId2, 2); // second claim
-    }
-
-    function testFuzzDecodeTokenId(uint256 optionId, uint256 claimId) public {
-        optionId = bound(optionId, 0, type(uint160).max);
-        claimId = bound(claimId, 0, type(uint96).max);
-
-        uint256 testTokenId = claimId;
-        testTokenId |= optionId << 96;
-
-        (uint160 decodedOptionId, uint96 decodedClaimId) = decodeTokenId(testTokenId);
-        assertEq(decodedOptionId, optionId);
-        assertEq(decodedClaimId, claimId);
     }
 
     function testGetOptionForTokenId() public {

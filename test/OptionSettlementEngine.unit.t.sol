@@ -114,6 +114,35 @@ contract OptionSettlementTest is BaseEngineTest {
         ); // TODO dust from 1 exercise
     }
 
+    function testMinimumFee() public {
+        vm.startPrank(ALICE);
+        uint256 optionId = engine.newOptionType(
+            address(ERC20A),
+            1,
+            address(ERC20B),
+            15,
+            uint40(block.timestamp),
+            uint40(block.timestamp + 30 days)
+        );
+        uint256 claim1 = engine.write(optionId, 1);
+        uint256 costToWrite = 1 + _calculateFee(1); // underlyingAmount + fee
+        assertEq(ERC20A.balanceOf(ALICE), STARTING_BALANCE - (costToWrite), "Alice underlying balance before");
+
+        engine.safeTransferFrom(ALICE, BOB, optionId, 1, "");
+        vm.stopPrank();
+
+        // Warp right before expiry time and Bob exercises
+        vm.warp(block.timestamp + 30 days - 1 seconds);
+        vm.prank(BOB);
+        engine.exercise(optionId, 1);
+
+        // Check balances after exercise
+        // Bob +underlying -exercise, No change to Alice until she redeems
+        uint256 costToExercise = 15 + _calculateFee(15); // exerciseAmount + fee
+        assertEq(ERC20A.balanceOf(BOB), STARTING_BALANCE + 1, "Bob underlying balance after exercise 1");
+        assertEq(ERC20B.balanceOf(BOB), STARTING_BALANCE - costToExercise, "Bob exercise balance after exercise 1");
+    }
+
     /*//////////////////////////////////////////////////////////////
     //  Write Options
     //////////////////////////////////////////////////////////////*/

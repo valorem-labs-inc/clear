@@ -7,7 +7,7 @@ import "./utils/BaseEngineTest.sol";
 /// @notice Integration tests for OptionSettlementEngine
 contract OptionSettlementIntegrationTest is BaseEngineTest {
     // TODO(Delete when there is at least 1 test)
-    function testInitial() public {
+    function test_integrationInitial() public {
         assertEq(engine.feeTo(), FEE_TO);
         assertEq(engine.feesEnabled(), true);
     }

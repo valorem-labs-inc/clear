@@ -280,9 +280,17 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //  function feesEnabled() external view returns (bool enabled);
     //////////////////////////////////////////////////////////////*/
 
+    function test_unitFeesEnabled() public {
+        assertEq(engine.feesEnabled(), true);
+    }
+
     /*//////////////////////////////////////////////////////////////
     //  function feeTo() external view returns (address);
     //////////////////////////////////////////////////////////////*/
+
+    function test_unitFeeTo() public {
+        assertEq(engine.feeTo(), FEE_TO);
+    }
 
     /*//////////////////////////////////////////////////////////////
     // function newOptionType(

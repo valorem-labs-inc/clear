@@ -808,11 +808,11 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.expectEmit(true, true, true, true);
         emit FeeSwitchUpdated(FEE_TO, false);
 
-        assertFalse(engine.feesEnabled());
-
         // disable
         vm.startPrank(FEE_TO);
         engine.setFeesEnabled(false);
+
+        assertFalse(engine.feesEnabled());
 
         vm.expectEmit(true, true, true, true);
         emit FeeSwitchUpdated(FEE_TO, true);

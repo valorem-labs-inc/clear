@@ -907,9 +907,11 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.prank(FEE_TO);
         engine.setFeeTo(newFeeTo);
 
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, newFeeTo));
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, newFeeTo)
+        );
         vm.prank(ALICE);
-        engine.acceptFeeTo();        
+        engine.acceptFeeTo();
     }
 
     /*//////////////////////////////////////////////////////////////

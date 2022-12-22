@@ -118,55 +118,47 @@ contract OptionSettlementTest is BaseEngineTest {
     }
 
     function test_unitClaimWrittenMultipleMultipleClaims() public {
-        uint112 amountWritten = 69;
-        vm.prank(ALICE);
-        uint256 claimId = engine.write(testOptionId, amountWritten);
+        vm.startPrank(ALICE);
 
-        IOptionSettlementEngine.Claim memory claim = engine.claim(claimId);
-        assertEq(claim.amountWritten, amountWritten * WAD);
-        assertEq(claim.amountExercised, 0);
-        assertEq(claim.optionId, testOptionId);
+        uint256 claimId1 = engine.write(testOptionId, 1);
+        IOptionSettlementEngine.Claim memory claim1 = engine.claim(claimId1);
+        assertEq(claim1.amountWritten, WAD);
+        assertEq(claim1.amountExercised, 0);
 
-        // Write a second claim
-        vm.prank(ALICE);
-        engine.write(testOptionId, amountWritten);
+        uint256 claimId2 = engine.write(testOptionId, 1);
+        IOptionSettlementEngine.Claim memory claim2 = engine.claim(claimId2);
+        assertEq(claim1.amountWritten, WAD);
+        assertEq(claim1.amountExercised, 0);
+        assertEq(claim2.amountWritten, WAD);
+        assertEq(claim2.amountExercised, 0);
 
-        claim = engine.claim(claimId);
-        assertEq(claim.amountWritten, amountWritten * WAD);
-        assertEq(claim.amountExercised, 0);
-        assertEq(claim.optionId, testOptionId);
+        engine.write(claimId2, 1);
+        claim2 = engine.claim(claimId2);
+        assertEq(claim1.amountWritten, WAD);
+        assertEq(claim1.amountExercised, 0);
+        assertEq(claim2.amountWritten, 2 * WAD);
+        assertEq(claim2.amountExercised, 0);
 
-        vm.warp(testOption.exerciseTimestamp);
-        vm.prank(ALICE);
-        engine.exercise(testOptionId, 1);
+        vm.warp(testExerciseTimestamp);
 
-        claim = engine.claim(claimId);
-        assertEq(claim.amountWritten, amountWritten * WAD);
-        assertEq(claim.amountExercised, FixedPointMathLib.divWadDown(1, 2));
-        assertEq(claim.optionId, testOptionId);
-
-        vm.prank(ALICE);
-        engine.write(claimId, amountWritten);
-
-        claim = engine.claim(claimId);
-        assertEq(claim.amountWritten, amountWritten * 2 * WAD);
-        assertEq(claim.amountExercised, FixedPointMathLib.divWadDown(1, 2));
-        assertEq(claim.optionId, testOptionId);
-
-        vm.prank(ALICE);
-        engine.exercise(testOptionId, 137);
-
-        claim = engine.claim(claimId);
-        assertEq(claim.amountWritten, amountWritten * 2 * WAD);
-        assertEq(claim.amountExercised, FixedPointMathLib.divWadDown(138, 2));
-        assertEq(claim.optionId, testOptionId);
-
-        vm.warp(testOption.expiryTimestamp);
-        vm.prank(ALICE);
-        engine.redeem(claimId);
-
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, claimId));
-        claim = engine.claim(claimId);
+        engine.exercise(testOptionId, 2);
+        claim1 = engine.claim(claimId1);
+        claim2 = engine.claim(claimId2);
+        assertEq(claim1.amountWritten, WAD);
+        // exercised ratio in the bucket is 2/3
+        assertEq(
+            // 1 option is written in this claim, two options are exercised in the bucket, and in
+            // total, 3 options are written
+            claim1.amountExercised,
+            FixedPointMathLib.divWadDown(1 * 2, 3)
+        );
+        assertEq(claim2.amountWritten, 2 * WAD);
+        assertEq(
+            // 2 options are written in this claim, two options are exercised in the bucket, and in
+            // total, 3 options are written
+            claim2.amountExercised,
+            FixedPointMathLib.divWadDown(2 * 2, 3)
+        );
     }
 
     //

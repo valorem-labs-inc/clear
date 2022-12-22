@@ -879,6 +879,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         returns (uint256 fee)
     {
         fee = (assetAmount * feeBps) / 10_000;
+
+        if (fee == 0) {
+            fee = 1;
+        }
+
         feeBalance[assetAddress] += fee;
 
         emit FeeAccrued(optionId, assetAddress, msg.sender, fee);

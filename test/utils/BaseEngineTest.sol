@@ -273,7 +273,11 @@ abstract contract BaseEngineTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function _calculateFee(uint256 amount) internal view returns (uint256) {
-        return (amount * engine.feeBps()) / 10_000;
+        uint256 fee = (amount * engine.feeBps()) / 10_000;
+        if (fee == 0) {
+            fee = 1;
+        }
+        return fee;
     }
 
     /*//////////////////////////////////////////////////////////////

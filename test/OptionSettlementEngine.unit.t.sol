@@ -188,12 +188,13 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     }
 
     function test_unitPositionUnexercisedClaim() public {
+        uint112 amountWritten = 69;
         vm.prank(ALICE);
-        uint256 claimId = engine.write(testOptionId, 69);
+        uint256 claimId = engine.write(testOptionId, amountWritten);
 
         IOptionSettlementEngine.Position memory position = engine.position(claimId);
         assertEq(position.underlyingAsset, testUnderlyingAsset);
-        assertEq(position.underlyingAmount, int256(uint256(testUnderlyingAmount)));
+        assertEq(position.underlyingAmount, int256(uint256(testUnderlyingAmount) * amountWritten));
         assertEq(position.exerciseAsset, testExerciseAsset);
         assertEq(position.exerciseAmount, int256(0));
     }
@@ -206,6 +207,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.prank(ALICE);
         engine.exercise(testOptionId, 1);
 
+        vm.prank(ALICE);
         engine.write(claimId, amountWritten);
 
         amountWritten = amountWritten * 2;
@@ -217,7 +219,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
             int256(uint256((amountWritten - 1) * testUnderlyingAmount * amountWritten) / amountWritten)
         );
         assertEq(position.exerciseAsset, testExerciseAsset);
-        assertEq(position.exerciseAmount, int256(uint256(1 * testUnderlyingAmount * amountWritten) / amountWritten));
+        assertEq(position.exerciseAmount, int256(uint256(1 * testExerciseAmount * amountWritten) / amountWritten));
     }
 
     function test_unitPositionExercisedClaim() public {
@@ -226,13 +228,13 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         uint256 claimId = engine.write(testOptionId, amountWritten);
 
         vm.prank(ALICE);
-        engine.exercise(testOptionId, 69);
+        engine.exercise(testOptionId, amountWritten);
 
         IOptionSettlementEngine.Position memory position = engine.position(claimId);
         assertEq(position.underlyingAsset, testUnderlyingAsset);
         assertEq(position.underlyingAmount, int256(uint256(0)));
         assertEq(position.exerciseAsset, testExerciseAsset);
-        assertEq(position.exerciseAmount, int256(uint256(amountWritten * testUnderlyingAmount)));
+        assertEq(position.exerciseAmount, int256(uint256(amountWritten * testExerciseAmount)));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -269,6 +271,10 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     /*//////////////////////////////////////////////////////////////
     //  function feeBps() external view returns (uint8 fee);
     //////////////////////////////////////////////////////////////*/
+
+    function test_unitFeeBps() public {
+        assertEq(engine.feeBps(), 5);
+    }
 
     /*//////////////////////////////////////////////////////////////
     //  function feesEnabled() external view returns (bool enabled);

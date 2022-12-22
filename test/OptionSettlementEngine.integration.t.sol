@@ -242,7 +242,7 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
         vm.startPrank(BOB);
     }
 
-    // TODO resolve test which broke after removing 0s from newOptionType 
+    // TODO resolve test which broke after removing 0s from newOptionType
     // function test_integrationWriteExerciseAddBuckets() public {
     //     vm.startPrank(ALICE);
     //     uint256[7] memory claimRatios;

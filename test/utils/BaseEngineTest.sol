@@ -277,7 +277,10 @@ abstract contract BaseEngineTest is Test {
                         optionInfo.exerciseAmount,
                         optionInfo.exerciseTimestamp,
                         optionInfo.expiryTimestamp
-                    ))));
+                    )
+                )
+            )
+        );
 
         return uint256(optionKey) << 96;
     }

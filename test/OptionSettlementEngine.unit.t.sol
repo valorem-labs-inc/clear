@@ -917,11 +917,11 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.uri(420);
     }
 
-    // **********************************************************************
-    //                            PROTOCOL ADMIN
-    // **********************************************************************
+    /*//////////////////////////////////////////////////////////////
+    // constructor(address _feeTo, address _tokenURIGenerator)
+    //////////////////////////////////////////////////////////////*/
 
-    function testRevertConstructorWhenFeeToIsZeroAddress() public {
+    function test_unitConstructorRevertWhenFeeToIsZeroAddress() public {
         TokenURIGenerator localGenerator = new TokenURIGenerator();
 
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAddress.selector, address(0)));
@@ -929,7 +929,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         new OptionSettlementEngine(address(0), address(localGenerator));
     }
 
-    function testRevertConstructorWhenTokenURIGeneratorIsZeroAddress() public {
+    function test_unitConstructorRevertWhenTokenURIGeneratorIsZeroAddress() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAddress.selector, address(0)));
 
         new OptionSettlementEngine(FEE_TO, address(0));

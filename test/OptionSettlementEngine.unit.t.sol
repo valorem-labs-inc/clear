@@ -804,6 +804,32 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // function setFeesEnabled(bool enabled) external
     //////////////////////////////////////////////////////////////*/
 
+    function test_unitSetFeesEnabled() public {
+        vm.expectEmit(true, true, true, true);
+        emit FeeSwitchUpdated(FEE_TO, false);
+
+        assertFalse(engine.feesEnabled());
+
+        // disable
+        vm.startPrank(FEE_TO);
+        engine.setFeesEnabled(false);
+
+        vm.expectEmit(true, true, true, true);
+        emit FeeSwitchUpdated(FEE_TO, true);
+
+        // enable
+        engine.setFeesEnabled(true);
+
+        assertTrue(engine.feesEnabled());
+    }
+
+    function test_unitSetFeesEnabledRevertWhenNotFeeTo() public {
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
+
+        vm.prank(ALICE);
+        engine.setFeesEnabled(true);
+    }
+
     /*//////////////////////////////////////////////////////////////
     // function setFeeTo(address newFeeTo) external
     //////////////////////////////////////////////////////////////*/
@@ -835,44 +861,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // **********************************************************************
     //                            PROTOCOL ADMIN
     // **********************************************************************
-
-    function testSetFeesEnabled() public {
-        // precondition check -- in test suite, fee switch is enabled by default
-        assertTrue(engine.feesEnabled());
-
-        // disable
-        vm.startPrank(FEE_TO);
-        engine.setFeesEnabled(false);
-
-        assertFalse(engine.feesEnabled());
-
-        // enable
-        engine.setFeesEnabled(true);
-
-        assertTrue(engine.feesEnabled());
-    }
-
-    function testEventSetFeesEnabled() public {
-        vm.expectEmit(true, true, true, true);
-        emit FeeSwitchUpdated(FEE_TO, false);
-
-        // disable
-        vm.startPrank(FEE_TO);
-        engine.setFeesEnabled(false);
-
-        vm.expectEmit(true, true, true, true);
-        emit FeeSwitchUpdated(FEE_TO, true);
-
-        // enable
-        engine.setFeesEnabled(true);
-    }
-
-    function testRevertSetFeesEnabledWhenNotFeeTo() public {
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
-
-        vm.prank(ALICE);
-        engine.setFeesEnabled(true);
-    }
 
     function testRevertConstructorWhenFeeToIsZeroAddress() public {
         TokenURIGenerator localGenerator = new TokenURIGenerator();

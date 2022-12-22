@@ -201,13 +201,6 @@ interface IOptionSettlementEngine {
     error InvalidAssets(address asset1, address asset2);
 
     /**
-     * @notice The supplied underlying and exercise amounts are too small.
-     * @param underlyingAmount The amount of the underlying asset.
-     * @param exerciseAmount The amount of the exercise asset.
-     */
-    error InvalidAssetAmounts(uint256 underlyingAmount, uint256 exerciseAmount);
-
-    /**
      * @notice The token specified is not a claim token.
      * @param token The supplied token id.
      */

@@ -454,7 +454,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // Emit event about options written on a new claim.
             emit OptionsWritten(encodedOptionId, msg.sender, tokenId, amount);
 
-            // Mint a new claim token and transfer option tokens.
+            // Transfer in the requisite underlying asset amount.
+            SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
+
+            // Mint a new claim token and option tokens.
             uint256[] memory tokens = new uint256[](2);
             tokens[0] = encodedOptionId;
             tokens[1] = tokenId;
@@ -479,12 +482,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // Emit event about options written on existing claim.
             emit OptionsWritten(encodedOptionId, msg.sender, tokenId, amount);
 
+            // Transfer in the requisite underlying asset amount.
+            SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
+
             // Mint more options on existing claim to writer.
             _mint(msg.sender, encodedOptionId, amount, "");
         }
-
-        // Transfer in the requisite underlying asset amount.
-        SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
 
         return tokenId;
     }
@@ -636,7 +639,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @inheritdoc IOptionSettlementEngine
-    function sweepFees(address[] memory tokens) external {
+    function sweepFees(address[] calldata tokens) external {
         address sendFeeTo = feeTo;
         address token;
         uint256 fee;
@@ -876,6 +879,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         returns (uint256 fee)
     {
         fee = (assetAmount * feeBps) / 10_000;
+
+        if (fee == 0) {
+            fee = 1;
+        }
+
         feeBalance[assetAddress] += fee;
 
         emit FeeAccrued(optionId, assetAddress, msg.sender, fee);

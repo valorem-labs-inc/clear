@@ -4,8 +4,8 @@ pragma solidity 0.8.16;
 
 import "./utils/BaseEngineTest.sol";
 
-/// @notice Fuzz tests for OptionSettlementEngine
-contract OptionSettlementFuzzTest is BaseEngineTest {
+/// @notice Integration tests for OptionSettlementEngine
+contract OptionSettlementIntegrationTest is BaseEngineTest {
     // TODO(Delete when there is at least 1 test)
     function testInitial() public {
         assertEq(engine.feeTo(), FEE_TO);

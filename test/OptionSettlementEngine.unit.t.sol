@@ -512,6 +512,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //////////////////////////////////////////////////////////////*/
 
     function test_unitWriteNewClaim() public {
+        // TODO(Add balance assertions here)
         uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
 
         vm.expectEmit(true, true, true, true);
@@ -525,6 +526,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     }
 
     function test_unitWriteExistingClaim() public {
+        // TODO(Balance assertions)
         uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
 
         vm.prank(ALICE);
@@ -541,6 +543,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     }
 
     function test_unitWriteFeeOff() public {
+        // TODO(Balance assertions)
         vm.prank(FEE_TO);
         engine.setFeesEnabled(false);
 
@@ -714,6 +717,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //////////////////////////////////////////////////////////////*/
 
     function test_unitExercise() public {
+        // TODO(Balance assertions)
         // Alice writes
         vm.startPrank(ALICE);
         engine.write(testOptionId, 1);
@@ -805,6 +809,8 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         );
         engine.exercise(testOptionId, 2);
     }
+
+    // TODO(Failure case for the user not having enough tokens to exercise)
 
     /*//////////////////////////////////////////////////////////////
     // function setFeesEnabled(bool enabled) external
@@ -947,6 +953,9 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     /*//////////////////////////////////////////////////////////////
     // function sweepFees(address[] memory tokens) external
     //////////////////////////////////////////////////////////////*/
+
+    // TODO(Balance assertions on success cases)
+    // TODO(Should fee sweep be onlyFeeTo? Probably)
 
     function test_unitSweepNoFees() public {
         address[] memory tokens = new address[](3);

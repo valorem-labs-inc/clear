@@ -371,6 +371,142 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //    ) external returns (uint256 optionId);
     //////////////////////////////////////////////////////////////*/
 
+    function test_unitNewOptionType() public {
+        IOptionSettlementEngine.Option memory optionInfo = IOptionSettlementEngine.Option({
+            underlyingAsset: address(DAILIKE),
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAsset: address(WETHLIKE),
+            exerciseAmount: testExerciseAmount,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp,
+            settlementSeed: 0,
+            nextClaimKey: 0
+        });
+
+        uint256 expectedOptionId = _createOptionIdFromStruct(optionInfo);
+
+        vm.expectEmit(true, true, true, true);
+        emit NewOptionType(
+            expectedOptionId,
+            address(WETHLIKE),
+            address(DAILIKE),
+            testExerciseAmount,
+            testUnderlyingAmount,
+            testExerciseTimestamp,
+            testExpiryTimestamp
+            );
+
+        engine.newOptionType(
+            address(DAILIKE),
+            testUnderlyingAmount,
+            address(WETHLIKE),
+            testExerciseAmount,
+            testExerciseTimestamp,
+            testExpiryTimestamp
+        );
+    }
+
+    // Fail tests
+
+    function test_unitRevertNewOptionTypeWhenOptionsTypeExists() public {
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.OptionsTypeExists.selector, testOptionId));
+        _createNewOptionType({
+            underlyingAsset: address(WETHLIKE),
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAsset: address(DAILIKE),
+            exerciseAmount: testExerciseAmount,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp
+        });
+    }
+
+    function test_unitRevertNewOptionTypeWhenExpiryWindowTooShort() public {
+        uint40 tooSoonExpiryTimestamp = uint40(block.timestamp + 1 days - 1 seconds);
+        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
+            underlyingAsset: address(DAILIKE),
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAsset: address(WETHLIKE),
+            exerciseAmount: testExerciseAmount,
+            exerciseTimestamp: uint40(block.timestamp),
+            expiryTimestamp: tooSoonExpiryTimestamp,
+            settlementSeed: 0, // default zero for settlement seed
+            nextClaimKey: 0 // default zero for next claim id
+        });
+        _createOptionIdFromStruct(option);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.ExpiryWindowTooShort.selector, testExpiryTimestamp - 1)
+        );
+        engine.newOptionType({
+            underlyingAsset: address(WETHLIKE),
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAsset: address(DAILIKE),
+            exerciseAmount: testExerciseAmount,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp - 1
+        });
+    }
+
+    function test_unitRevertNewOptionTypeWhenExerciseWindowTooShort() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.ExerciseWindowTooShort.selector, uint40(block.timestamp + 1))
+        );
+        engine.newOptionType({
+            underlyingAsset: address(WETHLIKE),
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAsset: address(DAILIKE),
+            exerciseAmount: testExerciseAmount,
+            exerciseTimestamp: uint40(block.timestamp + 1),
+            expiryTimestamp: testExpiryTimestamp
+        });
+    }
+
+    function test_unitRevertNewOptionTypeWhenInvalidAssets() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(DAILIKE), address(DAILIKE))
+        );
+        _createNewOptionType({
+            underlyingAsset: address(DAILIKE),
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAsset: address(DAILIKE),
+            exerciseAmount: testExerciseAmount,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp
+        });
+    }
+
+    function test_unitRevertNewOptionTypeWhenTotalSuppliesAreTooLowToExercise() public {
+        uint96 underlyingAmountExceedsTotalSupply = uint96(IERC20(address(DAILIKE)).totalSupply() + 1);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(DAILIKE), address(WETHLIKE))
+        );
+
+        _createNewOptionType({
+            underlyingAsset: address(DAILIKE),
+            underlyingAmount: underlyingAmountExceedsTotalSupply,
+            exerciseAsset: address(WETHLIKE),
+            exerciseAmount: testExerciseAmount,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp
+        });
+
+        uint96 exerciseAmountExceedsTotalSupply = uint96(IERC20(address(USDCLIKE)).totalSupply() + 1);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(USDCLIKE), address(WETHLIKE))
+        );
+
+        _createNewOptionType({
+            underlyingAsset: address(USDCLIKE),
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAsset: address(WETHLIKE),
+            exerciseAmount: exerciseAmountExceedsTotalSupply,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp
+        });
+    }
+
     /*//////////////////////////////////////////////////////////////
     // function write(uint256 tokenId, uint112 amount) external returns (uint256 claimId);
     //////////////////////////////////////////////////////////////*/
@@ -836,41 +972,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //                            EVENT TESTS
     // **********************************************************************
 
-    function testEventNewOptionType() public {
-        IOptionSettlementEngine.Option memory optionInfo = IOptionSettlementEngine.Option({
-            underlyingAsset: address(DAILIKE),
-            underlyingAmount: testUnderlyingAmount,
-            exerciseAsset: address(WETHLIKE),
-            exerciseAmount: testExerciseAmount,
-            exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp,
-            settlementSeed: 0,
-            nextClaimKey: 0
-        });
-
-        uint256 expectedOptionId = _createOptionIdFromStruct(optionInfo);
-
-        vm.expectEmit(true, true, true, true);
-        emit NewOptionType(
-            expectedOptionId,
-            address(WETHLIKE),
-            address(DAILIKE),
-            testExerciseAmount,
-            testUnderlyingAmount,
-            testExerciseTimestamp,
-            testExpiryTimestamp
-            );
-
-        engine.newOptionType(
-            address(DAILIKE),
-            testUnderlyingAmount,
-            address(WETHLIKE),
-            testExerciseAmount,
-            testExerciseTimestamp,
-            testExpiryTimestamp
-        );
-    }
-
     function testEventWriteWhenNewClaim() public {
         uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
 
@@ -1145,105 +1246,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // **********************************************************************
     //                            FAIL TESTS
     // **********************************************************************
-
-    function testRevertNewOptionTypeWhenOptionsTypeExists() public {
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.OptionsTypeExists.selector, testOptionId));
-        _createNewOptionType({
-            underlyingAsset: address(WETHLIKE),
-            underlyingAmount: testUnderlyingAmount,
-            exerciseAsset: address(DAILIKE),
-            exerciseAmount: testExerciseAmount,
-            exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp
-        });
-    }
-
-    function testRevertNewOptionTypeWhenExpiryTooSoon() public {
-        uint40 tooSoonExpiryTimestamp = uint40(block.timestamp + 1 days - 1 seconds);
-        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
-            underlyingAsset: address(DAILIKE),
-            underlyingAmount: testUnderlyingAmount,
-            exerciseAsset: address(WETHLIKE),
-            exerciseAmount: testExerciseAmount,
-            exerciseTimestamp: uint40(block.timestamp),
-            expiryTimestamp: tooSoonExpiryTimestamp,
-            settlementSeed: 0, // default zero for settlement seed
-            nextClaimKey: 0 // default zero for next claim id
-        });
-        _createOptionIdFromStruct(option);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ExpiryWindowTooShort.selector, testExpiryTimestamp - 1)
-        );
-        engine.newOptionType({
-            underlyingAsset: address(WETHLIKE),
-            underlyingAmount: testUnderlyingAmount,
-            exerciseAsset: address(DAILIKE),
-            exerciseAmount: testExerciseAmount,
-            exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp - 1
-        });
-    }
-
-    function testRevertNewOptionTypeWhenExerciseWindowTooShort() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ExerciseWindowTooShort.selector, uint40(block.timestamp + 1))
-        );
-        engine.newOptionType({
-            underlyingAsset: address(WETHLIKE),
-            underlyingAmount: testUnderlyingAmount,
-            exerciseAsset: address(DAILIKE),
-            exerciseAmount: testExerciseAmount,
-            exerciseTimestamp: uint40(block.timestamp + 1),
-            expiryTimestamp: testExpiryTimestamp
-        });
-    }
-
-    function testRevertNewOptionTypeWhenInvalidAssets() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(DAILIKE), address(DAILIKE))
-        );
-        _createNewOptionType({
-            underlyingAsset: address(DAILIKE),
-            underlyingAmount: testUnderlyingAmount,
-            exerciseAsset: address(DAILIKE),
-            exerciseAmount: testExerciseAmount,
-            exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp
-        });
-    }
-
-    function testRevertNewOptionTypeWhenTotalSuppliesAreTooLowToExercise() public {
-        uint96 underlyingAmountExceedsTotalSupply = uint96(IERC20(address(DAILIKE)).totalSupply() + 1);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(DAILIKE), address(WETHLIKE))
-        );
-
-        _createNewOptionType({
-            underlyingAsset: address(DAILIKE),
-            underlyingAmount: underlyingAmountExceedsTotalSupply,
-            exerciseAsset: address(WETHLIKE),
-            exerciseAmount: testExerciseAmount,
-            exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp
-        });
-
-        uint96 exerciseAmountExceedsTotalSupply = uint96(IERC20(address(USDCLIKE)).totalSupply() + 1);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(USDCLIKE), address(WETHLIKE))
-        );
-
-        _createNewOptionType({
-            underlyingAsset: address(USDCLIKE),
-            underlyingAmount: testUnderlyingAmount,
-            exerciseAsset: address(WETHLIKE),
-            exerciseAmount: exerciseAmountExceedsTotalSupply,
-            exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp
-        });
-    }
 
     function testRevertWriteWhenInvalidOption() public {
         // Option ID not 0 in lower 96 b

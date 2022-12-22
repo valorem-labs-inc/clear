@@ -109,6 +109,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @notice Details about the option, buckets, and claims per option type.
     mapping(uint160 => OptionTypeState) private optionTypeStates;
 
+    /// @notice The new feeTo address, pending explicit acceptance by this address.
+    address private pendingFeeTo;
+
     /*//////////////////////////////////////////////////////////////
     //  State Variables - Public
     //////////////////////////////////////////////////////////////*/
@@ -633,9 +636,29 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         if (newFeeTo == address(0)) {
             revert InvalidAddress(address(0));
         }
-        feeTo = newFeeTo;
+        pendingFeeTo = newFeeTo;
+    }
 
-        emit FeeToUpdated(newFeeTo);
+    /// @inheritdoc IOptionSettlementEngine
+    function acceptFeeTo() external {
+        if (msg.sender != pendingFeeTo) {
+            revert AccessControlViolation(msg.sender, pendingFeeTo);
+        }
+
+        feeTo = msg.sender;
+        pendingFeeTo = address(0);
+
+        emit FeeToUpdated(feeTo);
+    }
+
+    /// @inheritdoc IOptionSettlementEngine
+    function setTokenURIGenerator(address newTokenURIGenerator) external onlyFeeTo {
+        if (newTokenURIGenerator == address(0)) {
+            revert InvalidAddress(address(0));
+        }
+        tokenURIGenerator = ITokenURIGenerator(newTokenURIGenerator);
+
+        emit TokenURIGeneratorUpdated(newTokenURIGenerator);
     }
 
     /// @inheritdoc IOptionSettlementEngine
@@ -660,16 +683,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 }
             }
         }
-    }
-
-    /// @inheritdoc IOptionSettlementEngine
-    function setTokenURIGenerator(address newTokenURIGenerator) external onlyFeeTo {
-        if (newTokenURIGenerator == address(0)) {
-            revert InvalidAddress(address(0));
-        }
-        tokenURIGenerator = ITokenURIGenerator(newTokenURIGenerator);
-
-        emit TokenURIGeneratorUpdated(newTokenURIGenerator);
     }
 
     /*//////////////////////////////////////////////////////////////

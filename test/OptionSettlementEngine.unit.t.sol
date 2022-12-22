@@ -839,20 +839,54 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     }
 
     /*//////////////////////////////////////////////////////////////
-    // function setFeeTo(address newFeeTo) external
+    // function setFeeTo(address newFeeTo) external + function acceptFeeTo() external
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitSetFeeTo() public {
+    function test_unitSetFeeToAndAcceptFeeTo() public {
+        address newFeeTo = address(0xCAFE);
+
         // precondition check
         assertEq(engine.feeTo(), FEE_TO);
 
-        vm.expectEmit(true, true, true, true);
-        emit FeeToUpdated(address(0xCAFE));
-
         vm.prank(FEE_TO);
-        engine.setFeeTo(address(0xCAFE));
+        engine.setFeeTo(newFeeTo);
 
-        assertEq(engine.feeTo(), address(0xCAFE));
+        vm.expectEmit(true, true, true, true);
+        emit FeeToUpdated(newFeeTo);
+
+        vm.prank(newFeeTo);
+        engine.acceptFeeTo();
+
+        assertEq(engine.feeTo(), newFeeTo);
+    }
+
+    function test_unitSetFeeToAndAcceptFeeToTwoTimes() public {
+        address newFeeTo = address(0xCAFE);
+        address newNewFeeTo = address(0xBEEF);
+
+        // First time around.
+        vm.prank(FEE_TO);
+        engine.setFeeTo(newFeeTo);
+
+        vm.expectEmit(true, true, true, true);
+        emit FeeToUpdated(newFeeTo);
+
+        vm.prank(newFeeTo);
+        engine.acceptFeeTo();
+
+        assertEq(engine.feeTo(), newFeeTo);
+
+        // Second time around.
+        vm.prank(newFeeTo);
+        engine.setFeeTo(newNewFeeTo);
+
+        vm.expectEmit(true, true, true, true);
+        emit FeeToUpdated(newNewFeeTo);
+
+        vm.prank(newNewFeeTo);
+        engine.acceptFeeTo();
+
+        assertEq(engine.feeTo(), newNewFeeTo);
     }
 
     function test_unitSetFeeToRevertWhenNotCurrentFeeTo() public {
@@ -865,6 +899,19 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAddress.selector, address(0)));
         vm.prank(FEE_TO);
         engine.setFeeTo(address(0));
+    }
+
+    function test_unitAcceptFeeToRevertWhenNotPendingFeeTo() public {
+        address newFeeTo = address(0xCAFE);
+
+        vm.prank(FEE_TO);
+        engine.setFeeTo(newFeeTo);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, newFeeTo)
+        );
+        vm.prank(ALICE);
+        engine.acceptFeeTo();
     }
 
     /*//////////////////////////////////////////////////////////////

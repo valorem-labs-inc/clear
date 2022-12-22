@@ -28,6 +28,145 @@ contract OptionSettlementTest is BaseEngineTest {
 
     // function claim(uint256 claimId) external view returns (Claim memory claimInfo);
 
+    function test_unitClaimRevertsWhenClaimDoesNotExist() public {
+        uint256 badClaimId = testOptionId + 69;
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, badClaimId));
+        engine.claim(badClaimId);
+    }
+
+    function test_unitClaimWrittenOnce() public {
+        uint112 amountWritten = 69;
+        vm.prank(ALICE);
+        uint256 claimId = engine.write(testOptionId, amountWritten);
+
+        IOptionSettlementEngine.Claim memory claim = engine.claim(claimId);
+        assertEq(claim.amountWritten, amountWritten * WAD);
+        assertEq(claim.amountExercised, 0);
+        assertEq(claim.optionId, testOptionId);
+        // TODO(Why do we need this if claim() reverts when it does not exist?) See L64 below
+        assertEq(claim.unredeemed, true);
+
+        vm.warp(testOption.exerciseTimestamp);
+        vm.prank(ALICE);
+        engine.exercise(testOptionId, 1);
+
+        claim = engine.claim(claimId);
+        assertEq(claim.amountWritten, amountWritten * WAD);
+        assertEq(claim.amountExercised, 1 * WAD);
+        assertEq(claim.optionId, testOptionId);
+
+        vm.warp(testOption.exerciseTimestamp);
+        vm.prank(ALICE);
+        engine.exercise(testOptionId, 68);
+
+        claim = engine.claim(claimId);
+        assertEq(claim.amountWritten, amountWritten * WAD);
+        assertEq(claim.amountExercised, amountWritten * WAD);
+        assertEq(claim.optionId, testOptionId);
+
+        vm.warp(testOption.expiryTimestamp);
+        vm.prank(ALICE);
+        engine.redeem(claimId);
+
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, claimId));
+        claim = engine.claim(claimId);
+    }
+
+    function test_unitClaimWrittenMultiple() public {
+        uint112 amountWritten = 69;
+        vm.prank(ALICE);
+        uint256 claimId = engine.write(testOptionId, amountWritten);
+
+        IOptionSettlementEngine.Claim memory claim = engine.claim(claimId);
+        assertEq(claim.amountWritten, amountWritten * WAD);
+        assertEq(claim.amountExercised, 0);
+        assertEq(claim.optionId, testOptionId);
+
+        vm.warp(testOption.exerciseTimestamp);
+        vm.prank(ALICE);
+        engine.exercise(testOptionId, 1);
+
+        claim = engine.claim(claimId);
+        assertEq(claim.amountWritten, amountWritten * WAD);
+        assertEq(claim.amountExercised, 1 * WAD);
+        assertEq(claim.optionId, testOptionId);
+
+        vm.prank(ALICE);
+        engine.write(claimId, amountWritten);
+
+        claim = engine.claim(claimId);
+        assertEq(claim.amountWritten, amountWritten * 2 * WAD);
+        assertEq(claim.amountExercised, 1 * WAD);
+        assertEq(claim.optionId, testOptionId);
+
+        vm.prank(ALICE);
+        engine.exercise(testOptionId, 137);
+
+        claim = engine.claim(claimId);
+        assertEq(claim.amountWritten, amountWritten * 2 * WAD);
+        assertEq(claim.amountExercised, amountWritten * 2 * WAD);
+        assertEq(claim.optionId, testOptionId);
+
+        vm.warp(testOption.expiryTimestamp);
+        vm.prank(ALICE);
+        engine.redeem(claimId);
+
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, claimId));
+        claim = engine.claim(claimId);
+    }
+
+    function test_unitClaimWrittenMultipleMultipleClaims() public {
+        uint112 amountWritten = 69;
+        vm.prank(ALICE);
+        uint256 claimId = engine.write(testOptionId, amountWritten);
+
+        IOptionSettlementEngine.Claim memory claim = engine.claim(claimId);
+        assertEq(claim.amountWritten, amountWritten * WAD);
+        assertEq(claim.amountExercised, 0);
+        assertEq(claim.optionId, testOptionId);
+
+        // Write a second claim
+        vm.prank(ALICE);
+        engine.write(testOptionId, amountWritten);
+
+        claim = engine.claim(claimId);
+        assertEq(claim.amountWritten, amountWritten * WAD);
+        assertEq(claim.amountExercised, 0);
+        assertEq(claim.optionId, testOptionId);
+
+        vm.warp(testOption.exerciseTimestamp);
+        vm.prank(ALICE);
+        engine.exercise(testOptionId, 1);
+
+        claim = engine.claim(claimId);
+        assertEq(claim.amountWritten, amountWritten * WAD);
+        assertEq(claim.amountExercised, FixedPointMathLib.divWadDown(1, 2));
+        assertEq(claim.optionId, testOptionId);
+
+        vm.prank(ALICE);
+        engine.write(claimId, amountWritten);
+
+        claim = engine.claim(claimId);
+        assertEq(claim.amountWritten, amountWritten * 2 * WAD);
+        assertEq(claim.amountExercised, FixedPointMathLib.divWadDown(1, 2));
+        assertEq(claim.optionId, testOptionId);
+
+        vm.prank(ALICE);
+        engine.exercise(testOptionId, 137);
+
+        claim = engine.claim(claimId);
+        assertEq(claim.amountWritten, amountWritten * 2 * WAD);
+        assertEq(claim.amountExercised, FixedPointMathLib.divWadDown(138, 2));
+        assertEq(claim.optionId, testOptionId);
+
+        vm.warp(testOption.expiryTimestamp);
+        vm.prank(ALICE);
+        engine.redeem(claimId);
+
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, claimId));
+        claim = engine.claim(claimId);
+    }
+
     // function position(uint256 tokenId) external view returns (Position memory positionInfo);
 
     // function tokenType(uint256 tokenId) external view returns (TokenType typeOfToken);

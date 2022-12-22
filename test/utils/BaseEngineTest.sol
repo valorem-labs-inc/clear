@@ -16,6 +16,9 @@ abstract contract BaseEngineTest is Test {
     OptionSettlementEngine internal engine;
     ITokenURIGenerator internal generator;
 
+    // Scalars
+    uint256 internal constant WAD = 1e18;
+
     // Users
     address internal constant ALICE = address(0xA);
     address internal constant BOB = address(0xB);

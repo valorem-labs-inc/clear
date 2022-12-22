@@ -610,11 +610,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         _burn(msg.sender, optionId, amount);
 
-        // Transfer out the required amount of the underlying asset.
-        SafeTransferLib.safeTransfer(ERC20(underlyingAsset), msg.sender, txAmount);
-
         // Transfer in the required amount of the exercise asset.
         SafeTransferLib.safeTransferFrom(ERC20(exerciseAsset), msg.sender, address(this), (rxAmount + fee));
+
+        // Transfer out the required amount of the underlying asset.
+        SafeTransferLib.safeTransfer(ERC20(underlyingAsset), msg.sender, txAmount);
     }
 
     //

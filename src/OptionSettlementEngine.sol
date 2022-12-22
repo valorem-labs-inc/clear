@@ -489,7 +489,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             _mint(msg.sender, encodedOptionId, amount, "");
         }
 
-
         return tokenId;
     }
 

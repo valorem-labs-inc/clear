@@ -319,7 +319,7 @@ interface IOptionSettlementEngine {
     function position(uint256 tokenId) external view returns (Position memory positionInfo);
 
     //
-    // Token Information
+    // Token information
     //
 
     /**

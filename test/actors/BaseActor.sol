@@ -12,7 +12,5 @@ abstract contract BaseActor is StdUtils, CommonBase {
 
     constructor(OptionSettlementEngine _engine, OptionSettlementEngineInvariantTest _test) {
         engine = _engine;
-        test = _test;
-        //
     }
 }

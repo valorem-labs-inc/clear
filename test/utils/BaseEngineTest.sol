@@ -16,6 +16,9 @@ abstract contract BaseEngineTest is Test {
     OptionSettlementEngine internal engine;
     ITokenURIGenerator internal generator;
 
+    // Scalars
+    uint256 internal constant WAD = 1e18;
+
     // Users
     address internal constant ALICE = address(0xA);
     address internal constant BOB = address(0xB);
@@ -23,6 +26,7 @@ abstract contract BaseEngineTest is Test {
 
     // Admin
     address internal constant FEE_TO = address(0xBEEF);
+    address internal constant NEW_FEE_TO = address(0xDEAD);
 
     // Tokens
     IERC20 internal WETHLIKE;
@@ -38,8 +42,10 @@ abstract contract BaseEngineTest is Test {
 
     IERC20[6] internal ERC20S;
 
+    uint256 internal constant STARTING_BALANCE = 1_000_000_000 ether;
     uint256 internal constant STARTING_BALANCE_WETH = 10_000_000;
     uint256 internal constant STARTING_BALANCE_OTHER = 1_000_000_000;
+    uint256 internal constant STARTING_BALANCE_USDC = 1_000_000_000 * 1e6;
 
     // Test option
     uint256 internal testOptionId;
@@ -261,6 +267,18 @@ abstract contract BaseEngineTest is Test {
         uint160 optionKey = uint160(bytes20(keccak256(abi.encode(optionInfo))));
 
         return uint256(optionKey) << 96;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+    //  Test Helpers -- Protocol Fee
+    //////////////////////////////////////////////////////////////*/
+
+    function _calculateFee(uint256 amount) internal view returns (uint256) {
+        uint256 fee = (amount * engine.feeBps()) / 10_000;
+        if (fee == 0) {
+            fee = 1;
+        }
+        return fee;
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -267,7 +267,17 @@ abstract contract BaseEngineTest is Test {
         pure
         returns (uint256)
     {
-        uint160 optionKey = uint160(bytes20(keccak256(abi.encode(optionInfo))));
+        uint160 optionKey = uint160(
+            bytes20(
+                keccak256(
+                    abi.encode(
+                        optionInfo.underlyingAsset,
+                        optionInfo.underlyingAmount,
+                        optionInfo.exerciseAsset,
+                        optionInfo.exerciseAmount,
+                        optionInfo.exerciseTimestamp,
+                        optionInfo.expiryTimestamp
+                    ))));
 
         return uint256(optionKey) << 96;
     }

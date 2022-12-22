@@ -66,9 +66,9 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         uint40 exerciseTimestamp,
         uint40 expiryTimestamp
     ) public {
-        vm.assume(expiryTimestamp >= block.timestamp + 86400);
+        vm.assume(expiryTimestamp >= block.timestamp + 1 days);
         vm.assume(exerciseTimestamp >= block.timestamp);
-        vm.assume(exerciseTimestamp <= expiryTimestamp - 86400);
+        vm.assume(exerciseTimestamp <= expiryTimestamp - 1 days);
         vm.assume(expiryTimestamp <= type(uint64).max);
         vm.assume(exerciseTimestamp <= type(uint64).max);
         vm.assume(underlyingAmount <= WETHLIKE.totalSupply());
@@ -86,9 +86,21 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         IOptionSettlementEngine.Option memory optionRecord = engine.option(optionId);
 
         // assert the option ID is equal to the upper 160 of the keccak256 hash
-        bytes20 _optionInfoHash = bytes20(keccak256(abi.encode(optionInfo)));
-        uint160 _optionId = uint160(_optionInfoHash);
-        uint256 expectedOptionId = uint256(_optionId) << 96;
+        uint160 optionKey = uint160(
+            bytes20(
+                keccak256(
+                    abi.encode(
+                        optionInfo.underlyingAsset,
+                        optionInfo.underlyingAmount,
+                        optionInfo.exerciseAsset,
+                        optionInfo.exerciseAmount,
+                        optionInfo.exerciseTimestamp,
+                        optionInfo.expiryTimestamp
+                    )
+                )
+            )
+        );
+        uint256 expectedOptionId = uint256(optionKey) << 96;
 
         assertEq(optionId, expectedOptionId);
         assertEq(optionRecord.underlyingAsset, address(WETHLIKE));

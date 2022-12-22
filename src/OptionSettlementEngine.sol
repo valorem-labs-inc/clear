@@ -345,9 +345,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                         exerciseAsset,
                         exerciseAmount,
                         exerciseTimestamp,
-                        expiryTimestamp,
-                        uint160(0),
-                        uint96(0)
+                        expiryTimestamp
                     )
                 )
             )

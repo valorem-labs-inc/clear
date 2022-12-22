@@ -194,6 +194,9 @@ contract OptionSettlementTest is BaseEngineTest {
     //
     // function tokenURIGenerator() external view returns (ITokenURIGenerator uriGenerator);
     //
+    function test_unitTokenURIGenerator() public view {
+        assert(address(engine.tokenURIGenerator()) == address(generator));
+    }
 
     //
     // function feeBalance(address token) external view returns (uint256);

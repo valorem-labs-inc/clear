@@ -611,7 +611,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
             ALICE,
             0, // no one has exercised
             expectedUnderlyingAmount
-        );
+            );
 
         engine.redeem(claimId);
     }
@@ -633,13 +633,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.warp(testExpiryTimestamp);
 
         vm.expectEmit(true, true, true, true);
-        emit ClaimRedeemed(
-            claimId,
-            testOptionId,
-            ALICE,
-            expectedExerciseAmount,
-            expectedUnderlyingAmount
-        );
+        emit ClaimRedeemed(claimId, testOptionId, ALICE, expectedExerciseAmount, expectedUnderlyingAmount);
 
         engine.redeem(claimId);
     }
@@ -657,13 +651,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.warp(testExpiryTimestamp);
 
         vm.expectEmit(true, true, true, true);
-        emit ClaimRedeemed(
-            claimId,
-            testOptionId,
-            ALICE,
-            expectedExerciseAmount,
-            0
-        );
+        emit ClaimRedeemed(claimId, testOptionId, ALICE, expectedExerciseAmount, 0);
 
         engine.redeem(claimId);
     }

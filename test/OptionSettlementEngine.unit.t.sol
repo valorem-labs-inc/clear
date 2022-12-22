@@ -408,7 +408,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     // Fail tests
 
-    function test_unitRevertNewOptionTypeWhenOptionsTypeExists() public {
+    function test_unitNewOptionTypeRevertWhenOptionsTypeExists() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.OptionsTypeExists.selector, testOptionId));
         _createNewOptionType({
             underlyingAsset: address(WETHLIKE),
@@ -420,7 +420,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         });
     }
 
-    function test_unitRevertNewOptionTypeWhenExpiryWindowTooShort() public {
+    function test_unitNewOptionTypeRevertWhenExpiryWindowTooShort() public {
         uint40 tooSoonExpiryTimestamp = uint40(block.timestamp + 1 days - 1 seconds);
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
             underlyingAsset: address(DAILIKE),
@@ -447,7 +447,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         });
     }
 
-    function test_unitRevertNewOptionTypeWhenExerciseWindowTooShort() public {
+    function test_unitNewOptionTypeRevertWhenExerciseWindowTooShort() public {
         vm.expectRevert(
             abi.encodeWithSelector(IOptionSettlementEngine.ExerciseWindowTooShort.selector, uint40(block.timestamp + 1))
         );
@@ -461,7 +461,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         });
     }
 
-    function test_unitRevertNewOptionTypeWhenInvalidAssets() public {
+    function test_unitNewOptionTypeRevertWhenInvalidAssets() public {
         vm.expectRevert(
             abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(DAILIKE), address(DAILIKE))
         );
@@ -475,7 +475,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         });
     }
 
-    function test_unitRevertNewOptionTypeWhenTotalSuppliesAreTooLowToExercise() public {
+    function test_unitNewOptionTypeRevertWhenTotalSuppliesAreTooLowToExercise() public {
         uint96 underlyingAmountExceedsTotalSupply = uint96(IERC20(address(DAILIKE)).totalSupply() + 1);
 
         vm.expectRevert(
@@ -511,7 +511,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // function write(uint256 tokenId, uint112 amount) external returns (uint256 claimId);
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitWriteWhenNewClaim() public {
+    function test_unitWriteNewClaim() public {
         uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
 
         vm.expectEmit(true, true, true, true);
@@ -524,7 +524,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.write(testOptionId, 1);
     }
 
-    function test_unitWriteWhenExistingClaim() public {
+    function test_unitWriteExistingClaim() public {
         uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
 
         vm.prank(ALICE);
@@ -553,7 +553,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     // Fail tests
 
-    function test_unitRevertWriteWhenAmountWrittenCannotBeZero() public {
+    function test_unitWriteRevertWhenAmountWrittenCannotBeZero() public {
         uint112 invalidWriteAmount = 0;
 
         vm.expectRevert(IOptionSettlementEngine.AmountWrittenCannotBeZero.selector);
@@ -561,7 +561,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.write(testOptionId, invalidWriteAmount);
     }
 
-    function test_unitRevertWriteWhenInvalidOption() public {
+    function test_unitWriteRevertWhenInvalidOption() public {
         // Option ID not 0 in lower 96 b
         uint256 invalidOptionId = testOptionId + 1;
         // Option ID not initialized
@@ -570,7 +570,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.write(invalidOptionId, 1);
     }
 
-    function test_unitRevertWriteWhenExpiredOption() public {
+    function test_unitWriteRevertWhenExpiredOption() public {
         vm.warp(testExpiryTimestamp + 1 seconds);
 
         vm.expectRevert(
@@ -581,7 +581,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.write(testOptionId, 1);
     }
 
-    function test_unitRevertWriteWhenCallerDoesNotOwnClaimId() public {
+    function test_unitWriteRevertWhenCallerDoesNotOwnClaimId() public {
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
         vm.stopPrank();
@@ -658,7 +658,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     // Fail tests
 
-    function test_unitRevertRedeemWhenInvalidClaim() public {
+    function test_unitRedeemRevertWhenInvalidClaim() public {
         uint256 badClaimId = encodeTokenId(0xDEADBEEF, 0);
 
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidClaim.selector, badClaimId));
@@ -667,7 +667,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.redeem(badClaimId);
     }
 
-    function test_unitRevertRedeemWhenCallerDoesNotOwnClaimId() public {
+    function test_unitRedeemRevertWhenCallerDoesNotOwnClaimId() public {
         // Alice writes and transfers to Bob, then Alice tries to redeem
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
@@ -696,7 +696,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.stopPrank();
     }
 
-    function test_unitRevertRedeemWhenClaimTooSoon() public {
+    function test_unitRedeemRevertWhenClaimTooSoon() public {
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
 

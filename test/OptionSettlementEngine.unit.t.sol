@@ -117,12 +117,7 @@ contract OptionSettlementTest is BaseEngineTest {
     function testMinimumFee() public {
         vm.startPrank(ALICE);
         uint256 optionId = engine.newOptionType(
-            address(ERC20A),
-            1,
-            address(ERC20B),
-            15,
-            uint40(block.timestamp),
-            uint40(block.timestamp + 30 days)
+            address(ERC20A), 1, address(ERC20B), 15, uint40(block.timestamp), uint40(block.timestamp + 30 days)
         );
         uint256 claim1 = engine.write(optionId, 1);
         uint256 costToWrite = 1 + _calculateFee(1); // underlyingAmount + fee

@@ -639,7 +639,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @inheritdoc IOptionSettlementEngine
-    function sweepFees(address[] memory tokens) external {
+    function sweepFees(address[] calldata tokens) external {
         address sendFeeTo = feeTo;
         address token;
         uint256 fee;

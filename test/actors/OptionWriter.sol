@@ -4,23 +4,21 @@ pragma solidity 0.8.16;
 import "./BaseActor.sol";
 
 contract OptionWriter is BaseActor {
-    constructor(OptionSettlementEngine _engine) BaseActor(_engine) {
-        //
-    }
+    constructor(OptionSettlementEngine _engine) BaseActor(_engine) {}
 
-    function newOptionType() external {
+    function newOptionType() external view {
         console.logString("newOptionType");
     }
 
-    function writeNew() external {
+    function writeNew() external view {
         console.logString("writeNew");
     }
 
-    function writeExisting() external {
+    function writeExisting() external view {
         console.logString("writeExisting");
     }
 
-    function redeem() external {
+    function redeem() external view {
         console.logString("redeem");
     }
 }

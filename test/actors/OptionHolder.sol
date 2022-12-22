@@ -4,11 +4,9 @@ pragma solidity 0.8.16;
 import "./BaseActor.sol";
 
 contract OptionHolder is BaseActor {
-    constructor(OptionSettlementEngine _engine) BaseActor(_engine) {
-        //
-    }
+    constructor(OptionSettlementEngine _engine) BaseActor(_engine) {}
 
-    function exercise() external {
+    function exercise() external view {
         console.logString("exercise");
     }
 }

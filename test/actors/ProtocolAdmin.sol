@@ -4,23 +4,21 @@ pragma solidity 0.8.16;
 import "./BaseActor.sol";
 
 contract ProtocolAdmin is BaseActor {
-    constructor(OptionSettlementEngine _engine) BaseActor(_engine) {
-        //
-    }
+    constructor(OptionSettlementEngine _engine) BaseActor(_engine) {}
 
-    function setFeesEnabled() external {
+    function setFeesEnabled() external view {
         console.logString("setFeesEnabled");
     }
 
-    function setFeeTo() external {
+    function setFeeTo() external view {
         console.logString("setFeeTo");
     }
 
-    function setTokenURIGenerator() external {
+    function setTokenURIGenerator() external view {
         console.logString("setTokenURIGenerator");
     }
 
-    function sweepFees() external {
+    function sweepFees() external view {
         console.logString("sweepFees");
     }
 }

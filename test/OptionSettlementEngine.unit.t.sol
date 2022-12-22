@@ -1338,34 +1338,6 @@ contract OptionSettlementTest is BaseEngineTest {
         });
     }
 
-    function testRevertNewOptionTypeWhenInvalidAssetAmounts() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssetAmounts.selector, 1, testExerciseAmount)
-        );
-
-        _createNewOptionType({
-            underlyingAsset: address(DAILIKE),
-            underlyingAmount: 1,
-            exerciseAsset: address(WETHLIKE),
-            exerciseAmount: testExerciseAmount,
-            exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp
-        });
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssetAmounts.selector, testUnderlyingAmount, 1)
-        );
-
-        _createNewOptionType({
-            underlyingAsset: address(DAILIKE),
-            underlyingAmount: testUnderlyingAmount,
-            exerciseAsset: address(WETHLIKE),
-            exerciseAmount: 1,
-            exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp
-        });
-    }
-
     function testRevertWriteWhenInvalidOption() public {
         // Option ID not 0 in lower 96 b
         uint256 invalidOptionId = testOptionId + 1;

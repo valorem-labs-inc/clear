@@ -175,6 +175,13 @@ contract OptionSettlementTest is BaseEngineTest {
         assertEq(position.underlyingAmount, int256(uint256(testUnderlyingAmount)));
         assertEq(position.exerciseAsset, testExerciseAsset);
         assertEq(position.exerciseAmount, -int256(uint256(testExerciseAmount)));
+
+        vm.warp(testOption.expiryTimestamp);
+        // The token is now expired/worthless, and this should revert.
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
+        );
+        position = engine.position(testOptionId);
     }
 
     function test_unitPositionUnexercisedClaim() public {}
@@ -743,22 +750,6 @@ contract OptionSettlementTest is BaseEngineTest {
         position = engine.position(claim2);
         _assertPosition(position.underlyingAmount, 0);
         _assertPosition(position.exerciseAmount, testExerciseAmount);
-    }
-
-    function testPositionForFungibleOptionToken() public {
-        IOptionSettlementEngine.Position memory position = engine.position(testOptionId);
-        // before expiry, position is entirely the underlying amount
-        _assertPosition(position.underlyingAmount, testUnderlyingAmount);
-        _assertPosition(-1 * position.exerciseAmount, testExerciseAmount);
-        assertEq(testExerciseAsset, position.exerciseAsset);
-        assertEq(testUnderlyingAsset, position.underlyingAsset);
-
-        vm.warp(testOption.expiryTimestamp);
-        // The token is now expired/worthless, and this should revert.
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
-        );
-        position = engine.position(testOptionId);
     }
 
     function testAddOptionsToExistingClaim() public {

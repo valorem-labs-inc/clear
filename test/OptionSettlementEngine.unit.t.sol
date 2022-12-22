@@ -865,6 +865,32 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // function setTokenURIGenerator(address newTokenURIGenerator) external
     //////////////////////////////////////////////////////////////*/
 
+    function test_unitSetTokenURIGenerator() public {
+        TokenURIGenerator newTokenURIGenerator = new TokenURIGenerator();
+
+        vm.expectEmit(true, true, true, true);
+        emit TokenURIGeneratorUpdated(address(newTokenURIGenerator));
+
+        vm.prank(FEE_TO);
+        engine.setTokenURIGenerator(address(newTokenURIGenerator));
+
+        assertEq(address(engine.tokenURIGenerator()), address(newTokenURIGenerator));
+    }
+
+    // Fail tests
+
+    function test_unitSetTokenURIGeneratorRevertWhenNotCurrentFeeTo() public {
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
+        vm.prank(ALICE);
+        engine.setTokenURIGenerator(address(0xCAFE));
+    }
+
+    function test_unitSetTokenURIGeneratorRevertWhenZeroAddress() public {
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAddress.selector, address(0)));
+        vm.prank(FEE_TO);
+        engine.setTokenURIGenerator(address(0));
+    }
+
     /*//////////////////////////////////////////////////////////////
     // function sweepFees(address[] memory tokens) external
     //////////////////////////////////////////////////////////////*/
@@ -910,28 +936,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.setTokenURIGenerator(address(newTokenURIGenerator));
 
         assertEq(address(engine.tokenURIGenerator()), address(newTokenURIGenerator));
-    }
-
-    function testEventSetTokenURIGenerator() public {
-        TokenURIGenerator newTokenURIGenerator = new TokenURIGenerator();
-
-        vm.expectEmit(true, true, true, true);
-        emit TokenURIGeneratorUpdated(address(newTokenURIGenerator));
-
-        vm.prank(FEE_TO);
-        engine.setTokenURIGenerator(address(newTokenURIGenerator));
-    }
-
-    function testRevertSetTokenURIGeneratorWhenNotCurrentFeeTo() public {
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
-        vm.prank(ALICE);
-        engine.setTokenURIGenerator(address(0xCAFE));
-    }
-
-    function testRevertSetTokenURIGeneratorWhenZeroAddress() public {
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAddress.selector, address(0)));
-        vm.prank(FEE_TO);
-        engine.setTokenURIGenerator(address(0));
     }
 
     // **********************************************************************

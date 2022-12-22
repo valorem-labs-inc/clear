@@ -626,7 +626,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
         engine.exercise(testOptionId, 3);
 
-        uint256 expectedUnderlyingAmount = testExerciseAmount * 11;
+        uint256 expectedUnderlyingAmount = testUnderlyingAmount * 11;
 
         engine.write(claimId, uint112(amountWritten));
 

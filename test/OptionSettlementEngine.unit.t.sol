@@ -511,6 +511,87 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // function write(uint256 tokenId, uint112 amount) external returns (uint256 claimId);
     //////////////////////////////////////////////////////////////*/
 
+    function test_unitWriteWhenNewClaim() public {
+        uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
+
+        vm.expectEmit(true, true, true, true);
+        emit FeeAccrued(testOptionId, address(WETHLIKE), ALICE, expectedFeeAccruedAmount);
+
+        vm.expectEmit(true, true, true, true);
+        emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, 1);
+
+        vm.prank(ALICE);
+        engine.write(testOptionId, 1);
+    }
+
+    function test_unitWriteWhenExistingClaim() public {
+        uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
+
+        vm.prank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 1);
+
+        vm.expectEmit(true, true, true, true);
+        emit FeeAccrued(testOptionId, address(WETHLIKE), ALICE, expectedFeeAccruedAmount);
+
+        vm.expectEmit(true, true, true, true);
+        emit OptionsWritten(testOptionId, ALICE, claimId, 1);
+
+        vm.prank(ALICE);
+        engine.write(claimId, 1);
+    }
+
+    function test_unitWriteFeeOff() public {
+        vm.prank(FEE_TO);
+        engine.setFeesEnabled(false);
+
+        vm.expectEmit(true, true, true, true);
+        emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, 1);
+
+        vm.prank(ALICE);
+        engine.write(testOptionId, 1);
+    }
+
+    // Fail tests
+
+    function test_unitRevertWriteWhenAmountWrittenCannotBeZero() public {
+        uint112 invalidWriteAmount = 0;
+
+        vm.expectRevert(IOptionSettlementEngine.AmountWrittenCannotBeZero.selector);
+
+        engine.write(testOptionId, invalidWriteAmount);
+    }
+
+    function test_unitRevertWriteWhenInvalidOption() public {
+        // Option ID not 0 in lower 96 b
+        uint256 invalidOptionId = testOptionId + 1;
+        // Option ID not initialized
+        invalidOptionId = encodeTokenId(0x1, 0x0);
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId));
+        engine.write(invalidOptionId, 1);
+    }
+
+    function test_unitRevertWriteWhenExpiredOption() public {
+        vm.warp(testExpiryTimestamp + 1 seconds);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
+        );
+
+        vm.prank(ALICE);
+        engine.write(testOptionId, 1);
+    }
+
+    function test_unitRevertWriteWhenCallerDoesNotOwnClaimId() public {
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 1);
+        vm.stopPrank();
+
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
+
+        vm.prank(BOB);
+        engine.write(claimId, 1);
+    }
+
     /*//////////////////////////////////////////////////////////////
     // function redeem(uint256 claimId) external;
     //////////////////////////////////////////////////////////////*/
@@ -972,35 +1053,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //                            EVENT TESTS
     // **********************************************************************
 
-    function testEventWriteWhenNewClaim() public {
-        uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
-
-        vm.expectEmit(true, true, true, true);
-        emit FeeAccrued(testOptionId, address(WETHLIKE), ALICE, expectedFeeAccruedAmount);
-
-        vm.expectEmit(true, true, true, true);
-        emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, 1);
-
-        vm.prank(ALICE);
-        engine.write(testOptionId, 1);
-    }
-
-    function testEventWriteWhenExistingClaim() public {
-        uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
-
-        vm.prank(ALICE);
-        uint256 claimId = engine.write(testOptionId, 1);
-
-        vm.expectEmit(true, true, true, true);
-        emit FeeAccrued(testOptionId, address(WETHLIKE), ALICE, expectedFeeAccruedAmount);
-
-        vm.expectEmit(true, true, true, true);
-        emit OptionsWritten(testOptionId, ALICE, claimId, 1);
-
-        vm.prank(ALICE);
-        engine.write(claimId, 1);
-    }
-
     function testEventExercise() public {
         vm.startPrank(ALICE);
         engine.write(testOptionId, 1);
@@ -1247,33 +1299,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //                            FAIL TESTS
     // **********************************************************************
 
-    function testRevertWriteWhenInvalidOption() public {
-        // Option ID not 0 in lower 96 b
-        uint256 invalidOptionId = testOptionId + 1;
-        // Option ID not initialized
-        invalidOptionId = encodeTokenId(0x1, 0x0);
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId));
-        engine.write(invalidOptionId, 1);
-    }
-
-    function testRevertWriteWhenAmountWrittenCannotBeZero() public {
-        uint112 invalidWriteAmount = 0;
-
-        vm.expectRevert(IOptionSettlementEngine.AmountWrittenCannotBeZero.selector);
-
-        engine.write(testOptionId, invalidWriteAmount);
-    }
-
-    function testRevertWriteExpiredOption() public {
-        vm.warp(testExpiryTimestamp);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
-        );
-
-        engine.write(testOptionId, 1);
-    }
-
     function testRevertExerciseBeforeExcercise() public {
         _createNewOptionType({
             underlyingAsset: address(WETHLIKE),
@@ -1287,33 +1312,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.startPrank(ALICE);
         engine.write(testOptionId, 1);
 
-        vm.stopPrank();
-    }
-
-    function testRevertWriteWhenCallerDoesNotOwnClaimId() public {
-        vm.startPrank(ALICE);
-        uint256 claimId = engine.write(testOptionId, 1);
-        vm.stopPrank();
-
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
-
-        vm.prank(BOB);
-        engine.write(claimId, 1);
-    }
-
-    function testRevertWriteWhenExpiredOption() public {
-        vm.startPrank(ALICE);
-        uint256 claimId = engine.write(testOptionId, 1);
-
-        vm.warp(testExpiryTimestamp + 1 seconds);
-
-        engine.redeem(claimId);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
-        );
-
-        engine.write(claimId, 1);
         vm.stopPrank();
     }
 

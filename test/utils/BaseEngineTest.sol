@@ -16,6 +16,9 @@ abstract contract BaseEngineTest is Test {
     OptionSettlementEngine internal engine;
     ITokenURIGenerator internal generator;
 
+    // Scalars
+    uint256 internal constant WAD = 1e18;
+
     // Users
     address internal constant ALICE = address(0xA);
     address internal constant BOB = address(0xB);
@@ -23,6 +26,7 @@ abstract contract BaseEngineTest is Test {
 
     // Admin
     address internal constant FEE_TO = address(0xBEEF);
+    address internal constant NEW_FEE_TO = address(0xDEAD);
 
     // Tokens
     IERC20 internal WETHLIKE;

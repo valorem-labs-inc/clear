@@ -12,7 +12,55 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         uint256 totalExercised;
     }
 
-    function testFuzzNewOptionType(
+    //
+    // function option(uint256 tokenId) external view returns (Option memory optionInfo);
+    //
+
+    //
+    // function claim(uint256 claimId) external view returns (Claim memory claimInfo);
+    //
+
+    //
+    // function position(uint256 tokenId) external view returns (Position memory positionInfo);
+    //
+
+    //
+    // function tokenType(uint256 tokenId) external view returns (TokenType typeOfToken);
+    //
+
+    //
+    // function tokenURIGenerator() external view returns (ITokenURIGenerator uriGenerator);
+    //
+
+    //
+    // function feeBalance(address token) external view returns (uint256);
+    //
+
+    //
+    // function feeBps() external view returns (uint8 fee);
+    //
+
+    //
+    // function feesEnabled() external view returns (bool enabled);
+    //
+
+    //
+    // function feeTo() external view returns (address);
+    //
+
+    //
+    // function newOptionType(
+    //        address underlyingAsset,
+    //        uint96 underlyingAmount,
+    //        address exerciseAsset,
+    //        uint96 exerciseAmount,
+    //        uint40 exerciseTimestamp,
+    //        uint40 expiryTimestamp
+    //    ) external returns (uint256 optionId);
+    //
+
+    // TODO(Bool to flip exercise/underlying assets)
+    function test_fuzzNewOptionType(
         uint96 underlyingAmount,
         uint96 exerciseAmount,
         uint40 exerciseTimestamp,
@@ -53,9 +101,13 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         _assertTokenIsOption(optionId);
     }
 
+    //
+    // function write(uint256 tokenId, uint112 amount) external returns (uint256 claimId);
+    //
+
     // TODO investigate rounding error
     // [FAIL. Reason: TRANSFER_FROM_FAILED Counterexample: calldata=0xf494d5a9000000000000000000000000000000000000000000000000000000000015c992, args=[1427858]]
-    function testFuzzWrite(uint112 amount) public {
+    function test_fuzzWrite(uint112 amount) public {
         uint256 wethBalanceEngine = WETHLIKE.balanceOf(address(engine));
         uint256 wethBalance = WETHLIKE.balanceOf(ALICE);
 
@@ -85,7 +137,10 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         _assertTokenIsClaim(claimId);
     }
 
-    function testFuzzExercise(uint112 amountWrite, uint112 amountExercise) public {
+    //
+    // function redeem(uint256 claimId) external;
+    //
+    function test_fuzzExercise(uint112 amountWrite, uint112 amountExercise) public {
         uint256 wethBalanceEngine = WETHLIKE.balanceOf(address(engine));
         uint256 daiBalanceEngine = DAILIKE.balanceOf(address(engine));
         uint256 wethBalance = WETHLIKE.balanceOf(ALICE);
@@ -121,44 +176,28 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         assertEq(engine.balanceOf(ALICE, claimId), 1);
     }
 
-    function testFuzzRedeem(uint112 amountWrite, uint112 amountExercise) public {
-        uint256 wethBalanceEngine = WETHLIKE.balanceOf(address(engine));
-        uint256 daiBalanceEngine = DAILIKE.balanceOf(address(engine));
-        uint256 wethBalance = WETHLIKE.balanceOf(ALICE);
-        uint256 daiBalance = DAILIKE.balanceOf(ALICE);
+    //
+    // function exercise(uint256 optionId, uint112 amount) external;
 
-        vm.assume(amountWrite > 0);
-        vm.assume(amountExercise > 0);
-        vm.assume(amountWrite >= amountExercise);
-        vm.assume(amountWrite <= wethBalance / testUnderlyingAmount);
-        vm.assume(amountExercise <= daiBalance / testExerciseAmount);
+    //
+    // function setFeesEnabled(bool enabled) external;
 
-        uint256 rxAmount = amountExercise * testExerciseAmount;
-        uint256 exerciseFee = (rxAmount / 10000) * engine.feeBps();
-        uint256 writeFee = ((amountWrite * testUnderlyingAmount) / 10000) * engine.feeBps();
+    //
+    // function setFeeTo(address newFeeTo) external;
 
-        vm.startPrank(ALICE);
-        uint256 claimId = engine.write(testOptionId, amountWrite);
-        _assertTokenIsClaim(claimId);
+    //
+    // function setTokenURIGenerator(address newTokenURIGenerator) external;
+    //
 
-        vm.warp(testExpiryTimestamp - 1);
-        engine.exercise(testOptionId, amountExercise);
+    //
+    // function sweepFees(address[] memory tokens) external;
+    //
 
-        vm.warp(1e15);
+    /*//////////////////////////////////////////////////////////////
+    // Function Composite Tests
+    //////////////////////////////////////////////////////////////*/
 
-        engine.redeem(claimId);
-
-        assertEq(WETHLIKE.balanceOf(address(engine)), wethBalanceEngine + writeFee);
-        assertEq(WETHLIKE.balanceOf(ALICE), wethBalance - writeFee);
-        assertEq(DAILIKE.balanceOf(address(engine)), daiBalanceEngine + exerciseFee);
-        assertEq(DAILIKE.balanceOf(ALICE), daiBalance - exerciseFee);
-        assertEq(engine.balanceOf(ALICE, testOptionId), amountWrite - amountExercise);
-        assertEq(engine.balanceOf(ALICE, claimId), 0);
-
-        _assertTokenIsNone(claimId);
-    }
-
-    function testFuzzWriteExerciseRedeem(uint32 seed) public {
+    function test_fuzzWriteExerciseRedeem(uint32 seed) public {
         uint32 i = 0;
         uint256[] memory claimIds1 = new uint256[](30);
         FuzzMetadata memory opt1 = FuzzMetadata(0, 0, 0);

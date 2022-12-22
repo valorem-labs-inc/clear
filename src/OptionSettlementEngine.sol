@@ -463,6 +463,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             amounts[0] = amount;
             amounts[1] = 1; // claim NFT
 
+            // Transfer in the requisite underlying asset amount.
+            SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
+
             _batchMint(msg.sender, tokens, amounts, "");
         } else {
             // Then add to an existing claim.
@@ -479,12 +482,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // Emit event about options written on existing claim.
             emit OptionsWritten(encodedOptionId, msg.sender, tokenId, amount);
 
+            // Transfer in the requisite underlying asset amount.
+            SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
+
             // Mint more options on existing claim to writer.
             _mint(msg.sender, encodedOptionId, amount, "");
         }
 
-        // Transfer in the requisite underlying asset amount.
-        SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
 
         return tokenId;
     }
@@ -607,11 +611,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         _burn(msg.sender, optionId, amount);
 
-        // Transfer in the required amount of the exercise asset.
-        SafeTransferLib.safeTransferFrom(ERC20(exerciseAsset), msg.sender, address(this), (rxAmount + fee));
-
         // Transfer out the required amount of the underlying asset.
         SafeTransferLib.safeTransfer(ERC20(underlyingAsset), msg.sender, txAmount);
+
+        // Transfer in the required amount of the exercise asset.
+        SafeTransferLib.safeTransferFrom(ERC20(exerciseAsset), msg.sender, address(this), (rxAmount + fee));
     }
 
     //

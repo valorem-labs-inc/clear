@@ -596,6 +596,131 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // function redeem(uint256 claimId) external;
     //////////////////////////////////////////////////////////////*/
 
+    function test_unitRedeemUnexercised() public {
+        vm.startPrank(ALICE);
+        uint256 amountWritten = 7;
+        uint256 claimId = engine.write(testOptionId, uint112(amountWritten));
+        uint256 expectedUnderlyingAmount = testUnderlyingAmount * amountWritten;
+
+        vm.warp(testExpiryTimestamp);
+
+        vm.expectEmit(true, true, true, true);
+        emit ClaimRedeemed(
+            claimId,
+            testOptionId,
+            ALICE,
+            0, // no one has exercised
+            expectedUnderlyingAmount
+        );
+
+        engine.redeem(claimId);
+    }
+
+    function testRedeemPartialExercise() public {
+        vm.startPrank(ALICE);
+        uint256 amountWritten = 7;
+        uint256 claimId = engine.write(testOptionId, uint112(amountWritten));
+        uint256 expectedExerciseAmount = testExerciseAmount * 3;
+
+        vm.warp(testExerciseTimestamp);
+
+        engine.exercise(testOptionId, 3);
+
+        uint256 expectedUnderlyingAmount = testExerciseAmount * 11;
+
+        engine.write(claimId, uint112(amountWritten));
+
+        vm.warp(testExpiryTimestamp);
+
+        vm.expectEmit(true, true, true, true);
+        emit ClaimRedeemed(
+            claimId,
+            testOptionId,
+            ALICE,
+            expectedExerciseAmount,
+            expectedUnderlyingAmount
+        );
+
+        engine.redeem(claimId);
+    }
+
+    function testRedeemExercised() public {
+        vm.startPrank(ALICE);
+        uint256 amountWritten = 7;
+        uint256 claimId = engine.write(testOptionId, uint112(amountWritten));
+        uint256 expectedExerciseAmount = testExerciseAmount * amountWritten;
+
+        vm.warp(testExerciseTimestamp);
+
+        engine.exercise(testOptionId, uint112(amountWritten));
+
+        vm.warp(testExpiryTimestamp);
+
+        vm.expectEmit(true, true, true, true);
+        emit ClaimRedeemed(
+            claimId,
+            testOptionId,
+            ALICE,
+            expectedExerciseAmount,
+            0
+        );
+
+        engine.redeem(claimId);
+    }
+
+    // Fail tests
+
+    function test_unitRevertRedeemWhenInvalidClaim() public {
+        uint256 badClaimId = encodeTokenId(0xDEADBEEF, 0);
+
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidClaim.selector, badClaimId));
+
+        vm.prank(ALICE);
+        engine.redeem(badClaimId);
+    }
+
+    function test_unitRevertRedeemWhenCallerDoesNotOwnClaimId() public {
+        // Alice writes and transfers to Bob, then Alice tries to redeem
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 1);
+        engine.safeTransferFrom(ALICE, BOB, claimId, 1, "");
+
+        vm.warp(testExpiryTimestamp);
+
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
+
+        engine.redeem(claimId);
+        vm.stopPrank();
+
+        // Carol feels left out and tries to redeem what she can't
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
+
+        vm.prank(CAROL);
+        engine.redeem(claimId);
+
+        // Bob redeems, which burns the Claim NFT, and then is unable to redeem a second time
+        vm.startPrank(BOB);
+        engine.redeem(claimId);
+
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
+
+        engine.redeem(claimId);
+        vm.stopPrank();
+    }
+
+    function test_unitRevertRedeemWhenClaimTooSoon() public {
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 1);
+
+        vm.warp(testExerciseTimestamp - 1 seconds);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.ClaimTooSoon.selector, claimId, testExpiryTimestamp)
+        );
+
+        engine.redeem(claimId);
+    }
+
     /*//////////////////////////////////////////////////////////////
     // function exercise(uint256 optionId, uint112 amount) external;
     //////////////////////////////////////////////////////////////*/
@@ -1074,26 +1199,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.exercise(testOptionId, 1);
     }
 
-    function testEventRedeem() public {
-        vm.startPrank(ALICE);
-        uint96 amountWritten = 7;
-        uint256 claimId = engine.write(testOptionId, amountWritten);
-        uint96 expectedUnderlyingAmount = testUnderlyingAmount * amountWritten;
-
-        vm.warp(testExpiryTimestamp + 1 seconds);
-
-        vm.expectEmit(true, true, true, true);
-        emit ClaimRedeemed(
-            claimId,
-            testOptionId,
-            ALICE,
-            0, // no one has exercised
-            expectedUnderlyingAmount
-            );
-
-        engine.redeem(claimId);
-    }
-
     function testSweepFeesWhenFeesAccruedForWrite() public {
         address[] memory tokens = new address[](3);
         tokens[0] = address(WETHLIKE);
@@ -1386,15 +1491,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.stopPrank();
     }
 
-    function testRevertRedeemWhenInvalidClaim() public {
-        uint256 badClaimId = encodeTokenId(0xDEADBEEF, 0);
-
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidClaim.selector, badClaimId));
-
-        vm.prank(ALICE);
-        engine.redeem(badClaimId);
-    }
-
     function testRevertExerciseWhenCallerHoldsInsufficientOptions() public {
         vm.warp(testExerciseTimestamp + 1 seconds);
 
@@ -1411,48 +1507,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
             abi.encodeWithSelector(IOptionSettlementEngine.CallerHoldsInsufficientOptions.selector, testOptionId, 2)
         );
         engine.exercise(testOptionId, 2);
-    }
-
-    function testRevertRedeemWhenCallerDoesNotOwnClaimId() public {
-        // Alice writes and transfers to Bob, then Alice tries to redeem
-        vm.startPrank(ALICE);
-        uint256 claimId = engine.write(testOptionId, 1);
-        engine.safeTransferFrom(ALICE, BOB, claimId, 1, "");
-
-        vm.warp(testExpiryTimestamp);
-
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
-
-        engine.redeem(claimId);
-        vm.stopPrank();
-
-        // Carol feels left out and tries to redeem what she can't
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
-
-        vm.prank(CAROL);
-        engine.redeem(claimId);
-
-        // Bob redeems, which burns the Claim NFT, and then is unable to redeem a second time
-        vm.startPrank(BOB);
-        engine.redeem(claimId);
-
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
-
-        engine.redeem(claimId);
-        vm.stopPrank();
-    }
-
-    function testRevertRedeemWhenClaimTooSoon() public {
-        vm.startPrank(ALICE);
-        uint256 claimId = engine.write(testOptionId, 1);
-
-        vm.warp(testExerciseTimestamp - 1 seconds);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ClaimTooSoon.selector, claimId, testExpiryTimestamp)
-        );
-
-        engine.redeem(claimId);
     }
 
     function testRevertUriWhenTokenNotFound() public {

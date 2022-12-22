@@ -184,11 +184,53 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         position = engine.position(testOptionId);
     }
 
-    function test_unitPositionUnexercisedClaim() public {}
+    function test_unitPositionUnexercisedClaim() public {
+        vm.prank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 69);
 
-    function test_unitPositionPartiallyExercisedClaim() public {}
+        IOptionSettlementEngine.Position memory position = engine.position(claimId);
+        assertEq(position.underlyingAsset, testUnderlyingAsset);
+        assertEq(position.underlyingAmount, int256(uint256(testUnderlyingAmount)));
+        assertEq(position.exerciseAsset, testExerciseAsset);
+        assertEq(position.exerciseAmount, int256(0));
+    }
 
-    function test_unitPositionExercisedClaim() public {}
+    function test_unitPositionPartiallyExercisedClaim() public {
+        uint112 amountWritten = 69;
+        vm.prank(ALICE);
+        uint256 claimId = engine.write(testOptionId, amountWritten);
+
+        vm.prank(ALICE);
+        engine.exercise(testOptionId, 1);
+
+        engine.write(claimId, amountWritten);
+
+        amountWritten = amountWritten * 2;
+
+        IOptionSettlementEngine.Position memory position = engine.position(claimId);
+        assertEq(position.underlyingAsset, testUnderlyingAsset);
+        assertEq(
+            position.underlyingAmount,
+            int256(uint256((amountWritten - 1) * testUnderlyingAmount * amountWritten) / amountWritten)
+        );
+        assertEq(position.exerciseAsset, testExerciseAsset);
+        assertEq(position.exerciseAmount, int256(uint256(1 * testUnderlyingAmount * amountWritten) / amountWritten));
+    }
+
+    function test_unitPositionExercisedClaim() public {
+        uint112 amountWritten = 69;
+        vm.prank(ALICE);
+        uint256 claimId = engine.write(testOptionId, amountWritten);
+
+        vm.prank(ALICE);
+        engine.exercise(testOptionId, 69);
+
+        IOptionSettlementEngine.Position memory position = engine.position(claimId);
+        assertEq(position.underlyingAsset, testUnderlyingAsset);
+        assertEq(position.underlyingAmount, int256(uint256(0)));
+        assertEq(position.exerciseAsset, testExerciseAsset);
+        assertEq(position.exerciseAmount, int256(uint256(amountWritten * testUnderlyingAmount)));
+    }
 
     //
     // function tokenType(uint256 tokenId) external view returns (TokenType typeOfToken);

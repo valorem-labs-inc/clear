@@ -184,7 +184,7 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
         );
     }
 
-    function testAddOptionsToExistingClaim() public {
+    function test_integrationAddOptionsToExistingClaim() public {
         // write some options, grab a claim
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
@@ -213,7 +213,7 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
         _assertClaimAmountExercised(claimId, 0);
     }
 
-    function testRandomAssignment() public {
+    function test_integrationRandomAssignment() public {
         uint16 numDays = 7;
         uint256[] memory claimIds = new uint256[](numDays);
 
@@ -242,77 +242,7 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
         vm.startPrank(BOB);
     }
 
-    function testWriteMultipleWriteSameOptionType() public {
-        // Alice writes a few options and later decides to write more
-        vm.startPrank(ALICE);
-        uint256 claimId1 = engine.write(testOptionId, 69);
-        vm.warp(block.timestamp + 100);
-        uint256 claimId2 = engine.write(testOptionId, 100);
-        vm.stopPrank();
-
-        assertEq(engine.balanceOf(ALICE, testOptionId), 169);
-        assertEq(engine.balanceOf(ALICE, claimId1), 1);
-        assertEq(engine.balanceOf(ALICE, claimId2), 1);
-
-        IOptionSettlementEngine.Position memory claimPosition = engine.position(claimId1);
-        (uint160 _optionId, uint96 claimIdx) = decodeTokenId(claimId1);
-        uint256 optionId = uint256(_optionId) << 96;
-        assertEq(optionId, testOptionId);
-        assertEq(claimIdx, 1);
-        assertEq(uint256(claimPosition.underlyingAmount), 69 * testUnderlyingAmount);
-        _assertClaimAmountExercised(claimId1, 0);
-
-        claimPosition = engine.position(claimId2);
-        (optionId, claimIdx) = decodeTokenId(claimId2);
-        optionId = uint256(_optionId) << 96;
-        assertEq(optionId, testOptionId);
-        assertEq(claimIdx, 2);
-        assertEq(uint256(claimPosition.underlyingAmount), 100 * testUnderlyingAmount);
-        _assertClaimAmountExercised(claimId2, 0);
-    }
-
-    function testExerciseMultipleWriteSameChain() public {
-        uint256 wethBalanceEngine = WETHLIKE.balanceOf(address(engine));
-        uint256 wethBalanceA = WETHLIKE.balanceOf(ALICE);
-        uint256 wethBalanceB = WETHLIKE.balanceOf(BOB);
-        uint256 daiBalanceEngine = DAILIKE.balanceOf(address(engine));
-        uint256 daiBalanceA = DAILIKE.balanceOf(ALICE);
-        uint256 daiBalanceB = DAILIKE.balanceOf(BOB);
-
-        // Alice writes 1, decides to write another, and sends both to Bob to exercise
-        vm.startPrank(ALICE);
-        engine.write(testOptionId, 1);
-        engine.write(testOptionId, 1);
-        engine.safeTransferFrom(ALICE, BOB, testOptionId, 2, "");
-        vm.stopPrank();
-
-        assertEq(engine.balanceOf(ALICE, testOptionId), 0);
-        assertEq(engine.balanceOf(BOB, testOptionId), 2);
-
-        // Fees
-        uint256 writeAmount = 2 * testUnderlyingAmount;
-        uint256 writeFee = (writeAmount / 10000) * engine.feeBps();
-
-        uint256 exerciseAmount = 2 * testExerciseAmount;
-        uint256 exerciseFee = (exerciseAmount / 10000) * engine.feeBps();
-
-        assertEq(WETHLIKE.balanceOf(address(engine)), wethBalanceEngine + writeAmount + writeFee);
-
-        vm.warp(testExpiryTimestamp - 1);
-        // Bob exercises
-        vm.prank(BOB);
-        engine.exercise(testOptionId, 2);
-        assertEq(engine.balanceOf(BOB, testOptionId), 0);
-
-        assertEq(WETHLIKE.balanceOf(address(engine)), wethBalanceEngine + writeFee);
-        assertEq(WETHLIKE.balanceOf(ALICE), wethBalanceA - writeAmount - writeFee);
-        assertEq(WETHLIKE.balanceOf(BOB), wethBalanceB + writeAmount);
-        assertEq(DAILIKE.balanceOf(address(engine)), daiBalanceEngine + exerciseAmount + exerciseFee);
-        assertEq(DAILIKE.balanceOf(ALICE), daiBalanceA);
-        assertEq(DAILIKE.balanceOf(BOB), daiBalanceB - exerciseAmount - exerciseFee);
-    }
-
-    function testWriteExerciseAddBuckets() public {
+    function test_integrationWriteExerciseAddBuckets() public {
         vm.startPrank(ALICE);
         uint256[7] memory claimRatios;
         uint112 targetBuckets = 7;
@@ -351,7 +281,7 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
         assertEq(claimRatios[6], bucketRatio2);
     }
 
-    function testSweepFeesWhenFeesAccruedForWrite() public {
+    function test_integrationSweepFeesWhenFeesAccruedForWrite() public {
         address[] memory tokens = new address[](3);
         tokens[0] = address(WETHLIKE);
         tokens[1] = address(DAILIKE);
@@ -443,7 +373,7 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
         assertEq(USDCLIKE.balanceOf(FEE_TO), feeToBalanceUsdc + expectedFees[2]);
     }
 
-    function testSweepFeesWhenFeesAccruedForExercise() public {
+    function test_integrationSweepFeesWhenFeesAccruedForExercise() public {
         address[] memory tokens = new address[](3);
         tokens[0] = address(DAILIKE);
         tokens[1] = address(WETHLIKE);

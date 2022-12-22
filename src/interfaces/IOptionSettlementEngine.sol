@@ -360,7 +360,8 @@ interface IOptionSettlementEngine {
     function feeBalance(address token) external view returns (uint256);
 
     /**
-     * @return fee The protocol fee, expressed in basis points.
+     * @notice Gets the protocol fee, expressed in basis points.
+     * @return fee The protocol fee.
      */
     function feeBps() external view returns (uint8 fee);
 
@@ -371,8 +372,8 @@ interface IOptionSettlementEngine {
     function feesEnabled() external view returns (bool enabled);
 
     /**
-     * @notice Returns the address which protocol fees are swept to.
-     * @return The address which fees are swept to.
+     * @notice Returns the address to which protocol fees are swept.
+     * @return The address to which fees are swept.
      */
     function feeTo() external view returns (address);
 
@@ -462,10 +463,18 @@ interface IOptionSettlementEngine {
     function setFeesEnabled(bool enabled) external;
 
     /**
-     * @notice Updates the address fees are swept to.
-     * @param newFeeTo The new address which fees are swept to.
+     * @notice Nominates a new address to which fees should be swept, requiring
+     * the new feeTo address to accept before the update is complete. See also
+     * acceptFeeTo().
+     * @param newFeeTo The new address to which fees should be swept.
      */
     function setFeeTo(address newFeeTo) external;
+
+    /**
+     * @notice Accepts the new feeTo address and completes the update.
+     * See also setFeeTo(address newFeeTo).
+     */
+    function acceptFeeTo() external;
 
     /**
      * @notice Updates the contract address for generating token URIs for tokens.

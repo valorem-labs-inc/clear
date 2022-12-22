@@ -713,6 +713,8 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // function exercise(uint256 optionId, uint112 amount) external;
     //////////////////////////////////////////////////////////////*/
 
+
+
     /*//////////////////////////////////////////////////////////////
     // function setFeesEnabled(bool enabled) external;
     //////////////////////////////////////////////////////////////*/
@@ -938,38 +940,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
         // Now Bob owns 0 of these options
         assertEq(engine.balanceOf(BOB, newOptionId), 0);
-    }
-
-    function testPositionWhenNotExercised() public {
-        // Alice writes 7 and no one exercises
-        vm.startPrank(ALICE);
-        uint256 claimId = engine.write(testOptionId, 7);
-
-        vm.warp(testExpiryTimestamp + 1);
-
-        IOptionSettlementEngine.Position memory position = engine.position(claimId);
-
-        assertEq(position.underlyingAsset, address(WETHLIKE));
-        _assertPosition(position.underlyingAmount, 7 * testUnderlyingAmount);
-        assertEq(position.exerciseAsset, address(DAILIKE));
-        assertEq(position.exerciseAmount, 0);
-    }
-
-    function testPositionAfterExercise() public {
-        uint256 claimId = _writeAndExerciseOption(testOptionId, ALICE, BOB, 2, 0);
-        IOptionSettlementEngine.Position memory position = engine.position(claimId);
-        _assertPosition(position.underlyingAmount, 2 * testUnderlyingAmount);
-        assertEq(position.exerciseAmount, 0);
-
-        _writeAndExerciseOption(testOptionId, ALICE, BOB, 0, 1);
-        position = engine.position(claimId);
-        _assertPosition(position.underlyingAmount, testUnderlyingAmount);
-        _assertPosition(position.exerciseAmount, testExerciseAmount);
-
-        _writeAndExerciseOption(testOptionId, ALICE, BOB, 0, 1);
-        position = engine.position(claimId);
-        _assertPosition(position.underlyingAmount, 0);
-        _assertPosition(position.exerciseAmount, 2 * testExerciseAmount);
     }
 
     function testWriteAfterFullyExercisingDay() public {

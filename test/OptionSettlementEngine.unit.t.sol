@@ -723,6 +723,12 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         // Fast-forward to exercise
         vm.warp(testExerciseTimestamp);
 
+        vm.expectEmit(true, true, true, true);
+        emit FeeAccrued(testOptionId, address(DAILIKE), BOB, _calculateFee(testExerciseAmount));
+
+        vm.expectEmit(true, true, true, true);
+        emit OptionsExercised(testOptionId, BOB, 1);
+
         // Bob exercises
         vm.startPrank(BOB);
         engine.exercise(testOptionId, 1);
@@ -929,39 +935,9 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         new OptionSettlementEngine(FEE_TO, address(0));
     }
 
-    function testSetTokenURIGenerator() public {
-        TokenURIGenerator newTokenURIGenerator = new TokenURIGenerator();
-
-        vm.prank(FEE_TO);
-        engine.setTokenURIGenerator(address(newTokenURIGenerator));
-
-        assertEq(address(engine.tokenURIGenerator()), address(newTokenURIGenerator));
-    }
-
     // **********************************************************************
     //                            EVENT TESTS
     // **********************************************************************
-
-    function testEventExercise() public {
-        vm.startPrank(ALICE);
-        engine.write(testOptionId, 1);
-        engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
-        vm.stopPrank();
-
-        vm.warp(testExpiryTimestamp - 1 seconds);
-
-        decodeTokenId(testOptionId);
-        uint256 expectedFeeAccruedAmount = (testExerciseAmount / 10_000) * engine.feeBps();
-
-        vm.expectEmit(true, true, true, true);
-        emit FeeAccrued(testOptionId, address(DAILIKE), BOB, expectedFeeAccruedAmount);
-
-        vm.expectEmit(true, true, true, true);
-        emit OptionsExercised(testOptionId, BOB, 1);
-
-        vm.prank(BOB);
-        engine.exercise(testOptionId, 1);
-    }
 
     function testSweepFeesWhenFeesAccruedForWrite() public {
         address[] memory tokens = new address[](3);

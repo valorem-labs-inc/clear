@@ -370,23 +370,23 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
 
         // Write option that will generate DAI fees
         (uint256 daiOptionId,) = _createNewOptionType({
-        underlyingAsset: address(DAILIKE),
-        underlyingAmount: daiUnderlyingAmount,
-        exerciseAsset: address(WETHLIKE),
-        exerciseAmount: testExerciseAmount,
-        exerciseTimestamp: testExerciseTimestamp,
-        expiryTimestamp: testExpiryTimestamp
+            underlyingAsset: address(DAILIKE),
+            underlyingAmount: daiUnderlyingAmount,
+            exerciseAsset: address(WETHLIKE),
+            exerciseAmount: testExerciseAmount,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp
         });
         engine.write(daiOptionId, optionsWrittenDaiUnderlying);
 
         // Write option that will generate USDC fees
         (uint256 usdcOptionId,) = _createNewOptionType({
-        underlyingAsset: address(USDCLIKE),
-        underlyingAmount: usdcUnderlyingAmount,
-        exerciseAsset: address(DAILIKE),
-        exerciseAmount: testExerciseAmount,
-        exerciseTimestamp: testExerciseTimestamp,
-        expiryTimestamp: testExpiryTimestamp
+            underlyingAsset: address(USDCLIKE),
+            underlyingAmount: usdcUnderlyingAmount,
+            exerciseAsset: address(DAILIKE),
+            exerciseAmount: testExerciseAmount,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp
         });
         engine.write(usdcOptionId, optionsWrittenUsdcUnderlying);
         vm.stopPrank();
@@ -460,45 +460,45 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
         // Write option for WETH-DAI pair
         vm.startPrank(ALICE);
         (uint256 daiExerciseOptionId,) = _createNewOptionType({
-        underlyingAsset: address(WETHLIKE),
-        underlyingAmount: testUnderlyingAmount,
-        exerciseAsset: address(DAILIKE),
-        exerciseAmount: daiExerciseAmount,
-        exerciseTimestamp: testExerciseTimestamp,
-        expiryTimestamp: testExpiryTimestamp
+            underlyingAsset: address(WETHLIKE),
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAsset: address(DAILIKE),
+            exerciseAmount: daiExerciseAmount,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp
         });
         engine.write(daiExerciseOptionId, optionsWrittenDaiExercise);
 
         // Write option for DAI-WETH pair
         (uint256 wethExerciseOptionId,) = _createNewOptionType({
-        underlyingAsset: address(DAILIKE),
-        underlyingAmount: testUnderlyingAmount,
-        exerciseAsset: address(WETHLIKE),
-        exerciseAmount: wethExerciseAmount,
-        exerciseTimestamp: testExerciseTimestamp,
-        expiryTimestamp: testExpiryTimestamp
+            underlyingAsset: address(DAILIKE),
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAsset: address(WETHLIKE),
+            exerciseAmount: wethExerciseAmount,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp
         });
         engine.write(wethExerciseOptionId, optionsWrittenWethExercise);
 
         // Write option for DAI-USDC pair
         (uint256 usdcExerciseOptionId,) = _createNewOptionType({
-        underlyingAsset: address(DAILIKE),
-        underlyingAmount: testUnderlyingAmount,
-        exerciseAsset: address(USDCLIKE),
-        exerciseAmount: usdcExerciseAmount,
-        exerciseTimestamp: testExerciseTimestamp,
-        expiryTimestamp: testExpiryTimestamp
+            underlyingAsset: address(DAILIKE),
+            underlyingAmount: testUnderlyingAmount,
+            exerciseAsset: address(USDCLIKE),
+            exerciseAmount: usdcExerciseAmount,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp
         });
         engine.write(usdcExerciseOptionId, optionsWrittenUsdcExercise);
 
         // Write option for USDC-DAI pair, so that USDC feeBalance will be 1 wei after writing
         (uint256 usdcUnderlyingOptionId,) = _createNewOptionType({
-        underlyingAsset: address(USDCLIKE),
-        underlyingAmount: usdcExerciseAmount,
-        exerciseAsset: address(DAILIKE),
-        exerciseAmount: daiExerciseAmount,
-        exerciseTimestamp: testExerciseTimestamp,
-        expiryTimestamp: testExpiryTimestamp
+            underlyingAsset: address(USDCLIKE),
+            underlyingAmount: usdcExerciseAmount,
+            exerciseAsset: address(DAILIKE),
+            exerciseAmount: daiExerciseAmount,
+            exerciseTimestamp: testExerciseTimestamp,
+            expiryTimestamp: testExpiryTimestamp
         });
         engine.write(usdcUnderlyingOptionId, 1);
 

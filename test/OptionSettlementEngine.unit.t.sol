@@ -924,8 +924,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
         emit FeeSwept(testExerciseAsset, FEE_TO, daiFee);
         emit FeeSwept(testUnderlyingAsset, FEE_TO, wethFee);
-    engine.sweepFees(tokens);
-
+        engine.sweepFees(tokens);
     }
 
     /*//////////////////////////////////////////////////////////////

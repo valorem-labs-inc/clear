@@ -713,8 +713,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // function exercise(uint256 optionId, uint112 amount) external;
     //////////////////////////////////////////////////////////////*/
 
-
-
     /*//////////////////////////////////////////////////////////////
     // function setFeesEnabled(bool enabled) external;
     //////////////////////////////////////////////////////////////*/
@@ -953,64 +951,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         position = engine.position(claim2);
         _assertPosition(position.underlyingAmount, 0);
         _assertPosition(position.exerciseAmount, testExerciseAmount);
-    }
-
-    function testAddOptionsToExistingClaim() public {
-        // write some options, grab a claim
-        vm.startPrank(ALICE);
-        uint256 claimId = engine.write(testOptionId, 1);
-
-        IOptionSettlementEngine.Position memory claimPosition = engine.position(claimId);
-
-        assertEq(testUnderlyingAmount, uint256(claimPosition.underlyingAmount));
-        _assertClaimAmountExercised(claimId, 0);
-        assertEq(1, engine.balanceOf(ALICE, claimId));
-        assertEq(1, engine.balanceOf(ALICE, testOptionId));
-
-        // write some more options, get a new claim NFT
-        uint256 claimId2 = engine.write(testOptionId, 1);
-        assertFalse(claimId == claimId2);
-        assertEq(1, engine.balanceOf(ALICE, claimId2));
-        assertEq(2, engine.balanceOf(ALICE, testOptionId));
-
-        // write some more options, adding to existing claim
-        uint256 claimId3 = engine.write(claimId, 1);
-        assertEq(claimId, claimId3);
-        assertEq(1, engine.balanceOf(ALICE, claimId3));
-        assertEq(3, engine.balanceOf(ALICE, testOptionId));
-
-        claimPosition = engine.position(claimId3);
-        assertEq(2 * testUnderlyingAmount, uint256(claimPosition.underlyingAmount));
-        _assertClaimAmountExercised(claimId, 0);
-    }
-
-    function testRandomAssignment() public {
-        uint16 numDays = 7;
-        uint256[] memory claimIds = new uint256[](numDays);
-
-        // New option type with expiry in 1w
-        testExerciseTimestamp = uint40(block.timestamp - 1);
-        testExpiryTimestamp = uint40(block.timestamp + numDays * 1 days + 1);
-        (uint256 optionId,) = _createNewOptionType({
-            underlyingAsset: address(WETHLIKE),
-            underlyingAmount: testUnderlyingAmount + 1, // to mess w seed
-            exerciseAsset: address(DAILIKE),
-            exerciseAmount: testExerciseAmount,
-            exerciseTimestamp: testExerciseTimestamp,
-            expiryTimestamp: testExpiryTimestamp
-        });
-
-        vm.startPrank(ALICE);
-        for (uint256 i = 0; i < numDays; i++) {
-            // write a single option
-            uint256 claimId = engine.write(optionId, 1);
-            claimIds[i] = claimId;
-            vm.warp(block.timestamp + 1 days);
-        }
-        engine.safeTransferFrom(ALICE, BOB, optionId, numDays, "");
-        vm.stopPrank();
-
-        vm.startPrank(BOB);
     }
 
     // **********************************************************************

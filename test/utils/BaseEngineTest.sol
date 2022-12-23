@@ -40,7 +40,7 @@ abstract contract BaseEngineTest is Test {
     IERC20 internal ERC20E;
     IERC20 internal ERC20F;
 
-    IERC20[6] internal ERC20S;
+    IERC20[] public ERC20S;
 
     uint256 internal constant STARTING_BALANCE = 1_000_000_000 ether;
     uint256 internal constant STARTING_BALANCE_WETH = 10_000_000;
@@ -78,8 +78,13 @@ abstract contract BaseEngineTest is Test {
         ERC20D = IERC20(address(new MockERC20("Mock ERC20 D", "ERC20D", 18)));
         ERC20E = IERC20(address(new MockERC20("Mock ERC20 E", "ERC20E", 18)));
         ERC20F = IERC20(address(new MockERC20("Mock ERC20 F", "ERC20F", 18)));
-        ERC20S = [ERC20A, ERC20B, ERC20C, ERC20D, ERC20E, ERC20F];
-
+        ERC20S.push(ERC20A);
+        ERC20S.push(ERC20B);
+        ERC20S.push(ERC20C);
+        ERC20S.push(ERC20D);
+        ERC20S.push(ERC20E);
+        ERC20S.push(ERC20F);
+        
         // Setup token balances and approvals
         address[3] memory recipients = [ALICE, BOB, CAROL];
         for (uint256 i = 0; i < recipients.length; i++) {
@@ -99,6 +104,13 @@ abstract contract BaseEngineTest is Test {
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
+    }
+
+    /*//////////////////////////////////////////////////////////////
+    //  Accessors
+    //////////////////////////////////////////////////////////////*/
+    function getMockErc20s() public returns (IERC20[] memory) {
+        return ERC20S;
     }
 
     /*//////////////////////////////////////////////////////////////

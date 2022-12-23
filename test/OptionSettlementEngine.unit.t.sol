@@ -238,12 +238,18 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     // Negative behavior
 
-    function test_unitPositionRevertsTokenNotFound() public {
+    function test_unitPositionRevertsWhenTokenNotFound() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, 1));
         engine.position(1);
     }
 
-    // TODO ExpiredOption revert
+    function test_unitPositionRevertsWhenExpiredOption() public {
+        vm.warp(testExpiryTimestamp);
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
+        );
+        engine.position(testOptionId);
+    }
 
     /*//////////////////////////////////////////////////////////////
     //  function tokenType(uint256 tokenId) external view returns (TokenType typeOfToken)
@@ -484,7 +490,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     }
 
     function test_unitNewOptionTypeRevertWhenTotalSuppliesAreTooLowToExercise() public {
-        uint96 underlyingAmountExceedsTotalSupply = uint96(IERC20(address(DAILIKE)).totalSupply() + 1);
+        uint96 underlyingAmountExceedsTotalSupply = uint96(DAILIKE.totalSupply() + 1);
 
         vm.expectRevert(
             abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(DAILIKE), address(WETHLIKE))
@@ -499,7 +505,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
             expiryTimestamp: testExpiryTimestamp
         });
 
-        uint96 exerciseAmountExceedsTotalSupply = uint96(IERC20(address(USDCLIKE)).totalSupply() + 1);
+        uint96 exerciseAmountExceedsTotalSupply = uint96(USDCLIKE.totalSupply() + 1);
 
         vm.expectRevert(
             abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(USDCLIKE), address(WETHLIKE))
@@ -520,46 +526,80 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //////////////////////////////////////////////////////////////*/
 
     function test_unitWriteNewClaim() public {
-        // TODO(Add balance assertions here)
-        uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
+        uint256 expectedFee = _calculateFee(testUnderlyingAmount * 5);
 
         vm.expectEmit(true, true, true, true);
-        emit FeeAccrued(testOptionId, address(WETHLIKE), ALICE, expectedFeeAccruedAmount);
+        emit FeeAccrued(testOptionId, testUnderlyingAsset, ALICE, expectedFee);
 
         vm.expectEmit(true, true, true, true);
-        emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, 1);
+        emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, 5);
 
         vm.prank(ALICE);
-        engine.write(testOptionId, 1);
+        uint256 claimId = engine.write(testOptionId, 5);
+
+        assertEq(claimId, testOptionId + 1, "claimId");
+        assertEq(
+            IERC20(testUnderlyingAsset).balanceOf(ALICE),
+            STARTING_BALANCE_WETH - (testUnderlyingAmount * 5) - expectedFee,
+            "Alice underlying"
+        );
+        assertEq(IERC20(testExerciseAsset).balanceOf(ALICE), STARTING_BALANCE, "Alice exercise"); // no change
+        assertEq(engine.balanceOf(ALICE, claimId), 1, "Alice Claim NFT"); // 1 Claim NFT
+        assertEq(engine.balanceOf(ALICE, testOptionId), 5, "Alice Option tokens"); // 5 fungible Option tokens
+        assertEq(engine.feeBalance(testUnderlyingAsset), expectedFee, "Fee balance underlying");
+        assertEq(engine.feeBalance(testExerciseAsset), 0, "Fee balance exercise"); // no fee assessed on exercise asset during write()
     }
 
     function test_unitWriteExistingClaim() public {
-        // TODO(Balance assertions)
-        uint256 expectedFeeAccruedAmount = ((testUnderlyingAmount / 10_000) * engine.feeBps());
-
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
 
         vm.expectEmit(true, true, true, true);
-        emit FeeAccrued(testOptionId, address(WETHLIKE), ALICE, expectedFeeAccruedAmount);
+        emit FeeAccrued(testOptionId, testUnderlyingAsset, ALICE, _calculateFee(testUnderlyingAmount * 5));
 
         vm.expectEmit(true, true, true, true);
-        emit OptionsWritten(testOptionId, ALICE, claimId, 1);
+        emit OptionsWritten(testOptionId, ALICE, claimId, 5);
 
+        // Alice writes 5 more options on existing claim
         vm.prank(ALICE);
-        engine.write(claimId, 1);
+        uint256 existingClaimId = engine.write(claimId, 5);
+
+        uint256 expectedFee = _calculateFee(testUnderlyingAmount * 6);
+        assertEq(existingClaimId, claimId, "claimId"); // same Claim NFT tokenId
+        assertEq(
+            IERC20(testUnderlyingAsset).balanceOf(ALICE),
+            STARTING_BALANCE_WETH - (testUnderlyingAmount * 6) - expectedFee,
+            "Alice underlying"
+        );
+        assertEq(IERC20(testExerciseAsset).balanceOf(ALICE), STARTING_BALANCE, "Alice exercise"); // no change
+        assertEq(engine.balanceOf(ALICE, claimId), 1, "Alice Claim NFT"); // still just 1 Claim NFT
+        assertEq(engine.balanceOf(ALICE, testOptionId), 6, "Alice Option tokens"); // 6 fungible Option tokens
+        assertEq(engine.feeBalance(testUnderlyingAsset), expectedFee, "Fee balance underlying");
+        assertEq(engine.feeBalance(testExerciseAsset), 0, "Fee balance exercise"); // no fee assessed on exercise asset during write()
     }
 
     function test_unitWriteFeeOff() public {
-        // TODO(Balance assertions)
         vm.prank(FEE_TO);
         engine.setFeesEnabled(false);
 
         vm.expectEmit(true, true, true, true);
-        emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, 1);
+        emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, 5);
 
         vm.prank(ALICE);
-        engine.write(testOptionId, 1);
+        uint256 claimId = engine.write(testOptionId, 5);
+
+        assertEq(
+            IERC20(testUnderlyingAsset).balanceOf(ALICE),
+            STARTING_BALANCE_WETH - (testUnderlyingAmount * 5), // no fee assessed when fee is off
+            "Alice underlying"
+        );
+        assertEq(engine.feeBalance(testUnderlyingAsset), 0, "Fee balance underlying"); // no fee assessed when fee is off
+        // sanity check on additional balance assertions when fee is off
+        assertEq(claimId, testOptionId + 1, "claimId");
+        assertEq(IERC20(testExerciseAsset).balanceOf(ALICE), STARTING_BALANCE, "Alice exercise");
+        assertEq(engine.balanceOf(ALICE, claimId), 1, "Alice Claim NFT");
+        assertEq(engine.balanceOf(ALICE, testOptionId), 5, "Alice Option tokens");
+        assertEq(engine.feeBalance(testExerciseAsset), 0, "Fee balance exercise");
     }
 
     // Negative behavior
@@ -625,6 +665,8 @@ contract OptionSettlementUnitTest is BaseEngineTest {
             );
 
         engine.redeem(claimId);
+
+        // TODO balance assertions
     }
 
     function test_unitRedeemPartialExercise() public {
@@ -647,6 +689,8 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         emit ClaimRedeemed(claimId, testOptionId, ALICE, expectedExerciseAmount, expectedUnderlyingAmount);
 
         engine.redeem(claimId);
+
+        // TODO balance assertions
     }
 
     function test_unitRedeemExercised() public {
@@ -665,6 +709,8 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         emit ClaimRedeemed(claimId, testOptionId, ALICE, expectedExerciseAmount, 0);
 
         engine.redeem(claimId);
+
+        // TODO balance assertions
     }
 
     // Negative behavior
@@ -718,6 +764,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         );
 
         engine.redeem(claimId);
+        vm.stopPrank();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -725,26 +772,131 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //////////////////////////////////////////////////////////////*/
 
     function test_unitExercise() public {
-        // TODO(Balance assertions)
-        // Alice writes
+        // Alice writes 5 and transfers 2 to Bob
         vm.startPrank(ALICE);
-        engine.write(testOptionId, 1);
-        engine.safeTransferFrom(ALICE, BOB, testOptionId, 1, "");
+        engine.write(testOptionId, 5);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 2, "");
         vm.stopPrank();
 
-        // Fast-forward to exercise
+        // Balance assertions post-transfer, pre-exercise
+        uint256 expectedWriteFee = _calculateFee(testUnderlyingAmount * 5);
+        assertEq(
+            IERC20(testUnderlyingAsset).balanceOf(ALICE),
+            STARTING_BALANCE_WETH - (testUnderlyingAmount * 5) - expectedWriteFee,
+            "Alice underlying pre"
+        );
+        assertEq(IERC20(testExerciseAsset).balanceOf(ALICE), STARTING_BALANCE, "Alice exercise pre");
+        assertEq(IERC20(testUnderlyingAsset).balanceOf(BOB), STARTING_BALANCE_WETH, "Bob underlying pre");
+        assertEq(IERC20(testExerciseAsset).balanceOf(BOB), STARTING_BALANCE, "Bob exercise pre");
+        assertEq(engine.balanceOf(ALICE, testOptionId), 3, "Alice Option tokens pre");
+        assertEq(engine.balanceOf(BOB, testOptionId), 2, "Bob Option tokens pre");
+        assertEq(engine.feeBalance(testUnderlyingAsset), expectedWriteFee, "Fee balance underlying pre");
+        assertEq(engine.feeBalance(testExerciseAsset), 0, "Fee balance exercise pre");
+
+        // Warp to exercise
         vm.warp(testExerciseTimestamp);
 
+        uint256 expectedExerciseFee = _calculateFee(testExerciseAmount * 2);
         vm.expectEmit(true, true, true, true);
-        emit FeeAccrued(testOptionId, address(DAILIKE), BOB, _calculateFee(testExerciseAmount));
+        emit FeeAccrued(testOptionId, testExerciseAsset, BOB, expectedExerciseFee);
 
         vm.expectEmit(true, true, true, true);
-        emit OptionsExercised(testOptionId, BOB, 1);
+        emit OptionsExercised(testOptionId, BOB, 2);
 
-        // Bob exercises
-        vm.startPrank(BOB);
-        engine.exercise(testOptionId, 1);
+        // Bob exercises 2
+        vm.prank(BOB);
+        engine.exercise(testOptionId, 2);
+
+        // Balance assertions post-exercise
+        assertEq(
+            IERC20(testUnderlyingAsset).balanceOf(ALICE),
+            STARTING_BALANCE_WETH - (testUnderlyingAmount * 5) - expectedWriteFee,
+            "Alice underlying post"
+        );
+        assertEq(IERC20(testExerciseAsset).balanceOf(ALICE), STARTING_BALANCE, "Alice exercise post"); // no change until Alice redeems her Claim
+        assertEq(
+            IERC20(testUnderlyingAsset).balanceOf(BOB),
+            STARTING_BALANCE_WETH + (testUnderlyingAmount * 2),
+            "Bob underlying post"
+        );
+        assertEq(
+            IERC20(testExerciseAsset).balanceOf(BOB),
+            STARTING_BALANCE - (testExerciseAmount * 2) - expectedExerciseFee,
+            "Bob exercise post"
+        );
+        assertEq(engine.balanceOf(ALICE, testOptionId), 3, "Alice Option tokens post");
+        assertEq(engine.balanceOf(BOB, testOptionId), 0, "Bob Option tokens post"); // Bob's Option tokens are burned
+        assertEq(engine.feeBalance(testUnderlyingAsset), expectedWriteFee, "Fee balance underlying post");
+        assertEq(engine.feeBalance(testExerciseAsset), expectedExerciseFee, "Fee balance exercise post");
+    }
+
+    function test_unitExerciseMultipleTimes() public {
+        // Alice writes 10 and transfers 6 to Bob
+        vm.startPrank(ALICE);
+        engine.write(testOptionId, 10);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 6, "");
         vm.stopPrank();
+
+        // Warp to exercise
+        vm.warp(testExerciseTimestamp);
+
+        uint256 expectedWriteFee = _calculateFee(testUnderlyingAmount * 10);
+        uint256 expectedExercise2Fee = _calculateFee(testExerciseAmount * 2);
+        uint256 expectedExercise3Fee = _calculateFee(testExerciseAmount * 3);
+
+        vm.expectEmit(true, true, true, true);
+        emit FeeAccrued(testOptionId, testExerciseAsset, BOB, expectedExercise2Fee);
+
+        vm.expectEmit(true, true, true, true);
+        emit OptionsExercised(testOptionId, BOB, 2);
+
+        // Bob exercises 2
+        vm.prank(BOB);
+        engine.exercise(testOptionId, 2);
+
+        // Balance assertions after exercising 2
+        assertEq(
+            IERC20(testUnderlyingAsset).balanceOf(BOB),
+            STARTING_BALANCE_WETH + (testUnderlyingAmount * 2),
+            "Bob underlying after exercising 2"
+        );
+        assertEq(
+            IERC20(testExerciseAsset).balanceOf(BOB),
+            STARTING_BALANCE - (testExerciseAmount * 2) - expectedExercise2Fee,
+            "Bob exercise after exercising 2"
+        );
+        assertEq(engine.balanceOf(BOB, testOptionId), 4, "Bob Option tokens after exercising 2");
+        assertEq(engine.feeBalance(testUnderlyingAsset), expectedWriteFee, "Fee balance underlying after exercising 2");
+        assertEq(engine.feeBalance(testExerciseAsset), expectedExercise2Fee, "Fee balance exercise after exercising 2");
+
+        vm.expectEmit(true, true, true, true);
+        emit FeeAccrued(testOptionId, testExerciseAsset, BOB, expectedExercise3Fee);
+
+        vm.expectEmit(true, true, true, true);
+        emit OptionsExercised(testOptionId, BOB, 3);
+
+        // Bob exercises 3 more
+        vm.prank(BOB);
+        engine.exercise(testOptionId, 3);
+
+        // Balance assertions after exercising 3 more, for a total of 5
+        assertEq(
+            IERC20(testUnderlyingAsset).balanceOf(BOB),
+            STARTING_BALANCE_WETH + (testUnderlyingAmount * 5),
+            "Bob underlying after exercising 5"
+        );
+        assertEq(
+            IERC20(testExerciseAsset).balanceOf(BOB),
+            STARTING_BALANCE - (testExerciseAmount * 5) - expectedExercise2Fee - expectedExercise3Fee,
+            "Bob exercise after exercising 5"
+        );
+        assertEq(engine.balanceOf(BOB, testOptionId), 1, "Bob Option tokens after exercising 5"); // still 1 left
+        assertEq(engine.feeBalance(testUnderlyingAsset), expectedWriteFee, "Fee balance underlying after exercising 5");
+        assertEq(
+            engine.feeBalance(testExerciseAsset),
+            expectedExercise2Fee + expectedExercise3Fee,
+            "Fee balance exercise after exercising 5"
+        );
     }
 
     // Negative behavior
@@ -758,10 +910,10 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId));
 
         engine.exercise(invalidOptionId, 1);
+        vm.stopPrank();
     }
 
     function test_unitExerciseRevertWhenExpiredOption() public {
-        // ====== Exercise after Expiry =======
         // Alice writes
         vm.startPrank(ALICE);
         engine.write(testOptionId, 1);
@@ -816,9 +968,76 @@ contract OptionSettlementUnitTest is BaseEngineTest {
             abi.encodeWithSelector(IOptionSettlementEngine.CallerHoldsInsufficientOptions.selector, testOptionId, 2)
         );
         engine.exercise(testOptionId, 2);
+        vm.stopPrank();
     }
 
+    function test_unitExerciseRevertWhenCallerHoldsInsufficientExerciseAsset() public {
+        uint256 optionId = engine.newOptionType({
+            underlyingAsset: address(ERC20A),
+            underlyingAmount: 1 ether,
+            exerciseAsset: address(ERC20B),
+            exerciseAmount: 8 ether,
+            exerciseTimestamp: uint40(block.timestamp),
+            expiryTimestamp: uint40(block.timestamp + 30 days)
+        });
+
+        // Approve engine up to max on exercise asset
+        address other = address(0xBABE);
+        ERC20B.approve(address(engine), type(uint256).max);
+
+        // Alice writes 5 and transfers 3 to Other
+        vm.startPrank(ALICE);
+        engine.write(optionId, 5);
+        engine.safeTransferFrom(ALICE, other, optionId, 3, "");
+        vm.stopPrank();
+
+        // Check revert when Option Holder has zero exercise asset
+        vm.expectRevert("TRANSFER_FROM_FAILED");
+        vm.prank(other);
+        engine.exercise(optionId, 3);
+
+        // Check revert when Option Holder has some, but less than required
+        _mint(other, MockERC20(address(ERC20A)), (8 ether * 3) - 1);
+
+        vm.expectRevert("TRANSFER_FROM_FAILED");
+        vm.prank(other);
+        engine.exercise(optionId, 3);
+    }
+
+    // function test_unitExerciseRevertWhenCallerHasNotGrantedSufficientApprovalToEngine() public {
+    //     uint256 optionId = engine.newOptionType({
+    //         underlyingAsset: address(ERC20A),
+    //         underlyingAmount: 1 ether,
+    //         exerciseAsset: address(ERC20B),
+    //         exerciseAmount: 8 ether,
+    //         exerciseTimestamp: uint40(block.timestamp),
+    //         expiryTimestamp: uint40(block.timestamp + 30 days)
+    //     });
+
+    //     address other = address(0xBABE);
+
+    //     // Alice writes 5 and transfers 3 to Other
+    //     vm.startPrank(ALICE);
+    //     engine.write(optionId, 5);
+    //     engine.safeTransferFrom(ALICE, other, optionId, 3, "");
+    //     vm.stopPrank();
+
+    //     // Check revert when Option Holder has insufficient exerciseAsset and insufficient approval
+    //     _mint(other, MockERC20(address(ERC20A)), (8 ether * 3) - 1);
+    //     ERC20B.approve(address(engine), (8 ether * 3) - 1);
+    //     vm.expectRevert("TRANSFER_FROM_FAILED");
+    //     vm.prank(other);
+    //     engine.exercise(optionId, 3);
+
+    //     // Check revert when Option Holder has some, but less than required
+    //     vm.expectRevert("TRANSFER_FROM_FAILED");
+    //     vm.prank(other);
+    //     engine.exercise(optionId, 3);
+    // }
+
     // TODO(Failure case for the user not having enough tokens to exercise)
+    // TODO write when insufficient approval
+    // TODO exercise when insufficient approval
 
     /*//////////////////////////////////////////////////////////////
     // function setFeesEnabled(bool enabled) external
@@ -839,6 +1058,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
         // enable
         engine.setFeesEnabled(true);
+        vm.stopPrank();
 
         assertTrue(engine.feesEnabled());
     }
@@ -1004,7 +1224,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     function test_unitUriRevertWhenTokenNotFound() public {
         uint256 tokenId = 420;
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, tokenId));
-        engine.uri(420);
+        engine.uri(tokenId);
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -360,8 +360,11 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
         engine.write(usdcOptionId, optionsWrittenUsdcUnderlying);
         vm.stopPrank();
         expectedFees[0] = (((testUnderlyingAmount * optionsWrittenWethUnderlying) / 10_000) * engine.feeBps());
+
         expectedFees[1] = (((daiUnderlyingAmount * optionsWrittenDaiUnderlying) / 10_000) * engine.feeBps());
+
         expectedFees[2] = (((usdcUnderlyingAmount * optionsWrittenUsdcUnderlying) / 10_000) * engine.feeBps());
+
         for (uint256 i = 0; i < tokens.length; i++) {
             vm.expectEmit(true, true, true, true);
             emit FeeSwept(tokens[i], engine.feeTo(), expectedFees[i]); // true amount
@@ -466,7 +469,9 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
         // has already happened, therefore actual fee swept amount = true fee amount.
         uint256[] memory expectedFees = new uint256[](3);
         expectedFees[0] = (((daiExerciseAmount * optionsWrittenDaiExercise) / 10_000) * engine.feeBps());
+
         expectedFees[1] = (((wethExerciseAmount * optionsWrittenWethExercise) / 10_000) * engine.feeBps());
+
         expectedFees[2] = (((usdcExerciseAmount * optionsWrittenUsdcExercise) / 10_000) * engine.feeBps());
 
         for (uint256 i = 0; i < tokens.length; i++) {

@@ -12,12 +12,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //  function option(uint256 tokenId) external view returns (Option memory optionInfo)
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitOptionRevertsWhenDoesNotExist() public {
-        uint256 badOptionId = 123;
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, badOptionId));
-        engine.option(badOptionId);
-    }
-
     function test_unitOptionReturnsOptionInfo() public {
         IOptionSettlementEngine.Option memory optionInfo = engine.option(testOptionId);
         assertEq(optionInfo.underlyingAsset, testUnderlyingAsset);
@@ -28,15 +22,17 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(optionInfo.expiryTimestamp, testExpiryTimestamp);
     }
 
+    // Negative behavior
+
+    function test_unitOptionRevertsWhenDoesNotExist() public {
+        uint256 badOptionId = 123;
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, badOptionId));
+        engine.option(badOptionId);
+    }
+
     /*//////////////////////////////////////////////////////////////
     //  function claim(uint256 claimId) external view returns (Claim memory claimInfo)
     //////////////////////////////////////////////////////////////*/
-
-    function test_unitClaimRevertsWhenClaimDoesNotExist() public {
-        uint256 badClaimId = testOptionId + 69;
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, badClaimId));
-        engine.claim(badClaimId);
-    }
 
     function test_unitClaimWrittenOnce() public {
         uint112 amountWritten = 69;
@@ -163,14 +159,17 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         );
     }
 
+    // Negative behavior
+
+    function test_unitClaimRevertsWhenClaimDoesNotExist() public {
+        uint256 badClaimId = testOptionId + 69;
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, badClaimId));
+        engine.claim(badClaimId);
+    }
+
     /*//////////////////////////////////////////////////////////////
     //  function position(uint256 tokenId) external view returns (Position memory positionInfo);
     //////////////////////////////////////////////////////////////*/
-
-    function test_unitPositionRevertsTokenNotFound() public {
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, 1));
-        engine.position(1);
-    }
 
     function test_unitPositionOption() public {
         IOptionSettlementEngine.Position memory position = engine.position(testOptionId);
@@ -236,6 +235,15 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(position.exerciseAsset, testExerciseAsset);
         assertEq(position.exerciseAmount, int256(uint256(amountWritten * testExerciseAmount)));
     }
+
+    // Negative behavior
+
+    function test_unitPositionRevertsTokenNotFound() public {
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, 1));
+        engine.position(1);
+    }
+
+    // TODO ExpiredOption revert
 
     /*//////////////////////////////////////////////////////////////
     //  function tokenType(uint256 tokenId) external view returns (TokenType typeOfToken)
@@ -406,7 +414,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         );
     }
 
-    // Fail tests
+    // Negative behavior
 
     function test_unitNewOptionTypeRevertWhenOptionsTypeExists() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.OptionsTypeExists.selector, testOptionId));
@@ -554,7 +562,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.write(testOptionId, 1);
     }
 
-    // Fail tests
+    // Negative behavior
 
     function test_unitWriteRevertWhenAmountWrittenCannotBeZero() public {
         uint112 invalidWriteAmount = 0;
@@ -659,7 +667,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.redeem(claimId);
     }
 
-    // Fail tests
+    // Negative behavior
 
     function test_unitRedeemRevertWhenInvalidClaim() public {
         uint256 badClaimId = encodeTokenId(0xDEADBEEF, 0);
@@ -739,7 +747,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.stopPrank();
     }
 
-    // Fail tests
+    // Negative behavior
 
     function test_unitExerciseRevertWhenInvalidOption() public {
         vm.startPrank(ALICE);
@@ -835,7 +843,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertTrue(engine.feesEnabled());
     }
 
-    // Fail tests
+    // Negative behavior
 
     function test_unitSetFeesEnabledRevertWhenNotFeeTo() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
@@ -936,7 +944,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(address(engine.tokenURIGenerator()), address(newTokenURIGenerator));
     }
 
-    // Fail tests
+    // Negative behavior
 
     function test_unitSetTokenURIGeneratorRevertWhenNotCurrentFeeTo() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
@@ -991,7 +999,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.uri(testOptionId);
     }
 
-    // Fail tests
+    // Negative behavior
 
     function test_unitUriRevertWhenTokenNotFound() public {
         uint256 tokenId = 420;

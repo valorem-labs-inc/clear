@@ -109,7 +109,7 @@ abstract contract BaseEngineTest is Test {
     /*//////////////////////////////////////////////////////////////
     //  Accessors
     //////////////////////////////////////////////////////////////*/
-    function getMockErc20s() public returns (IERC20[] memory) {
+    function getMockErc20s() public view returns (IERC20[] memory) {
         return ERC20S;
     }
 

@@ -645,8 +645,79 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.write(claimId, 1);
     }
 
-    // TODO write when insufficient underlyingAsset balance
-    // TODO write when insufficient underlyingAsset approval
+    function test_unitWriteRevertWhenCallerHoldsInsufficientExerciseAsset() public {
+        uint112 amountWritten = 5;
+
+        uint256 optionId = engine.newOptionType({
+            underlyingAsset: address(ERC20A),
+            underlyingAmount: 1 ether,
+            exerciseAsset: address(ERC20B),
+            exerciseAmount: 8 ether,
+            exerciseTimestamp: uint40(block.timestamp),
+            expiryTimestamp: uint40(block.timestamp + 30 days)
+        });
+
+        // Approve engine up to max on underlying asset
+        address other = address(0xBABE);
+        vm.startPrank(other);
+        ERC20A.approve(address(engine), type(uint256).max);
+
+        // Check revert when Option Writer has zero underlying asset
+        vm.expectRevert("TRANSFER_FROM_FAILED");
+        engine.write(optionId, amountWritten);
+
+        uint256 expectedFee = _calculateFee(1 ether) * amountWritten;
+
+        // Check revert when Option Writer has some, but less than required
+        _mint(other, MockERC20(address(ERC20A)), (1 ether * amountWritten) + expectedFee - 1);
+        vm.expectRevert("TRANSFER_FROM_FAILED");
+        engine.write(optionId, amountWritten);
+
+        // Finally, the positive case -- mint 1 more and write should succeed
+        _mint(other, MockERC20(address(ERC20A)), 1);
+        uint256 claimId = engine.write(optionId, amountWritten);
+        vm.stopPrank();
+
+        assertEq(engine.balanceOf(other, claimId), 1, "Other claim NFT");
+        assertEq(engine.balanceOf(other, optionId), amountWritten, "Other option tokens");
+    }
+
+    function test_unitWriteRevertWhenCallerHasNotGrantedSufficientApprovalToEngine() public {
+        uint112 amountWritten = 5;
+
+        uint256 optionId = engine.newOptionType({
+            underlyingAsset: address(ERC20A),
+            underlyingAmount: 1 ether,
+            exerciseAsset: address(ERC20B),
+            exerciseAmount: 8 ether,
+            exerciseTimestamp: uint40(block.timestamp),
+            expiryTimestamp: uint40(block.timestamp + 30 days)
+        });
+
+        // Mint Other 1000 tokens of underlying asset
+        address other = address(0xBABE);
+        _mint(other, MockERC20(address(ERC20A)), 1000 ether);
+
+        // Check revert when Option Writer has granted zero approval
+        vm.expectRevert("TRANSFER_FROM_FAILED");
+        vm.startPrank(other);
+        engine.write(optionId, amountWritten);
+
+        uint256 expectedFee = _calculateFee(1 ether) * amountWritten;
+
+        // Check revert when Option Writer has granted some approval, but less than required
+        ERC20A.approve(address(engine), (1 ether * amountWritten) + expectedFee - 1);
+        vm.expectRevert("TRANSFER_FROM_FAILED");
+        engine.write(optionId, amountWritten);
+
+        // Finally, the positive case -- approve 1 more and write should pass
+        ERC20A.approve(address(engine), (1 ether * amountWritten) + expectedFee);
+        uint256 claimId = engine.write(optionId, amountWritten);
+        vm.stopPrank();
+
+        assertEq(engine.balanceOf(other, claimId), 1, "Other claim NFT");
+        assertEq(engine.balanceOf(other, optionId), amountWritten, "Other option tokens");
+    }
 
     /*//////////////////////////////////////////////////////////////
     // function redeem(uint256 claimId) external
@@ -1335,33 +1406,52 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // function sweepFees(address[] memory tokens) external
     //////////////////////////////////////////////////////////////*/
 
-    // TODO(Balance assertions on success cases)
-    // i(Should fee sweep be onlyFeeTo? Probably)
+    // TODO(Should fee sweep be onlyFeeTo? Probably)
 
     function test_unitSweepNoFees() public {
+        // Precondition checks
+        assertEq(WETHLIKE.balanceOf(FEE_TO), 0);
+        assertEq(DAILIKE.balanceOf(FEE_TO), 0);
+        assertEq(USDCLIKE.balanceOf(FEE_TO), 0);
+
         address[] memory tokens = new address[](3);
-        tokens[0] = address(DAILIKE);
-        tokens[1] = address(WETHLIKE);
+        tokens[0] = address(WETHLIKE);
+        tokens[1] = address(DAILIKE);
         tokens[2] = address(USDCLIKE);
         engine.sweepFees(tokens);
+
+        // Balance assertions -- no change
+        assertEq(WETHLIKE.balanceOf(FEE_TO), 0);
+        assertEq(DAILIKE.balanceOf(FEE_TO), 0);
+        assertEq(USDCLIKE.balanceOf(FEE_TO), 0);
     }
 
     function test_unitSweepFees() public {
         address[] memory tokens = new address[](2);
         tokens[0] = address(WETHLIKE);
         tokens[1] = address(DAILIKE);
-        vm.prank(ALICE);
+
+        vm.startPrank(ALICE);
         engine.write(testOptionId, 10);
         vm.warp(testExerciseTimestamp);
-        vm.prank(ALICE);
         engine.exercise(testOptionId, 10);
+        vm.stopPrank();
 
         uint256 wethFee = _calculateFee(10 * testUnderlyingAmount);
         uint256 daiFee = _calculateFee(10 * testExerciseAmount);
 
-        emit FeeSwept(testExerciseAsset, FEE_TO, daiFee);
+        // Precondition checks
+        assertEq(WETHLIKE.balanceOf(FEE_TO), 0);
+        assertEq(DAILIKE.balanceOf(FEE_TO), 0);
+
         emit FeeSwept(testUnderlyingAsset, FEE_TO, wethFee);
+        emit FeeSwept(testExerciseAsset, FEE_TO, daiFee);
+
         engine.sweepFees(tokens);
+
+        // Balance assertions -- with tolerance of 1 wei for loss of precision
+        assertApproxEqAbs(WETHLIKE.balanceOf(FEE_TO), wethFee, 1, "FeeTo underlying balance");
+        assertApproxEqAbs(DAILIKE.balanceOf(FEE_TO), daiFee, 1, "FeeTo exercise balance");
     }
 
     /*//////////////////////////////////////////////////////////////

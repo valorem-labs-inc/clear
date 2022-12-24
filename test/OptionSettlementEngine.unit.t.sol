@@ -273,7 +273,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //  function tokenURIGenerator() external view returns (ITokenURIGenerator uriGenerator)
     //////////////////////////////////////////////////////////////*/
 
-    function test_tokenURIGenerator() public view {
+    function test_tokenURIGenerator() public {
         assertEq(address(engine.tokenURIGenerator()), address(generator));
     }
 

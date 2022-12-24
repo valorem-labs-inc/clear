@@ -12,7 +12,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //  function option(uint256 tokenId) external view returns (Option memory optionInfo)
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitOptionReturnsOptionInfo() public {
+    function test_option_returnsOptionInfo() public {
         IOptionSettlementEngine.Option memory optionInfo = engine.option(testOptionId);
         assertEq(optionInfo.underlyingAsset, testUnderlyingAsset);
         assertEq(optionInfo.underlyingAmount, testUnderlyingAmount);
@@ -24,7 +24,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     // Negative behavior
 
-    function test_unitOptionRevertsWhenDoesNotExist() public {
+    function testRevert_option_whenOptionDoesNotExist() public {
         uint256 badOptionId = 123;
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, badOptionId));
         engine.option(badOptionId);
@@ -34,7 +34,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //  function claim(uint256 claimId) external view returns (Claim memory claimInfo)
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitClaimWrittenOnce() public {
+    function test_claim_whenWrittenOnce() public {
         uint112 amountWritten = 69;
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, amountWritten);
@@ -72,7 +72,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         claim = engine.claim(claimId);
     }
 
-    function test_unitClaimWrittenMultiple() public {
+    function test_claim_whenWrittenMultiple() public {
         uint112 amountWritten = 69;
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, amountWritten);
@@ -115,7 +115,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         claim = engine.claim(claimId);
     }
 
-    function test_unitClaimWrittenMultipleMultipleClaims() public {
+    function test_claim_whenWrittenMultipleTimesOnMultipleClaims() public {
         vm.startPrank(ALICE);
 
         uint256 claimId1 = engine.write(testOptionId, 1);
@@ -161,7 +161,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     // Negative behavior
 
-    function test_unitClaimRevertsWhenClaimDoesNotExist() public {
+    function testRevert_claim_whenClaimDoesNotExist() public {
         uint256 badClaimId = testOptionId + 69;
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, badClaimId));
         engine.claim(badClaimId);
@@ -171,7 +171,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //  function position(uint256 tokenId) external view returns (Position memory positionInfo);
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitPositionOption() public {
+    function test_position_whenOption() public {
         IOptionSettlementEngine.Position memory position = engine.position(testOptionId);
         assertEq(position.underlyingAsset, testUnderlyingAsset);
         assertEq(position.underlyingAmount, int256(uint256(testUnderlyingAmount)));
@@ -186,7 +186,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         position = engine.position(testOptionId);
     }
 
-    function test_unitPositionUnexercisedClaim() public {
+    function test_position_whenUnexercisedClaim() public {
         uint112 amountWritten = 69;
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, amountWritten);
@@ -198,7 +198,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(position.exerciseAmount, int256(0));
     }
 
-    function test_unitPositionPartiallyExercisedClaim() public {
+    function test_position_whenPartiallyExercisedClaim() public {
         uint112 amountWritten = 69;
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, amountWritten);
@@ -221,7 +221,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(position.exerciseAmount, int256(uint256(1 * testExerciseAmount * amountWritten) / amountWritten));
     }
 
-    function test_unitPositionExercisedClaim() public {
+    function test_position_whenFullyExercisedClaim() public {
         uint112 amountWritten = 69;
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, amountWritten);
@@ -238,12 +238,12 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     // Negative behavior
 
-    function test_unitPositionRevertsWhenTokenNotFound() public {
+    function testRevert_position_whenTokenNotFound() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, 1));
         engine.position(1);
     }
 
-    function test_unitPositionRevertsWhenExpiredOption() public {
+    function testRevert_position_whenExpiredOption() public {
         vm.warp(testExpiryTimestamp);
         vm.expectRevert(
             abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
@@ -255,15 +255,15 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //  function tokenType(uint256 tokenId) external view returns (TokenType typeOfToken)
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitTokenTypeReturnsNone() public {
+    function test_tokenType_returnsNone() public {
         _assertTokenIsNone(127);
     }
 
-    function test_unitTokenTypeReturnsOption() public {
+    function test_tokenType_returnsOption() public {
         _assertTokenIsOption(testOptionId);
     }
 
-    function test_unitTokenTypeReturnsClaim() public {
+    function test_tokenType_returnsClaim() public {
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
         _assertTokenIsClaim(claimId);
@@ -273,15 +273,15 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //  function tokenURIGenerator() external view returns (ITokenURIGenerator uriGenerator)
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitTokenURIGenerator() public view {
-        assert(address(engine.tokenURIGenerator()) == address(generator));
+    function test_tokenURIGenerator() public view {
+        assertEq(address(engine.tokenURIGenerator()), address(generator));
     }
 
     /*//////////////////////////////////////////////////////////////
     //  function feeBalance(address token) external view returns (uint256)
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitFeeBalanceFeeOn() public {
+    function test_feeBalance_whenFeeOn() public {
         assertEq(engine.feeBalance(testUnderlyingAsset), 0);
         assertEq(engine.feeBalance(testExerciseAsset), 0);
 
@@ -307,7 +307,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(engine.feeBalance(address(DAILIKE)), exerciseFee);
     }
 
-    function test_unitFeeBalanceFeeOff() public {
+    function test_feeBalance_whenFeeOff() public {
         assertEq(engine.feeBalance(testUnderlyingAsset), 0);
         assertEq(engine.feeBalance(testExerciseAsset), 0);
 
@@ -330,7 +330,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(engine.feeBalance(address(DAILIKE)), 0);
     }
 
-    function test_unitFeeBalanceMinimum() public {
+    function test_feeBalance_whenMinimum() public {
         vm.startPrank(ALICE);
         uint256 optionId = engine.newOptionType(
             address(ERC20A), 1, address(ERC20B), 15, uint40(block.timestamp), uint40(block.timestamp + 30 days)
@@ -354,7 +354,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //  function feeBps() external view returns (uint8 fee)
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitFeeBps() public {
+    function test_feeBps() public {
         assertEq(engine.feeBps(), 5);
     }
 
@@ -362,7 +362,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //  function feesEnabled() external view returns (bool enabled)
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitFeesEnabled() public {
+    function test_feesEnabled() public {
         assertEq(engine.feesEnabled(), true);
     }
 
@@ -370,7 +370,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //  function feeTo() external view returns (address)
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitFeeTo() public {
+    function test_feeTo() public {
         assertEq(engine.feeTo(), FEE_TO);
     }
 
@@ -385,7 +385,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //    ) external returns (uint256 optionId)
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitNewOptionType() public {
+    function test_newOptionType() public {
         IOptionSettlementEngine.Option memory optionInfo = IOptionSettlementEngine.Option({
             underlyingAsset: address(DAILIKE),
             underlyingAmount: testUnderlyingAmount,
@@ -422,7 +422,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     // Negative behavior
 
-    function test_unitNewOptionTypeRevertWhenOptionsTypeExists() public {
+    function testRevert_newOptionType_whenOptionsTypeExists() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.OptionsTypeExists.selector, testOptionId));
         _createNewOptionType({
             underlyingAsset: address(WETHLIKE),
@@ -434,7 +434,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         });
     }
 
-    function test_unitNewOptionTypeRevertWhenExpiryWindowTooShort() public {
+    function testRevert_newOptionType_whenExpiryWindowTooShort() public {
         uint40 tooSoonExpiryTimestamp = uint40(block.timestamp + 1 days - 1 seconds);
         IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
             underlyingAsset: address(DAILIKE),
@@ -461,7 +461,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         });
     }
 
-    function test_unitNewOptionTypeRevertWhenExerciseWindowTooShort() public {
+    function testRevert_newOptionType_whenExerciseWindowTooShort() public {
         vm.expectRevert(
             abi.encodeWithSelector(IOptionSettlementEngine.ExerciseWindowTooShort.selector, uint40(block.timestamp + 1))
         );
@@ -475,7 +475,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         });
     }
 
-    function test_unitNewOptionTypeRevertWhenInvalidAssets() public {
+    function testRevert_newOptionType_whenInvalidAssets() public {
         vm.expectRevert(
             abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(DAILIKE), address(DAILIKE))
         );
@@ -489,7 +489,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         });
     }
 
-    function test_unitNewOptionTypeRevertWhenTotalSuppliesAreTooLowToExercise() public {
+    function testRevert_newOptionType_whenTotalSuppliesAreTooLowToExercise() public {
         uint96 underlyingAmountExceedsTotalSupply = uint96(DAILIKE.totalSupply() + 1);
 
         vm.expectRevert(
@@ -525,7 +525,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // function write(uint256 tokenId, uint112 amount) external returns (uint256 claimId)
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitWriteNewClaim() public {
+    function test_write_whenNewClaim() public {
         uint112 amountWritten = 5;
         uint256 expectedFee = _calculateFee(testUnderlyingAmount * amountWritten);
 
@@ -551,7 +551,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(engine.feeBalance(testExerciseAsset), 0, "Fee balance exercise"); // no fee assessed on exercise asset during write()
     }
 
-    function test_unitWriteExistingClaim() public {
+    function test_write_whenExistingClaim() public {
         // Alice writes 1 option
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
@@ -580,7 +580,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(engine.feeBalance(testExerciseAsset), 0, "Fee balance exercise"); // no fee assessed on exercise asset during write()
     }
 
-    function test_unitWriteFeeOff() public {
+    function test_write_whenFeeOff() public {
         vm.prank(FEE_TO);
         engine.setFeesEnabled(false);
 
@@ -606,7 +606,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     // Negative behavior
 
-    function test_unitWriteRevertWhenAmountWrittenCannotBeZero() public {
+    function testRevert_write_whenAmountWrittenCannotBeZero() public {
         uint112 invalidWriteAmount = 0;
 
         vm.expectRevert(IOptionSettlementEngine.AmountWrittenCannotBeZero.selector);
@@ -614,7 +614,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.write(testOptionId, invalidWriteAmount);
     }
 
-    function test_unitWriteRevertWhenInvalidOption() public {
+    function testRevert_write_whenInvalidOption() public {
         // Option ID not 0 in lower 96 b
         uint256 invalidOptionId = testOptionId + 1;
         // Option ID not initialized
@@ -623,7 +623,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.write(invalidOptionId, 1);
     }
 
-    function test_unitWriteRevertWhenExpiredOption() public {
+    function testRevert_write_whenExpiredOption() public {
         vm.warp(testExpiryTimestamp + 1 seconds);
 
         vm.expectRevert(
@@ -634,7 +634,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.write(testOptionId, 1);
     }
 
-    function test_unitWriteRevertWhenCallerDoesNotOwnClaimId() public {
+    function testRevert_write_whenCallerDoesNotOwnClaimId() public {
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
         vm.stopPrank();
@@ -645,7 +645,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.write(claimId, 1);
     }
 
-    function test_unitWriteRevertWhenCallerHoldsInsufficientExerciseAsset() public {
+    function testRevert_write_whenCallerHoldsInsufficientExerciseAsset() public {
         uint112 amountWritten = 5;
 
         uint256 optionId = engine.newOptionType({
@@ -682,7 +682,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(engine.balanceOf(other, optionId), amountWritten, "Other option tokens");
     }
 
-    function test_unitWriteRevertWhenCallerHasNotGrantedSufficientApprovalToEngine() public {
+    function testRevert_write_whenCallerHasNotGrantedSufficientApprovalToEngine() public {
         uint112 amountWritten = 5;
 
         uint256 optionId = engine.newOptionType({
@@ -723,7 +723,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // function redeem(uint256 claimId) external
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitRedeemWhenUnexercised() public {
+    function test_redeem_whenUnexercised() public {
         uint112 amountWritten = 7;
         uint256 expectedUnderlyingAmount = testUnderlyingAmount * amountWritten;
         uint256 expectedUnderlyingFee = _calculateFee(expectedUnderlyingAmount);
@@ -764,7 +764,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(DAILIKE.balanceOf(ALICE), STARTING_BALANCE, "Alice exercise post redeem"); // no change
     }
 
-    function test_unitRedeemWhenPartiallyExercised() public {
+    function test_redeem_whenPartiallyExercised() public {
         uint112 amountWritten = 7;
         uint112 amountExercised = 3;
         uint256 expectedUnderlyingFee = _calculateFee(testUnderlyingAmount);
@@ -846,7 +846,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         );
     }
 
-    function test_unitRedeemWhenFullyExercised() public {
+    function test_redeem_whenFullyExercised() public {
         uint112 amountWritten = 7;
         uint112 amountExercised = 7;
         uint256 expectedUnderlyingFee = _calculateFee(testUnderlyingAmount);
@@ -926,7 +926,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     // Negative behavior
 
-    function test_unitRedeemRevertWhenInvalidClaim() public {
+    function testRevert_redeem_whenInvalidClaim() public {
         uint256 badClaimId = encodeTokenId(0xDEADBEEF, 0);
 
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidClaim.selector, badClaimId));
@@ -935,7 +935,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.redeem(badClaimId);
     }
 
-    function test_unitRedeemRevertWhenCallerDoesNotOwnClaimId() public {
+    function testRevert_redeem_whenCallerDoesNotOwnClaimId() public {
         // Alice writes and transfers to Bob, then Alice tries to redeem
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
@@ -964,7 +964,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.stopPrank();
     }
 
-    function test_unitRedeemRevertWhenClaimTooSoon() public {
+    function testRevert_redeem_whenClaimTooSoon() public {
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
 
@@ -982,7 +982,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // function exercise(uint256 optionId, uint112 amount) external
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitExercise() public {
+    function test_exercise() public {
         // Alice writes 5 and transfers 2 to Bob
         vm.startPrank(ALICE);
         engine.write(testOptionId, 5);
@@ -1041,7 +1041,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(engine.feeBalance(testExerciseAsset), expectedExerciseFee, "Fee balance exercise post");
     }
 
-    function test_unitExerciseMultipleTimes() public {
+    function test_exercise_whenExercisingMultipleTimes() public {
         // Alice writes 10 and transfers 6 to Bob
         vm.startPrank(ALICE);
         engine.write(testOptionId, 10);
@@ -1112,7 +1112,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     // Negative behavior
 
-    function test_unitExerciseRevertWhenInvalidOption() public {
+    function testRevert_exercise_whenInvalidOption() public {
         vm.startPrank(ALICE);
         engine.write(testOptionId, 1);
 
@@ -1124,7 +1124,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.stopPrank();
     }
 
-    function test_unitExerciseRevertWhenExpiredOption() public {
+    function testRevert_exercise_whenExpiredOption() public {
         // Alice writes
         vm.startPrank(ALICE);
         engine.write(testOptionId, 1);
@@ -1143,7 +1143,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.stopPrank();
     }
 
-    function test_unitExerciseRevertWhenExerciseTooEarly() public {
+    function testRevert_exercise_whenExerciseTooEarly() public {
         // Alice writes
         vm.startPrank(ALICE);
         engine.write(testOptionId, 1);
@@ -1163,7 +1163,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.stopPrank();
     }
 
-    function test_unitExerciseRevertWhenCallerHoldsInsufficientOptions() public {
+    function testRevert_exercise_whenCallerHoldsInsufficientOptions() public {
         vm.warp(testExerciseTimestamp + 1 seconds);
 
         // Should revert if you hold 0
@@ -1182,7 +1182,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.stopPrank();
     }
 
-    function test_unitExerciseRevertWhenCallerHoldsInsufficientExerciseAsset() public {
+    function testRevert_exercise_whenCallerHoldsInsufficientExerciseAsset() public {
         uint256 optionId = engine.newOptionType({
             underlyingAsset: address(ERC20A),
             underlyingAmount: 1 ether,
@@ -1223,7 +1223,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(engine.balanceOf(other, optionId), 1, "Other option tokens"); // 1 left after 3 are burned on exercise
     }
 
-    function test_unitExerciseRevertWhenCallerHasNotGrantedSufficientApprovalToEngine() public {
+    function testRevert_exercise_whenCallerHasNotGrantedSufficientApprovalToEngine() public {
         uint256 optionId = engine.newOptionType({
             underlyingAsset: address(ERC20A),
             underlyingAmount: 1 ether,
@@ -1267,7 +1267,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // function setFeesEnabled(bool enabled) external
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitSetFeesEnabled() public {
+    function test_setFeesEnabled() public {
         vm.expectEmit(true, true, true, true);
         emit FeeSwitchUpdated(FEE_TO, false);
 
@@ -1289,7 +1289,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     // Negative behavior
 
-    function test_unitSetFeesEnabledRevertWhenNotFeeTo() public {
+    function testRevert_setFeesEnabled_whenNotFeeTo() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
 
         vm.prank(ALICE);
@@ -1300,7 +1300,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // function setFeeTo(address newFeeTo) external + function acceptFeeTo() external
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitSetFeeToAndAcceptFeeTo() public {
+    function test_setFeeToAndAcceptFeeTo() public {
         address newFeeTo = address(0xCAFE);
 
         // precondition check
@@ -1318,7 +1318,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(engine.feeTo(), newFeeTo);
     }
 
-    function test_unitSetFeeToAndAcceptFeeToTwoTimes() public {
+    function test_setFeeToAndAcceptFeeTo_multipleTimes() public {
         address newFeeTo = address(0xCAFE);
         address newNewFeeTo = address(0xBEEF);
 
@@ -1347,19 +1347,19 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(engine.feeTo(), newNewFeeTo);
     }
 
-    function test_unitSetFeeToRevertWhenNotCurrentFeeTo() public {
+    function testRevert_setFeeTo_whenNotCurrentFeeTo() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
         vm.prank(ALICE);
         engine.setFeeTo(address(0xCAFE));
     }
 
-    function test_unitSetFeeToRevertWhenZeroAddress() public {
+    function testRevert_setFeeTo_whenZeroAddress() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAddress.selector, address(0)));
         vm.prank(FEE_TO);
         engine.setFeeTo(address(0));
     }
 
-    function test_unitAcceptFeeToRevertWhenNotPendingFeeTo() public {
+    function testRevert_acceptFeeTo_whenNotPendingFeeTo() public {
         address newFeeTo = address(0xCAFE);
 
         vm.prank(FEE_TO);
@@ -1376,7 +1376,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // function setTokenURIGenerator(address newTokenURIGenerator) external
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitSetTokenURIGenerator() public {
+    function test_setTokenURIGenerator() public {
         TokenURIGenerator newTokenURIGenerator = new TokenURIGenerator();
 
         vm.expectEmit(true, true, true, true);
@@ -1390,13 +1390,13 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     // Negative behavior
 
-    function test_unitSetTokenURIGeneratorRevertWhenNotCurrentFeeTo() public {
+    function testRevert_setTokenURIGenerator_whenNotCurrentFeeTo() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
         vm.prank(ALICE);
         engine.setTokenURIGenerator(address(0xCAFE));
     }
 
-    function test_unitSetTokenURIGeneratorRevertWhenZeroAddress() public {
+    function testRevert_setTokenURIGenerator_whenZeroAddress() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAddress.selector, address(0)));
         vm.prank(FEE_TO);
         engine.setTokenURIGenerator(address(0));
@@ -1408,7 +1408,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     // TODO(Should fee sweep be onlyFeeTo? Probably)
 
-    function test_unitSweepNoFees() public {
+    function test_sweepFees_whenNoFees() public {
         // Precondition checks
         assertEq(WETHLIKE.balanceOf(FEE_TO), 0);
         assertEq(DAILIKE.balanceOf(FEE_TO), 0);
@@ -1426,7 +1426,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(USDCLIKE.balanceOf(FEE_TO), 0);
     }
 
-    function test_unitSweepFees() public {
+    function test_sweepFees() public {
         address[] memory tokens = new address[](2);
         tokens[0] = address(WETHLIKE);
         tokens[1] = address(DAILIKE);
@@ -1458,14 +1458,15 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // function uri(uint256 tokenId) public view virtual override returns (string memory)
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitUri() public view {
+    function test_uri() public view {
         engine.uri(testOptionId);
     }
 
     // Negative behavior
 
-    function test_unitUriRevertWhenTokenNotFound() public {
+    function testRevert_uri_whenTokenNotFound() public {
         uint256 tokenId = 420;
+
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, tokenId));
         engine.uri(tokenId);
     }
@@ -1474,17 +1475,15 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // constructor(address _feeTo, address _tokenURIGenerator)
     //////////////////////////////////////////////////////////////*/
 
-    function test_unitConstructorRevertWhenFeeToIsZeroAddress() public {
+    function testRevert_construction_whenFeeToIsZeroAddress() public {
         TokenURIGenerator localGenerator = new TokenURIGenerator();
 
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAddress.selector, address(0)));
-
         new OptionSettlementEngine(address(0), address(localGenerator));
     }
 
-    function test_unitConstructorRevertWhenTokenURIGeneratorIsZeroAddress() public {
+    function testRevert_construction_whenTokenURIGeneratorIsZeroAddress() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAddress.selector, address(0)));
-
         new OptionSettlementEngine(FEE_TO, address(0));
     }
 }

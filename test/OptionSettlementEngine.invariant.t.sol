@@ -16,6 +16,7 @@ contract OptionSettlementEngineInvariantTest is BaseEngineTest, InvariantTest {
     OptionHolder internal holder;
     ProtocolAdmin internal admin;
     Timekeeper internal timekeeper;
+    address private defaultFeeTo;
 
     uint256[] internal optionTypes;
     uint256[] internal claimsWritten;
@@ -23,6 +24,8 @@ contract OptionSettlementEngineInvariantTest is BaseEngineTest, InvariantTest {
 
     function setUp() public override {
         super.setUp();
+
+        defaultFeeTo = engine.feeTo();
 
         holder = new OptionHolder(engine, this);
         writer = new OptionWriter(engine, this, address(holder));
@@ -58,6 +61,7 @@ contract OptionSettlementEngineInvariantTest is BaseEngineTest, InvariantTest {
             minted += erc20.balanceOf(address(holder));
             minted += erc20.balanceOf(address(admin));
             minted += erc20.balanceOf(address(engine));
+            minted += erc20.balanceOf(defaultFeeTo);
 
             // Not used for invariant tests, but accounting is necessary
             // for accounts minted to when BaseEngineTest.setUp() is called

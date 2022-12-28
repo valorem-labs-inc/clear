@@ -26,7 +26,6 @@ abstract contract BaseEngineTest is Test {
 
     // Admin
     address internal constant FEE_TO = address(0xBEEF);
-    address internal constant NEW_FEE_TO = address(0xDEAD);
 
     // Tokens
     IERC20 internal WETHLIKE;

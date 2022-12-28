@@ -43,7 +43,7 @@ contract ProtocolAdmin is BaseActor {
         IERC20[] memory mockErc20s = test.getMockErc20s();
         address[] memory _mockErc20s = new address[](mockErc20s.length);
 
-        for (uint i = 0; i < mockErc20s.length; i++){
+        for (uint256 i = 0; i < mockErc20s.length; i++) {
             // need to change type from IERC20 to address
             _mockErc20s[i] = address(mockErc20s[i]);
         }

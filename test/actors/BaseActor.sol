@@ -25,5 +25,4 @@ abstract contract BaseActor is StdUtils, CommonBase {
         uint256 idx = _randBetween(seed, arr.length);
         return arr[idx];
     }
-
 }

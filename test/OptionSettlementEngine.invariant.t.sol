@@ -128,7 +128,7 @@ contract OptionSettlementEngineInvariantTest is BaseEngineTest, InvariantTest {
         optionTypes.push(optionId);
     }
 
-    function getOptionTypes() public view returns (uint256[] memory){
+    function getOptionTypes() public view returns (uint256[] memory) {
         return optionTypes;
     }
 

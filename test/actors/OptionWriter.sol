@@ -5,11 +5,19 @@ import "./BaseActor.sol";
 
 contract OptionWriter is BaseActor {
     address private optionHolder;
-    constructor(OptionSettlementEngine _engine, OptionSettlementEngineInvariantTest _test, address _optionHolder) BaseActor(_engine, _test) {
+
+    constructor(OptionSettlementEngine _engine, OptionSettlementEngineInvariantTest _test, address _optionHolder)
+        BaseActor(_engine, _test)
+    {
         optionHolder = _optionHolder;
     }
 
-    function newOptionType(uint40 durationToExercise, uint40 durationToExpiry, uint96 underlyingAmount, uint96 exerciseAmount) external {
+    function newOptionType(
+        uint40 durationToExercise,
+        uint40 durationToExpiry,
+        uint96 underlyingAmount,
+        uint96 exerciseAmount
+    ) external {
         console.logString("newOptionType");
         IERC20[] memory mockTokens = test.getMockErc20s();
         uint256 tokenAIndex = _randBetween(uint32(block.timestamp), mockTokens.length);
@@ -29,7 +37,7 @@ contract OptionWriter is BaseActor {
             address(mockTokens[tokenBIndex]),
             exerciseAmount,
             uint40(block.timestamp + durationToExercise),
-            uint40(block.timestamp + durationToExpiry) 
+            uint40(block.timestamp + durationToExpiry)
         );
         test.addOptionType(optionId);
     }
@@ -38,7 +46,7 @@ contract OptionWriter is BaseActor {
         console.logString("writeNew");
         uint256[] memory optionTypes = test.getOptionTypes();
 
-        if (optionTypes.length == 0){
+        if (optionTypes.length == 0) {
             console.logString("OptionWriter::WriteNew: no option types created");
             return;
         }

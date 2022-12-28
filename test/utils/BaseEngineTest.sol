@@ -83,7 +83,7 @@ abstract contract BaseEngineTest is Test {
         ERC20S.push(ERC20D);
         ERC20S.push(ERC20E);
         ERC20S.push(ERC20F);
-        
+
         // Setup token balances and approvals
         address[3] memory recipients = [ALICE, BOB, CAROL];
         for (uint256 i = 0; i < recipients.length; i++) {

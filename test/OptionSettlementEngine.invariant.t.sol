@@ -81,9 +81,11 @@ contract OptionSettlementEngineInvariantTest is BaseEngineTest, InvariantTest {
             uint256 claimIndex = 1;
             uint256 totalWrittenFromClaims = 0;
             while (true) {
-                IOptionSettlementEngine.Claim memory claim = engine.claim(optionTypeId + claimIndex);
-                if (claim.amountWritten == 0) {
-                    // claim isn't initialized
+                IOptionSettlementEngine.Claim memory claim;
+                try engine.claim(optionTypeId + claimIndex) returns (IOptionSettlementEngine.Claim memory _claim) {
+                    claim = _claim;
+                } catch {
+                    // token not found
                     break;
                 }
                 totalWrittenFromClaims += claim.amountWritten;

@@ -41,15 +41,21 @@ contract ProtocolAdmin is BaseActor {
     function sweepFees() external {
         console.logString("sweepFees");
         IERC20[] memory mockErc20s = test.getMockErc20s();
+        address[] memory _mockErc20s = new address[](mockErc20s.length);
+
+        for (uint i = 0; i < mockErc20s.length; i++){
+            // need to change type from IERC20 to address
+            _mockErc20s[i] = address(mockErc20s[i]);
+        }
 
         address _feeTo = engine.feeTo();
 
         if (_feeTo == address(this)) {
-            engine.sweepFees(mockErc20s);
+            engine.sweepFees(_mockErc20s);
             return;
         }
 
         vm.prank(_feeTo);
-        engine.sweepFees(mockErc20s);
+        engine.sweepFees(_mockErc20s);
     }
 }

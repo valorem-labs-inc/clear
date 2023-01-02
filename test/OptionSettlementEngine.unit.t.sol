@@ -1404,8 +1404,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // function sweepFees(address[] memory tokens) external
     //////////////////////////////////////////////////////////////*/
 
-    // TODO(Should fee sweep be onlyFeeTo? Probably)
-
     function test_sweepFees_whenNoFees() public {
         // Precondition checks
         assertEq(WETHLIKE.balanceOf(FEE_TO), 0);

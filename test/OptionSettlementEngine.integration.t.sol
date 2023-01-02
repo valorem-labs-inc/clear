@@ -6,6 +6,93 @@ import "./utils/BaseEngineTest.sol";
 
 /// @notice Integration tests for OptionSettlementEngine
 contract OptionSettlementIntegrationTest is BaseEngineTest {
+    function setUp() public {
+        // Fork mainnet
+
+        // Get deployed WETH, DAI, USDC, and UNI contracts
+        // WETH9   0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
+        // DAI     0x6B175474E89094C44Da98b954EedeAC495271d0F
+        // USDC    0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+        // UNI     0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984
+
+        //
+    }
+
+    function test_integration() public {
+        // Create some new Option Types
+
+        // Alice writes some Options
+
+        // Check fee accrual
+
+        // Alice checks her Claim positions
+
+        // Alice transfers some Options to Bob
+
+        // Bob exercises some
+
+        // Check fee accrual
+
+        // Sweep fees
+
+        // Bob checks his Option positions
+
+        // Alice checks her Claim positions
+
+        // Alice writes some more
+
+        // Create some new Option Types
+
+        // Carol writes some Options
+
+        // Alice writes some
+
+        // Bob writes some
+
+        // Bob transfers some Options to Carol
+
+        // Carol transfers some to Bob
+
+        // Alice transfers some to Carol
+
+        // Bob exercises some Options
+
+        // Carol exercises some
+
+        // Alice exercises some
+
+        // Check fee accrual
+
+        // Protocol Admin sets new feeTo; New feeTo accepts
+
+        // Sweep fees
+
+        // Check Option and Claim positions
+
+        // Protocol Admin disables fee switch
+
+        // Alice transfers a Claim to Carol
+
+        // Carol writes more Options against existing Claim
+
+        // Carol exercises some Options
+
+        // Carol redeems some Claims
+
+        // Check no fees accrued for latest write or exercise
+
+        // Check their Option and Claim positions
+
+        // Bob redeems some Claims
+
+        // Check Option and Claim positions
+
+        // Alice redeems some Claims
+
+        // Check Option and Claim positions
+
+    }
+
     function test_integrationFairAssignment() public {
         // write 2, exercise 1, write 2 should create two buckets
         vm.startPrank(ALICE);

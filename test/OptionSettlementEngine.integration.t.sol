@@ -6,7 +6,9 @@ import "./utils/BaseEngineTest.sol";
 
 /// @notice Integration tests for OptionSettlementEngine
 contract OptionSettlementIntegrationTest is BaseEngineTest {
-    function setUp() public {
+    function setUp() public override {
+        super.setUp();
+
         // Fork mainnet
 
         // Get deployed WETH, DAI, USDC, and UNI contracts
@@ -90,7 +92,6 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
         // Alice redeems some Claims
 
         // Check Option and Claim positions
-
     }
 
     function test_integrationFairAssignment() public {

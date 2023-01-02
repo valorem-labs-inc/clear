@@ -48,10 +48,6 @@ contract OptionSettlementEngineInvariantTest is BaseEngineTest, InvariantTest {
         console.logString("setUp");
     }
 
-    function invariant_alwaysBlue() public {
-        assertTrue(true);
-    }
-
     // balances between the actors and engine should always add up to their original sums
     function invariant_erc20_balances() public {
         console.logString("erc20 balances");

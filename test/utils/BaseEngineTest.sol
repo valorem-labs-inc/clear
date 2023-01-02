@@ -41,10 +41,9 @@ abstract contract BaseEngineTest is Test {
 
     IERC20[] public ERC20S;
 
-    uint256 internal constant STARTING_BALANCE = 1_000_000_000 ether;
-    uint256 internal constant STARTING_BALANCE_WETH = 10_000_000;
-    uint256 internal constant STARTING_BALANCE_OTHER = 1_000_000_000;
+    uint256 internal constant STARTING_BALANCE = 1_000_000_000 * 1e18;
     uint256 internal constant STARTING_BALANCE_USDC = 1_000_000_000 * 1e6;
+    uint256 internal constant STARTING_BALANCE_WETH = 1_000_000 * 1e18;
 
     // Test option
     uint256 internal testOptionId;
@@ -121,13 +120,13 @@ abstract contract BaseEngineTest is Test {
     // }
     function _mintTokensForAddress(address recipient) internal {
         // Now we have 1B in stables and 10M WETH
-        _mint(recipient, MockERC20(address(WETHLIKE)), STARTING_BALANCE_WETH * 1e18);
-        _mint(recipient, MockERC20(address(DAILIKE)), STARTING_BALANCE_OTHER * 1e18);
-        _mint(recipient, MockERC20(address(USDCLIKE)), STARTING_BALANCE_OTHER * 1e6);
-        _mint(recipient, MockERC20(address(UNILIKE)), STARTING_BALANCE_OTHER * 1e18);
+        _mint(recipient, MockERC20(address(WETHLIKE)), STARTING_BALANCE_WETH);
+        _mint(recipient, MockERC20(address(DAILIKE)), STARTING_BALANCE);
+        _mint(recipient, MockERC20(address(USDCLIKE)), STARTING_BALANCE_USDC);
+        _mint(recipient, MockERC20(address(UNILIKE)), STARTING_BALANCE);
 
         for (uint256 i = 0; i < ERC20S.length; i++) {
-            _mint(recipient, MockERC20(address(ERC20S[i])), STARTING_BALANCE_OTHER * 1e18);
+            _mint(recipient, MockERC20(address(ERC20S[i])), STARTING_BALANCE);
         }
 
         // Approve settlement engine to spend ERC20 token balances on behalf of user

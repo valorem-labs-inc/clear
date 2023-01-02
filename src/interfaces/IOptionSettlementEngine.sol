@@ -270,8 +270,6 @@ interface IOptionSettlementEngine {
         uint256 amountExercised;
         /// @custom:member optionId The option ID of the option type this claim is for.
         uint256 optionId;
-        /// @custom:member unredeemed Whether or not this claim has been redeemed.
-        bool unredeemed;
     }
 
     /**

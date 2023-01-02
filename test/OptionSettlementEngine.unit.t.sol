@@ -43,8 +43,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(claim.amountWritten, amountWritten * WAD);
         assertEq(claim.amountExercised, 0);
         assertEq(claim.optionId, testOptionId);
-        // TODO(Why do we need this if claim() reverts when it does not exist?) See L64 below
-        assertEq(claim.unredeemed, true);
 
         vm.warp(testOption.exerciseTimestamp);
         vm.prank(ALICE);
@@ -1418,6 +1416,8 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         tokens[0] = address(WETHLIKE);
         tokens[1] = address(DAILIKE);
         tokens[2] = address(USDCLIKE);
+
+        vm.prank(FEE_TO);
         engine.sweepFees(tokens);
 
         // Balance assertions -- no change
@@ -1447,11 +1447,23 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         emit FeeSwept(testUnderlyingAsset, FEE_TO, wethFee);
         emit FeeSwept(testExerciseAsset, FEE_TO, daiFee);
 
+        vm.prank(FEE_TO);
         engine.sweepFees(tokens);
 
         // Balance assertions -- with tolerance of 1 wei for loss of precision
         assertApproxEqAbs(WETHLIKE.balanceOf(FEE_TO), wethFee, 1, "FeeTo underlying balance");
         assertApproxEqAbs(DAILIKE.balanceOf(FEE_TO), daiFee, 1, "FeeTo exercise balance");
+    }
+
+    function testRevert_sweepFees_whenNotFeeTo() public {
+        address[] memory tokens = new address[](2);
+        tokens[0] = address(WETHLIKE);
+        tokens[1] = address(DAILIKE);
+
+        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
+
+        vm.prank(ALICE);
+        engine.sweepFees(tokens);
     }
 
     /*//////////////////////////////////////////////////////////////

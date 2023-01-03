@@ -206,9 +206,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // scale the amount written by WAD for consistency
             amountWritten: amountWritten * 1e18,
             amountExercised: amountExercised,
-            optionId: uint256(optionKey) << OPTION_KEY_PADDING,
-            // If the claim is initialized, it is unredeemed.
-            unredeemed: true
+            optionId: uint256(optionKey) << OPTION_KEY_PADDING
         });
     }
 
@@ -345,9 +343,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                         exerciseAsset,
                         exerciseAmount,
                         exerciseTimestamp,
-                        expiryTimestamp,
-                        uint160(0),
-                        uint96(0)
+                        expiryTimestamp
                     )
                 )
             )
@@ -662,7 +658,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /// @inheritdoc IOptionSettlementEngine
-    function sweepFees(address[] calldata tokens) external {
+    function sweepFees(address[] calldata tokens) external onlyFeeTo {
         address sendFeeTo = feeTo;
         address token;
         uint256 fee;

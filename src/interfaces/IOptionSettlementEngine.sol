@@ -10,8 +10,24 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     //
-    // Write events
+    // Write/Redeem events
     //
+
+    /**
+     * @notice Emitted when a claim is redeemed.
+     * @param optionId The token id of the option type of the claim being redeemed.
+     * @param claimId The token id of the claim being redeemed.
+     * @param redeemer The address redeeming the claim.
+     * @param exerciseAmountRedeemed The amount of the option.exerciseAsset redeemed.
+     * @param underlyingAmountRedeemed The amount of option.underlyingAsset redeemed.
+     */
+    event ClaimRedeemed(
+        uint256 indexed claimId,
+        uint256 indexed optionId,
+        address indexed redeemer,
+        uint256 exerciseAmountRedeemed,
+        uint256 underlyingAmountRedeemed
+    );
 
     /**
      * @notice Emitted when a new option type is created.
@@ -33,46 +49,26 @@ interface IOptionSettlementEngine {
         uint40 indexed expiryTimestamp
     );
 
+    //
+    // Exercise events
+    //
+
     /**
-     * @notice Emitted when new options contract(s) are written.
+     * @notice Emitted when option contract(s) is(are) exercised.
+     * @param optionId The token id of the option type exercised.
+     * @param exerciser The address that exercised the option contract(s).
+     * @param amount The amount of option contracts exercised.
+     */
+    event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
+
+    /**
+     * @notice Emitted when new options contracts are written.
      * @param optionId The token id of the option type written.
      * @param writer The address of the writer.
      * @param claimId The claim token id of the new or existing short position written against.
      * @param amount The amount of options contracts written.
      */
     event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
-
-    //
-    // Redeem events
-    //
-
-    /**
-     * @notice Emitted when a claim is redeemed.
-     * @param optionId The token id of the option type of the claim being redeemed.
-     * @param claimId The token id of the claim being redeemed.
-     * @param redeemer The address redeeming the claim.
-     * @param exerciseAmountRedeemed The amount of the option.exerciseAsset redeemed.
-     * @param underlyingAmountRedeemed The amount of option.underlyingAsset redeemed.
-     */
-    event ClaimRedeemed(
-        uint256 indexed claimId,
-        uint256 indexed optionId,
-        address indexed redeemer,
-        uint256 exerciseAmountRedeemed,
-        uint256 underlyingAmountRedeemed
-    );
-
-    //
-    // Exercise events
-    //
-
-    /**
-     * @notice Emitted when option contract(s) are exercised.
-     * @param optionId The token id of the option type exercised.
-     * @param exerciser The address that exercised the option contract(s).
-     * @param amount The amount of option contracts exercised.
-     */
-    event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
 
     //
     // Fee events
@@ -223,8 +219,8 @@ interface IOptionSettlementEngine {
     error OptionsTypeExists(uint256 optionId);
 
     /**
-     * @notice The token specified is not found.
-     * @param token The supplied token.
+     * @notice The requested token is not found.
+     * @param token The token requested.
      */
     error TokenNotFound(uint256 token);
 
@@ -346,8 +342,7 @@ interface IOptionSettlementEngine {
     function tokenType(uint256 tokenId) external view returns (TokenType typeOfToken);
 
     /**
-     * @notice Gets the address of the URI generator contract.
-     * @return uriGenerator The address of the URI generator contract.
+     * @return uriGenerator the address of the URI generator contract.
      */
     function tokenURIGenerator() external view returns (ITokenURIGenerator uriGenerator);
 
@@ -375,7 +370,7 @@ interface IOptionSettlementEngine {
     function feesEnabled() external view returns (bool enabled);
 
     /**
-     * @notice Gets the address to which protocol fees are swept.
+     * @notice Returns the address to which protocol fees are swept.
      * @return The address to which fees are swept.
      */
     function feeTo() external view returns (address);

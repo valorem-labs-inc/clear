@@ -1,61 +1,147 @@
-OptionSettlementTest:testAddOptionsToExistingClaim() (gas: 449104)
-OptionSettlementTest:testAssignMultipleBuckets() (gas: 719294)
-OptionSettlementTest:testDecodeTokenId() (gas: 487495)
-OptionSettlementTest:testEncodeTokenId() (gas: 487096)
-OptionSettlementTest:testEventExercise() (gas: 340754)
-OptionSettlementTest:testEventNewOptionType() (gas: 124268)
-OptionSettlementTest:testEventRedeem() (gas: 299276)
-OptionSettlementTest:testEventWriteWhenExistingClaim() (gas: 318634)
-OptionSettlementTest:testEventWriteWhenNewClaim() (gas: 300830)
-OptionSettlementTest:testExerciseBeforeExpiry() (gas: 333430)
-OptionSettlementTest:testExerciseIncompleteExercise() (gas: 354554)
-OptionSettlementTest:testExerciseMultipleWriteSameChain() (gas: 467167)
-OptionSettlementTest:testExerciseWithDifferentDecimals() (gas: 407083)
-OptionSettlementTest:testFuzzDecodeTokenId(uint256,uint256) (runs: 256, μ: 11051, ~: 11138)
-OptionSettlementTest:testFuzzEncodeTokenId(uint256,uint256) (runs: 256, μ: 10977, ~: 11064)
-OptionSettlementTest:testFuzzExercise(uint112,uint112) (runs: 256, μ: 402353, ~: 405947)
-OptionSettlementTest:testFuzzNewOptionType(uint96,uint96,uint40,uint40) (runs: 256, μ: 124704, ~: 124704)
-OptionSettlementTest:testFuzzRedeem(uint112,uint112) (runs: 256, μ: 393014, ~: 396836)
-OptionSettlementTest:testFuzzWrite(uint112) (runs: 256, μ: 318304, ~: 318304)
-OptionSettlementTest:testFuzzWriteExerciseRedeem(uint32) (runs: 256, μ: 11505904, ~: 11596957)
-OptionSettlementTest:testGetClaimForTokenId() (gas: 375653)
-OptionSettlementTest:testGetOptionForTokenId() (gas: 124586)
-OptionSettlementTest:testInitial() (gas: 7835)
-OptionSettlementTest:testIsOptionInitialized() (gas: 124875)
-OptionSettlementTest:testRandomAssignment() (gas: 1599519)
-OptionSettlementTest:testRedeemNotExercised() (gas: 302870)
-OptionSettlementTest:testRevertExerciseBeforeExcercise() (gas: 401568)
-OptionSettlementTest:testRevertExerciseWhenCallerHoldsInsufficientOptions() (gas: 306338)
-OptionSettlementTest:testRevertExerciseWhenExerciseTooEarly() (gas: 308028)
-OptionSettlementTest:testRevertExerciseWhenExpiredOption() (gas: 427770)
-OptionSettlementTest:testRevertExerciseWhenInvalidOption() (gas: 294502)
-OptionSettlementTest:testRevertNewOptionTypeWhenExerciseWindowTooShort() (gas: 19244)
-OptionSettlementTest:testRevertNewOptionTypeWhenExpiryTooSoon() (gas: 20607)
-OptionSettlementTest:testRevertNewOptionTypeWhenInvalidAssets() (gas: 20812)
-OptionSettlementTest:testRevertNewOptionTypeWhenOptionsTypeExists() (gas: 22551)
-OptionSettlementTest:testRevertNewOptionTypeWhenTotalSuppliesAreTooLowToExercise() (gas: 48745)
-OptionSettlementTest:testRevertRedeemWhenCallerDoesNotOwnClaimId() (gas: 318477)
-OptionSettlementTest:testRevertRedeemWhenClaimTooSoon() (gas: 298523)
-OptionSettlementTest:testRevertRedeemWhenInvalidClaim() (gas: 10603)
-OptionSettlementTest:testRevertSetFeeToWhenNotCurrentFeeTo() (gas: 11908)
-OptionSettlementTest:testRevertSetFeeToWhenZeroAddress() (gas: 11722)
-OptionSettlementTest:testRevertSetTokenURIGeneratorWhenNotCurrentFeeTo() (gas: 11899)
-OptionSettlementTest:testRevertSetTokenURIGeneratorWhenZeroAddress() (gas: 11736)
-OptionSettlementTest:testRevertUnderlyingWhenTokenNotFound() (gas: 11757)
-OptionSettlementTest:testRevertUriWhenTokenNotFound() (gas: 18716)
-OptionSettlementTest:testRevertWriteExpiredOption() (gas: 16626)
-OptionSettlementTest:testRevertWriteWhenAmountWrittenCannotBeZero() (gas: 10948)
-OptionSettlementTest:testRevertWriteWhenCallerDoesNotOwnClaimId() (gas: 298936)
-OptionSettlementTest:testRevertWriteWhenEncodedOptionIdInClaimIdDoesNotMatchProvidedOptionId() (gas: 11690)
-OptionSettlementTest:testRevertWriteWhenExpiredOption() (gas: 295565)
-OptionSettlementTest:testRevertWriteWhenInvalidOption() (gas: 16923)
-OptionSettlementTest:testSetFeeTo() (gas: 15883)
-OptionSettlementTest:testSetTokenURIGenerator() (gas: 16786)
-OptionSettlementTest:testSweepFeesWhenFeesAccruedForExercise() (gas: 1558107)
-OptionSettlementTest:testSweepFeesWhenFeesAccruedForWrite() (gas: 1555126)
-OptionSettlementTest:testTokenURI() (gas: 483080)
-OptionSettlementTest:testUnderlyingAfterExercise() (gas: 375435)
-OptionSettlementTest:testUnderlyingForFungibleOptionToken() (gas: 31096)
-OptionSettlementTest:testUnderlyingWhenNotExercised() (gas: 304722)
-OptionSettlementTest:testWriteAfterFullyExercisingDay() (gas: 511448)
-OptionSettlementTest:testWriteMultipleWriteSameOptionType() (gas: 431145)
+No files changed, compilation skipped
+
+Running 7 tests for test/OptionSettlementEngine.integration.t.sol:OptionSettlementIntegrationTest
+[32m[PASS][0m test_integrationAddOptionsToExistingClaim() (gas: 393763)
+[32m[PASS][0m test_integrationDustHandling() (gas: 891608)
+[32m[PASS][0m test_integrationFairAssignment() (gas: 594889)
+[32m[PASS][0m test_integrationRandomAssignment() (gas: 890655)
+[32m[PASS][0m test_integrationSweepFeesWhenFeesAccruedForExercise() (gas: 1406468)
+[32m[PASS][0m test_integrationSweepFeesWhenFeesAccruedForWrite() (gas: 1330224)
+[32m[PASS][0m test_integrationWriteExerciseAddBuckets() (gas: 1106704)
+Test result: [32mok[0m. 7 passed; 0 failed; finished in 7.99ms
+
+Running 68 tests for test/OptionSettlementEngine.unit.t.sol:OptionSettlementUnitTest
+[32m[PASS][0m testRevert_acceptFeeTo_whenNotPendingFeeTo() (gas: 35301)
+[32m[PASS][0m testRevert_claim_whenClaimDoesNotExist() (gas: 13769)
+[32m[PASS][0m testRevert_construction_whenFeeToIsZeroAddress() (gas: 2055503)
+[32m[PASS][0m testRevert_construction_whenTokenURIGeneratorIsZeroAddress() (gas: 39941)
+[32m[PASS][0m testRevert_exercise_whenCallerHasNotGrantedSufficientApprovalToEngine() (gas: 578957)
+[32m[PASS][0m testRevert_exercise_whenCallerHoldsInsufficientExerciseAsset() (gas: 577114)
+[32m[PASS][0m testRevert_exercise_whenCallerHoldsInsufficientOptions() (gas: 262498)
+[32m[PASS][0m testRevert_exercise_whenExerciseTooEarly() (gas: 265916)
+[32m[PASS][0m testRevert_exercise_whenExpiredOption() (gas: 265622)
+[32m[PASS][0m testRevert_exercise_whenInvalidOption() (gas: 252122)
+[32m[PASS][0m testRevert_newOptionType_whenExerciseWindowTooShort() (gas: 23334)
+[32m[PASS][0m testRevert_newOptionType_whenExpiryWindowTooShort() (gas: 24821)
+[32m[PASS][0m testRevert_newOptionType_whenInvalidAssets() (gas: 21521)
+[32m[PASS][0m testRevert_newOptionType_whenOptionsTypeExists() (gas: 26485)
+[32m[PASS][0m testRevert_newOptionType_whenTotalSuppliesAreTooLowToExercise() (gas: 44326)
+[32m[PASS][0m testRevert_option_whenOptionDoesNotExist() (gas: 12449)
+[32m[PASS][0m testRevert_position_whenExpiredOption() (gas: 19216)
+[32m[PASS][0m testRevert_position_whenTokenNotFound() (gas: 11847)
+[32m[PASS][0m testRevert_redeem_whenCallerDoesNotOwnClaimId() (gas: 245351)
+[32m[PASS][0m testRevert_redeem_whenClaimTooSoon() (gas: 257881)
+[32m[PASS][0m testRevert_redeem_whenInvalidClaim() (gas: 9432)
+[32m[PASS][0m testRevert_setFeeTo_whenNotCurrentFeeTo() (gas: 11919)
+[32m[PASS][0m testRevert_setFeeTo_whenZeroAddress() (gas: 11619)
+[32m[PASS][0m testRevert_setFeesEnabled_whenNotFeeTo() (gas: 11843)
+[32m[PASS][0m testRevert_setTokenURIGenerator_whenNotCurrentFeeTo() (gas: 11889)
+[32m[PASS][0m testRevert_setTokenURIGenerator_whenZeroAddress() (gas: 11631)
+[32m[PASS][0m testRevert_sweepFees_whenNotFeeTo() (gas: 16949)
+[32m[PASS][0m testRevert_uri_whenTokenNotFound() (gas: 18686)
+[32m[PASS][0m testRevert_write_whenAmountWrittenCannotBeZero() (gas: 10763)
+[32m[PASS][0m testRevert_write_whenCallerDoesNotOwnClaimId() (gas: 259607)
+[32m[PASS][0m testRevert_write_whenCallerHasNotGrantedSufficientApprovalToEngine() (gas: 678929)
+[32m[PASS][0m testRevert_write_whenCallerHoldsInsufficientExerciseAsset() (gas: 679033)
+[32m[PASS][0m testRevert_write_whenExpiredOption() (gas: 16935)
+[32m[PASS][0m testRevert_write_whenInvalidOption() (gas: 13604)
+[32m[PASS][0m test_claim_whenWrittenMultiple() (gas: 378459)
+[32m[PASS][0m test_claim_whenWrittenMultipleTimesOnMultipleClaims() (gas: 453124)
+[32m[PASS][0m test_claim_whenWrittenOnce() (gas: 302178)
+[32m[PASS][0m test_exercise() (gas: 380988)
+[32m[PASS][0m test_exercise_whenExercisingMultipleTimes() (gas: 418925)
+[32m[PASS][0m test_feeBalance_whenFeeOff() (gas: 266569)
+[32m[PASS][0m test_feeBalance_whenFeeOn() (gas: 323166)
+[32m[PASS][0m test_feeBalance_whenMinimum() (gas: 398134)
+[32m[PASS][0m test_feeBps() (gas: 5622)
+[32m[PASS][0m test_feeTo() (gas: 7759)
+[32m[PASS][0m test_feesEnabled() (gas: 7640)
+[32m[PASS][0m test_newOptionType() (gas: 129995)
+[32m[PASS][0m test_option_returnsOptionInfo() (gas: 25650)
+[32m[PASS][0m test_position_whenFullyExercisedClaim() (gas: 302150)
+[32m[PASS][0m test_position_whenOption() (gas: 30855)
+[32m[PASS][0m test_position_whenPartiallyExercisedClaim() (gas: 424981)
+[32m[PASS][0m test_position_whenUnexercisedClaim() (gas: 261693)
+[32m[PASS][0m test_redeem_whenFullyExercised() (gas: 332651)
+[32m[PASS][0m test_redeem_whenPartiallyExercised() (gas: 343293)
+[32m[PASS][0m test_redeem_whenUnexercised() (gas: 233616)
+[32m[PASS][0m test_setFeeToAndAcceptFeeTo() (gas: 29492)
+[32m[PASS][0m test_setFeeToAndAcceptFeeTo_multipleTimes() (gas: 50393)
+[32m[PASS][0m test_setFeesEnabled() (gas: 20603)
+[32m[PASS][0m test_setTokenURIGenerator() (gas: 2036256)
+[32m[PASS][0m test_sweepFees() (gas: 369953)
+[32m[PASS][0m test_sweepFees_whenNoFees() (gas: 45547)
+[32m[PASS][0m test_tokenType_returnsClaim() (gas: 251315)
+[32m[PASS][0m test_tokenType_returnsNone() (gas: 8025)
+[32m[PASS][0m test_tokenType_returnsOption() (gas: 10216)
+[32m[PASS][0m test_tokenURIGenerator() (gas: 9963)
+[32m[PASS][0m test_uri() (gas: 479544)
+[32m[PASS][0m test_write_whenExistingClaim() (gas: 293868)
+[32m[PASS][0m test_write_whenFeeOff() (gas: 254362)
+[32m[PASS][0m test_write_whenNewClaim() (gas: 275707)
+Test result: [32mok[0m. 68 passed; 0 failed; finished in 8.08ms
+
+Running 3 tests for test/OptionSettlementEngine.invariant.t.sol:OptionSettlementEngineInvariantTest
+[32m[PASS][0m invariant_erc20_balances() (runs: 10, calls: 10000, reverts: 4524)
+[32m[PASS][0m invariant_options_written_match_claims() (runs: 10, calls: 10000, reverts: 4524)
+[32m[PASS][0m invariant_positions_accounting() (runs: 10, calls: 10000, reverts: 4524)
+Test result: [32mok[0m. 3 passed; 0 failed; finished in 2.71s
+
+Running 4 tests for test/OptionSettlementEngine.fuzz.t.sol:OptionSettlementFuzzTest
+[32m[PASS][0m test_fuzzExercise(uint112,uint112) (runs: 256, μ: 364680, ~: 365722)
+[32m[PASS][0m test_fuzzNewOptionType(uint96,uint96,uint40,uint40) (runs: 256, μ: 130922, ~: 130922)
+[32m[PASS][0m test_fuzzWrite(uint112) (runs: 256, μ: 281992, ~: 281992)
+[32m[PASS][0m test_fuzzWriteExerciseRedeem(uint32) (runs: 256, μ: 9409473, ~: 9515885)
+Test result: [32mok[0m. 4 passed; 0 failed; finished in 2.76s
+| src/OptionSettlementEngine.sol:OptionSettlementEngine contract |                 |        |        |        |         |
+|----------------------------------------------------------------|-----------------|--------|--------|--------|---------|
+| Deployment Cost                                                | Deployment Size |        |        |        |         |
+| 3262505                                                        | 16430           |        |        |        |         |
+| Function Name                                                  | min             | avg    | median | max    | # calls |
+| acceptFeeTo                                                    | 585             | 2455   | 2705   | 3825   | 4       |
+| balanceOf                                                      | 619             | 619    | 619    | 619    | 170     |
+| claim                                                          | 831             | 3008   | 3051   | 4660   | 34      |
+| exercise                                                       | 513             | 30410  | 19641  | 82341  | 84      |
+| feeBalance                                                     | 641             | 1391   | 641    | 2641   | 24      |
+| feeBps                                                         | 338             | 338    | 338    | 338    | 36      |
+| feeTo                                                          | 383             | 583    | 383    | 2383   | 20      |
+| feesEnabled                                                    | 350             | 1016   | 350    | 2350   | 3       |
+| newOptionType                                                  | 3527            | 92758  | 97071  | 106071 | 105     |
+| option                                                         | 1978            | 3231   | 1978   | 9978   | 7       |
+| position                                                       | 1272            | 6294   | 4433   | 21722  | 35      |
+| redeem                                                         | 465             | 12252  | 12704  | 28800  | 39      |
+| safeTransferFrom                                               | 3522            | 16063  | 19442  | 28802  | 71      |
+| setFeeTo                                                       | 2614            | 16363  | 21712  | 24712  | 6       |
+| setFeesEnabled                                                 | 1690            | 2279   | 2112   | 6912   | 87      |
+| setTokenURIGenerator                                           | 2638            | 4715   | 2733   | 8775   | 3       |
+| sweepFees                                                      | 2885            | 37700  | 18258  | 83958  | 7       |
+| tokenType                                                      | 724             | 1647   | 1062   | 2724   | 5       |
+| tokenURIGenerator                                              | 426             | 1426   | 1426   | 2426   | 2       |
+| uri                                                            | 9574            | 236921 | 236921 | 464268 | 2       |
+| write                                                          | 450             | 145487 | 124476 | 239400 | 136     |
+
+
+| src/TokenURIGenerator.sol:TokenURIGenerator contract |                 |        |        |        |         |
+|------------------------------------------------------|-----------------|--------|--------|--------|---------|
+| Deployment Cost                                      | Deployment Size |        |        |        |         |
+| 1982498                                              | 9934            |        |        |        |         |
+| Function Name                                        | min             | avg    | median | max    | # calls |
+| constructTokenURI                                    | 420110          | 420110 | 420110 | 420110 | 1       |
+
+
+| test/utils/MockERC20.sol:MockERC20 contract |                 |       |        |       |         |
+|---------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                             | Deployment Size |       |        |       |         |
+| 648998                                      | 4360            |       |        |       |         |
+| Function Name                               | min             | avg   | median | max   | # calls |
+| approve                                     | 2546            | 24528 | 24546  | 24546 | 2526    |
+| balanceOf                                   | 542             | 831   | 542    | 2542  | 166     |
+| decimals                                    | 249             | 249   | 249    | 249   | 2       |
+| mint                                        | 2896            | 31892 | 24796  | 46696 | 2526    |
+| symbol                                      | 3236            | 3236  | 3236   | 3236  | 2       |
+| totalSupply                                 | 363             | 637   | 363    | 2363  | 204     |
+| transfer                                    | 2985            | 5025  | 2985   | 24885 | 133     |
+| transferFrom                                | 824             | 11816 | 3381   | 32081 | 211     |
+
+
+

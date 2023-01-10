@@ -2,7 +2,7 @@
 src = 'src'
 out = 'out'
 libs = ['lib']
-remappings = ['forge-std/=lib/forge-std/src/', 'solmate/=lib/solmate/src/']
+remappings = ['forge-std/=lib/forge-std/src/', 'solmate/=lib/solmate/src/', 'create3/=lib/create3/contracts/']
 
 [fuzz]
 seed = 7

@@ -10,6 +10,7 @@ import "solmate/utils/FixedPointMathLib.sol";
 
 import "./interfaces/IOptionSettlementEngine.sol";
 import "./TokenURIGenerator.sol";
+import "./utils/Queue.sol";
 
 /*//////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                                //
@@ -112,6 +113,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @notice The new feeTo address, pending explicit acceptance by this address.
     address private pendingFeeTo;
 
+    Queue private globalEntropyQueue;
+
     /*//////////////////////////////////////////////////////////////
     //  State Variables - Public
     //////////////////////////////////////////////////////////////*/
@@ -157,6 +160,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
         feeTo = _feeTo;
         tokenURIGenerator = ITokenURIGenerator(_tokenURIGenerator);
+
+        globalEntropyQueue = new Queue();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -386,7 +391,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             exerciseAmount: exerciseAmount,
             exerciseTimestamp: exerciseTimestamp,
             expiryTimestamp: expiryTimestamp,
-            settlementSeed: optionKey,
+            settlementSeed: optionKey, // TODO leaving for now, to not break tests while writing POC
             nextClaimKey: 1
         });
 
@@ -438,6 +443,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         if (feesEnabled) {
             fee = _calculateRecordAndEmitFee(encodedOptionId, underlyingAsset, rxAmount);
         }
+
+        // Record entropy.
+        _recordEntropy(keccak256(abi.encode(msg.sender, blockhash(block.number - 1), optionKey, amount)));
 
         if (claimKey == 0) {
             // Then create a new claim.
@@ -598,7 +606,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         address underlyingAsset = optionRecord.underlyingAsset;
 
         // Assign exercise to writers.
-        _assignExercise(optionTypeState, optionRecord, amount);
+        _assignExercise(optionTypeState, optionKey, amount);
 
         // Assess a fee (if fee switch enabled) and emit events.
         uint256 fee = 0;
@@ -732,7 +740,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     //
 
     /**
-     * @notice Encodes the supplied option id and claim id
+     * @notice Encodes the supplied option id and claim id.
      * @dev See tokenType() for encoding scheme
      * @param optionKey The optionKey to encode.
      * @param claimKey The claimKey to encode.
@@ -747,7 +755,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     }
 
     /**
-     * @notice Decodes the supplied token id
+     * @notice Decodes the supplied token id.
      * @dev See tokenType() for encoding scheme
      * @param tokenId The token id to decode
      * @return optionKey claimNum The decoded components of the id as described above, padded as required
@@ -760,9 +768,35 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         claimKey = uint96(tokenId & CLAIM_KEY_MASK);
     }
 
+    //
+    // Global Entropy Queue
+    //
+
+    /**
+     * @notice Dequeue a single element off the global entropy queue, used
+     * as a source of entropy during fair exercise assignment.
+     * @return entropicElement The element providing entropy.
+     */
+    function _getEntropy() private returns (bytes32 entropicElement) {
+        entropicElement = globalEntropyQueue.dequeue();
+    }
+
     /*//////////////////////////////////////////////////////////////
     //  Private Mutators
     //////////////////////////////////////////////////////////////*/
+
+    //
+    // Global Entropy Queue
+    //
+
+    /**
+     * @notice Enqueue a single element onto the global entropy queue, used
+     * as a source of entropy during fair exercise assignment.
+     * @param entropicElement The element providing entropy.
+     */
+    function _recordEntropy(bytes32 entropicElement) private {
+        globalEntropyQueue.enqueue(entropicElement);
+    }
 
     //
     // Exercise Assignment
@@ -774,14 +808,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * another bucket, the buckets are iterated from oldest to newest. The pseudorandom
      * index seed is updated accordingly on the option type.
      */
-    function _assignExercise(OptionTypeState storage optionTypeState, Option storage optionRecord, uint112 amount)
-        private
-    {
+    function _assignExercise(OptionTypeState storage optionTypeState, uint160 optionKey, uint112 amount) private {
         // Setup pointers to buckets and buckets with collateral available for exercise.
         Bucket[] storage buckets = optionTypeState.bucketInfo.buckets;
         uint96[] storage unexercisedBucketIndices = optionTypeState.bucketInfo.unexercisedBucketIndices;
         uint96 numUnexercisedBuckets = uint96(unexercisedBucketIndices.length);
-        uint96 exerciseIndex = uint96(optionRecord.settlementSeed % numUnexercisedBuckets);
+        uint96 exerciseIndex = uint96(uint256(_getEntropy()) % numUnexercisedBuckets);
 
         while (amount > 0) {
             // Get the claim bucket to assign exercise to.
@@ -811,9 +843,8 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             }
         }
 
-        // Update the seed for the next exercise.
-        optionRecord.settlementSeed =
-            uint160(uint256(keccak256(abi.encode(optionRecord.settlementSeed, exerciseIndex))));
+        // Record entropy.
+        _recordEntropy(keccak256(abi.encode(msg.sender, blockhash(block.number - 1), optionKey, amount)));
     }
 
     /// @notice Adds or updates a bucket as needed for a given option type and amount written.

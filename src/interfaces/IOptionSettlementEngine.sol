@@ -250,7 +250,7 @@ interface IOptionSettlementEngine {
         /// @custom:member expiryTimestamp The timestamp before which this option can be exercised.
         uint40 expiryTimestamp;
         /// @custom:member settlementSeed Deterministic seed used for option fair exercise assignment.
-        uint160 settlementSeed;
+        uint160 settlementSeed; // TODO leaving for now, to not break tests while writing POC
         /// @custom:member nextClaimKey The next claim key available for this option type.
         uint96 nextClaimKey;
     }

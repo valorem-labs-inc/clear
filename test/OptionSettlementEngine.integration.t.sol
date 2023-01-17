@@ -4,6 +4,10 @@ pragma solidity 0.8.16;
 
 import "./utils/BaseEngineTest.sol";
 
+// TODO Encountered 2 failing tests in test/OptionSettlementEngine.integration.t.sol:OptionSettlementIntegrationTest
+// [FAIL. Reason: Assertion failed.] test_integrationFairAssignment() (gas: 761942)
+// [FAIL. Reason: Assertion failed.] test_integrationWriteExerciseAddBuckets() (gas: 1345106)
+
 /// @notice Integration tests for OptionSettlementEngine
 contract OptionSettlementIntegrationTest is BaseEngineTest {
     function test_integrationFairAssignment() public {

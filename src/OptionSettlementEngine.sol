@@ -392,9 +392,13 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             exerciseAmount: exerciseAmount,
             exerciseTimestamp: exerciseTimestamp,
             expiryTimestamp: expiryTimestamp,
-            settlementSeed: optionKey, // TODO leaving for now, to not break tests while writing POC
             nextClaimKey: 1
         });
+
+        // Record entropy.
+        EntropyPoolLib.recordEntropy(
+            entropyPool, keccak256(abi.encode(msg.sender, blockhash(block.number - 1), optionKey))
+        );
 
         emit NewOptionType(
             optionId,
@@ -444,6 +448,11 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         if (feesEnabled) {
             fee = _calculateRecordAndEmitFee(encodedOptionId, underlyingAsset, rxAmount);
         }
+
+        // Record entropy.
+        EntropyPoolLib.recordEntropy(
+            entropyPool, keccak256(abi.encode(msg.sender, blockhash(block.number - 1), optionKey, amount))
+        );
 
         if (claimKey == 0) {
             // Then create a new claim.
@@ -552,6 +561,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             totalExerciseAssetAmount,
             totalUnderlyingAssetAmount
             );
+
+        // Record entropy.
+        EntropyPoolLib.recordEntropy(
+            entropyPool,
+            keccak256(
+                abi.encode(
+                    msg.sender, blockhash(block.number - 1), optionKey, underlyingAssetAmount, exerciseAssetAmount
+                )
+            )
+        );
 
         // Burn the claim NFT and make transfers.
         _burn(msg.sender, claimId, 1);

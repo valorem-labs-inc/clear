@@ -391,7 +391,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
             exerciseAmount: testExerciseAmount,
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp,
-            settlementSeed: 0,
             nextClaimKey: 0
         });
 
@@ -441,7 +440,6 @@ contract OptionSettlementUnitTest is BaseEngineTest {
             exerciseAmount: testExerciseAmount,
             exerciseTimestamp: uint40(block.timestamp),
             expiryTimestamp: tooSoonExpiryTimestamp,
-            settlementSeed: 0, // default zero for settlement seed
             nextClaimKey: 0 // default zero for next claim id
         });
         _createOptionIdFromStruct(option);

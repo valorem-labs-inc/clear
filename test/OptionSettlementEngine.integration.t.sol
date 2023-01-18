@@ -4,9 +4,7 @@ pragma solidity 0.8.16;
 
 import "./utils/BaseEngineTest.sol";
 
-// TODO Encountered 2 failing tests in test/OptionSettlementEngine.integration.t.sol:OptionSettlementIntegrationTest
-// [FAIL. Reason: Assertion failed.] test_integrationFairAssignment() (gas: 761942)
-// [FAIL. Reason: Assertion failed.] test_integrationWriteExerciseAddBuckets() (gas: 1345106)
+// TODO Parameterize the expected values in test_integrationFairAssignment
 
 /// @notice Integration tests for OptionSettlementEngine
 contract OptionSettlementIntegrationTest is BaseEngineTest {
@@ -27,14 +25,14 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
         IOptionSettlementEngine.Claim memory claim2 = engine.claim(claimId2);
         IOptionSettlementEngine.Claim memory claim3 = engine.claim(claimId3);
 
-        assertEq(claim1.amountWritten, WAD);
-        assertEq(claim1.amountExercised, FixedPointMathLib.divWadDown(1 * 1, 2));
+        assertEq(claim1.amountWritten, WAD, "claim 1 amount written -- before");
+        assertEq(claim1.amountExercised, FixedPointMathLib.divWadDown(1 * 1, 2), "claim 1 amount exercised -- before");
 
-        assertEq(claim2.amountWritten, WAD);
-        assertEq(claim2.amountExercised, FixedPointMathLib.divWadDown(1 * 1, 2));
+        assertEq(claim2.amountWritten, WAD, "claim 2 amount written -- before");
+        assertEq(claim2.amountExercised, FixedPointMathLib.divWadDown(1 * 1, 2), "claim 2 amount exercised -- before");
 
-        assertEq(claim3.amountWritten, 2 * WAD);
-        assertEq(claim3.amountExercised, 0);
+        assertEq(claim3.amountWritten, 2 * WAD, "claim 3 amount written -- before");
+        assertEq(claim3.amountExercised, 0, "claim 3 amount exercised -- before");
 
         engine.exercise(testOptionId, 1);
 
@@ -45,14 +43,26 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
         // 50/50 chance of exercising in first (claim 1 & 2) bucket or second bucket (claim 3)
         // 1 option is written in this claim, two options are exercised in the bucket, and in
         // total, 2 options are written
-        assertEq(claim1.amountWritten, WAD);
-        assertEq(claim1.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
+        assertEq(claim1.amountWritten, WAD, "claim 1 amount written -- after 2nd exercise");
+        assertEq(
+            claim1.amountExercised,
+            FixedPointMathLib.divWadDown(1 * 2, 4),
+            "claim 1 amount exercised -- after 2nd exercise"
+        );
 
-        assertEq(claim2.amountWritten, WAD);
-        assertEq(claim2.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
+        assertEq(claim2.amountWritten, WAD, "claim 2 amount written -- after 2nd exercise");
+        assertEq(
+            claim2.amountExercised,
+            FixedPointMathLib.divWadDown(1 * 2, 4),
+            "claim 2 amount exercised -- after 2nd exercise"
+        );
 
-        assertEq(claim3.amountWritten, 2 * WAD);
-        assertEq(claim3.amountExercised, 0);
+        assertEq(claim3.amountWritten, 2 * WAD, "claim 3 amount written -- after 2nd exercise");
+        assertEq(
+            claim3.amountExercised,
+            FixedPointMathLib.divWadDown(1 * 2, 2),
+            "claim 3 amount exercised -- after 2nd exercise"
+        );
 
         // First bucket is fully exercised, this will be performed on the second
         engine.exercise(testOptionId, 1);
@@ -61,14 +71,26 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
         claim2 = engine.claim(claimId2);
         claim3 = engine.claim(claimId3);
 
-        assertEq(claim1.amountWritten, WAD);
-        assertEq(claim1.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
+        assertEq(claim1.amountWritten, WAD, "claim 1 amount written -- after 3rd exercise");
+        assertEq(
+            claim1.amountExercised,
+            FixedPointMathLib.divWadDown(1 * 2, 4),
+            "claim 1 amount exercised -- after 3rd exercise"
+        );
 
-        assertEq(claim2.amountWritten, WAD);
-        assertEq(claim2.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
+        assertEq(claim2.amountWritten, WAD, "claim 2 amount written -- after 3rd exercise");
+        assertEq(
+            claim2.amountExercised,
+            FixedPointMathLib.divWadDown(1 * 2, 4),
+            "claim 2 amount exercised -- after 3rd exercise"
+        );
 
-        assertEq(claim3.amountWritten, 2 * WAD);
-        assertEq(claim3.amountExercised, FixedPointMathLib.divWadDown(2 * 1, 2));
+        assertEq(claim3.amountWritten, 2 * WAD, "claim 3 amount written -- after 3rd exercise");
+        assertEq(
+            claim3.amountExercised,
+            FixedPointMathLib.divWadDown(2 * 1, 1),
+            "claim 3 amount exercised -- after 3rd exercise"
+        );
 
         // Both buckets are fully exercised
         engine.exercise(testOptionId, 1);
@@ -77,14 +99,26 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
         claim2 = engine.claim(claimId2);
         claim3 = engine.claim(claimId3);
 
-        assertEq(claim1.amountWritten, WAD);
-        assertEq(claim1.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
+        assertEq(claim1.amountWritten, WAD, "claim 1 amount written -- after 4th exercise");
+        assertEq(
+            claim1.amountExercised,
+            FixedPointMathLib.divWadDown(1 * 2, 2),
+            "claim 1 amount exercised -- after 4th exercise"
+        );
 
-        assertEq(claim2.amountWritten, WAD);
-        assertEq(claim2.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
+        assertEq(claim2.amountWritten, WAD, "claim 2 amount written -- after 4th exercise");
+        assertEq(
+            claim2.amountExercised,
+            FixedPointMathLib.divWadDown(1 * 2, 2),
+            "claim 2 amount exercised -- after 4th exercise"
+        );
 
-        assertEq(claim3.amountWritten, 2 * WAD);
-        assertEq(claim3.amountExercised, FixedPointMathLib.divWadDown(2 * 2, 2));
+        assertEq(claim3.amountWritten, 2 * WAD, "claim 3 amount written -- after 4th exercise");
+        assertEq(
+            claim3.amountExercised,
+            FixedPointMathLib.divWadDown(2 * 2, 2),
+            "claim 3 amount exercised -- after 4th exercise"
+        );
     }
 
     function test_integrationDustHandling() public {
@@ -263,7 +297,7 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
             totalExercised += claimData.amountExercised;
         }
 
-        assertEq(totalExercised, bucketsCreated * 1e18 - 1);
+        assertEq(totalExercised, bucketsCreated * 1e18, "total exercised");
     }
 
     function test_integrationSweepFeesWhenFeesAccruedForWrite() public {

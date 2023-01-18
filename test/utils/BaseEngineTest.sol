@@ -233,7 +233,6 @@ abstract contract BaseEngineTest is Test {
             exerciseAmount: exerciseAmount,
             exerciseTimestamp: exerciseTimestamp,
             expiryTimestamp: expiryTimestamp,
-            settlementSeed: 0, // default zero for settlement seed
             nextClaimKey: 0 // default zero for next claim id
         });
         optionId = _createOptionIdFromStruct(option);
@@ -358,7 +357,6 @@ abstract contract BaseEngineTest is Test {
         assertEq(actual.exerciseAmount, expected.exerciseAmount);
         assertEq(actual.exerciseTimestamp, expected.exerciseTimestamp);
         assertEq(actual.expiryTimestamp, expected.expiryTimestamp);
-        assertEq(actual.settlementSeed, expected.settlementSeed);
         assertEq(actual.nextClaimKey, expected.nextClaimKey);
     }
 

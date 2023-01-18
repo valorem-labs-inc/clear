@@ -41,9 +41,12 @@ abstract contract BaseEngineTest is Test {
 
     IERC20[] public ERC20S;
 
-    uint256 internal constant STARTING_BALANCE = 1_000_000_000 * 1e18;
-    uint256 internal constant STARTING_BALANCE_USDC = 1_000_000_000 * 1e6;
-    uint256 internal constant STARTING_BALANCE_WETH = 1_000_000 * 1e18;
+    uint256 internal constant STARTING_BALANCE = 1_000_000_000e18;
+    uint256 internal constant STARTING_BALANCE_USDC = 1_000_000_000e6;
+    uint256 internal constant STARTING_BALANCE_WETH = 1_000_000e18;
+
+    uint256 internal constant TIME0 = 2_000_000_000;
+    uint256 internal constant BLOCK0 = 20_000_000;
 
     // Test option
     uint256 internal testOptionId;
@@ -57,6 +60,10 @@ abstract contract BaseEngineTest is Test {
     IOptionSettlementEngine.Option internal testOption;
 
     function setUp() public virtual {
+        // Warp/roll to deterministic time/block.
+        vm.warp(TIME0);
+        vm.roll(BLOCK0);
+
         // Deploy OptionSettlementEngine
         generator = new TokenURIGenerator();
         engine = new OptionSettlementEngine(FEE_TO, address(generator));

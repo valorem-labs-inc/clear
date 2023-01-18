@@ -7,12 +7,12 @@ import "forge-std/Test.sol";
 import "../src/utils/Queue.sol";
 
 contract QueueTest is Test {
-    Queue private queue;
+    QueueLib.Queue private queue;
 
     bytes32[] private elements;
 
     function setUp() public {
-        queue = new Queue();
+        QueueLib.init(queue);
 
         elements = new bytes32[](15);
         elements[0] = keccak256(bytes("too many secrets"));
@@ -33,36 +33,35 @@ contract QueueTest is Test {
     }
 
     function test_size() public {
-        assertEq(queue.size(), 0, "initial size");
+        assertEq(QueueLib.size(queue), 0, "initial size");
 
-        queue.enqueue(keccak256(bytes("42")));
-        assertEq(queue.size(), 1, "size after 1");
+        QueueLib.enqueue(queue, keccak256(bytes("42")));
+        assertEq(QueueLib.size(queue), 1, "size after 1");
 
         for (uint256 i = 0; i < elements.length; i++) {
-            queue.enqueue(elements[i]);
+            QueueLib.enqueue(queue, elements[i]);
         }
 
-        assertEq(queue.size(), elements.length + 1, "size after enqueueing many");
+        assertEq(QueueLib.size(queue), elements.length + 1, "size after enqueueing many");
     }
 
     function test_enqueue_dequeue() public {
-        queue.enqueue(keccak256(bytes("42")));
+        QueueLib.enqueue(queue, keccak256(bytes("42")));
 
-        assertEq(queue.dequeue(), keccak256(bytes("42")), "dequeue after 1");
+        assertEq(QueueLib.dequeue(queue), keccak256(bytes("42")), "dequeue after 1");
 
         for (uint256 i = 0; i < elements.length; i++) {
-            queue.enqueue(elements[i]);
+            QueueLib.enqueue(queue, elements[i]);
         }
 
         for (uint256 i = 0; i < elements.length; i++) {
-            bytes32 element = elements[i];
-            assertEq(queue.dequeue(), element, "dequeue after enqueueing many");
+            assertEq(QueueLib.dequeue(queue), elements[i], "dequeue after enqueueing many");
         }
     }
 
     function testRevert_dequeue_whenEmptyQueue() public {
-        vm.expectRevert(Queue.EmptyQueue.selector);
+        vm.expectRevert(QueueLib.EmptyQueue.selector);
 
-        queue.dequeue();
+        QueueLib.dequeue(queue);
     }
 }

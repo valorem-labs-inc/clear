@@ -2,29 +2,36 @@
 // Valorem Labs Inc. (c) 2022.
 pragma solidity 0.8.16;
 
-contract Queue {
+library QueueLib {
     error EmptyQueue();
 
-    mapping(uint256 => bytes32) private queue;
-    uint256 private first = 1;
-    uint256 private last = 0;
-
-    function size() public view returns (uint256) {
-        return last;
+    struct Queue {
+        mapping(uint256 => bytes32) _queue;
+        uint256 _first;
+        uint256 _last;
     }
 
-    function enqueue(bytes32 element) public {
-        last++;
-        queue[last] = element;
+    function init(Queue storage queue) internal {
+        queue._first = 1;
+        queue._last = 0;
     }
 
-    function dequeue() public returns (bytes32 element) {
-        if (last < first) {
+    function size(Queue storage queue) internal view returns (uint256) {
+        return queue._last;
+    }
+
+    function enqueue(Queue storage queue, bytes32 element) internal {
+        queue._last++;
+        queue._queue[queue._last] = element;
+    }
+
+    function dequeue(Queue storage queue) internal returns (bytes32 element) {
+        if (queue._last < queue._first) {
             revert EmptyQueue();
         }
 
-        element = queue[first];
-        delete queue[first];
-        first++;
+        element = queue._queue[queue._first];
+        delete queue._queue[queue._first];
+        queue._first++;
     }
 }

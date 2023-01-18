@@ -113,7 +113,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
     /// @notice The new feeTo address, pending explicit acceptance by this address.
     address private pendingFeeTo;
 
-    Queue private globalEntropyQueue;
+    QueueLib.Queue private entropyPool;
 
     /*//////////////////////////////////////////////////////////////
     //  State Variables - Public
@@ -161,7 +161,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         feeTo = _feeTo;
         tokenURIGenerator = ITokenURIGenerator(_tokenURIGenerator);
 
-        globalEntropyQueue = new Queue();
+        QueueLib.init(entropyPool);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -778,7 +778,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * @return entropicElement The element providing entropy.
      */
     function _getEntropy() private returns (bytes32 entropicElement) {
-        entropicElement = globalEntropyQueue.dequeue();
+        entropicElement = QueueLib.dequeue(entropyPool);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -795,7 +795,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * @param entropicElement The element providing entropy.
      */
     function _recordEntropy(bytes32 entropicElement) private {
-        globalEntropyQueue.enqueue(entropicElement);
+        QueueLib.enqueue(entropyPool, entropicElement);
     }
 
     //

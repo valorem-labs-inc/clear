@@ -15,7 +15,8 @@
         "solhint:check": "solhint --config ./.solhint.json 'src/**/*.sol'",
         "lint": "npm run fmt && npm run solhint",
         "lint:check": "npm run fmt:check && npm run solhint:check",
-        "test": "forge test --optimize"
+        "test": "forge test --optimize",
+        "gas": "forge test --no-match-contract 'Fuzz|Invariant' --gas-report | sed '/|/!d' |tee .gas-snapshot"
     },
     "devDependencies": {
         "solhint": "^3.3.6"

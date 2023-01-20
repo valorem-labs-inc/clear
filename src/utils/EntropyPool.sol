@@ -12,6 +12,10 @@ library EntropyPoolLib {
         QueueLib.Queue _queue;
     }
 
+    function checkEntropy(EntropyPool storage entropyPool) internal view returns (uint256 queueSize) {
+        queueSize = QueueLib.size(entropyPool._queue);
+    }
+
     function seedEntropy(EntropyPool storage entropyPool) internal {
         QueueLib.init(entropyPool._queue);
         for (uint256 i = 1; i <= 256; i++) {
@@ -19,7 +23,7 @@ library EntropyPoolLib {
         }
     }
 
-    function getEntropy(EntropyPool storage entropyPool) internal returns (bytes32 entropicElement) {
+    function useEntropy(EntropyPool storage entropyPool) internal returns (bytes32 entropicElement) {
         entropicElement = QueueLib.dequeue(entropyPool._queue);
     }
 

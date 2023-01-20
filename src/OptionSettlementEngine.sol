@@ -835,7 +835,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         Bucket[] storage buckets = optionTypeState.bucketInfo.buckets;
         uint96[] storage unexercisedBucketIndices = optionTypeState.bucketInfo.unexercisedBucketIndices;
         uint96 numUnexercisedBuckets = uint96(unexercisedBucketIndices.length);
-        bytes32 entropicElement = EntropyPoolLib.getEntropy(entropyPool);
+        bytes32 entropicElement = EntropyPoolLib.useEntropy(entropyPool);
         uint96 exerciseIndex = uint96(uint256(entropicElement) % numUnexercisedBuckets);
 
         while (amount > 0) {

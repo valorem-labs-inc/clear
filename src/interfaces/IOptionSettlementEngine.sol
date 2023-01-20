@@ -54,6 +54,14 @@ interface IOptionSettlementEngine {
     //
 
     /**
+     * @notice Emitted when a bucket is assigned exercise.
+     * @param optionId The token id of the option type exercised.
+     * @param bucketIndex The index of the bucket which is being assigned exercise.
+     * @param amountAssigned The amount of options contracts assigned exercise in the given bucket.
+     */
+    event BucketAssignedExercise(uint256 indexed optionId, uint96 indexed bucketIndex, uint112 amountAssigned);
+
+    /**
      * @notice Emitted when option contract(s) is(are) exercised.
      * @param optionId The token id of the option type exercised.
      * @param exerciser The address that exercised the option contract(s).
@@ -66,9 +74,12 @@ interface IOptionSettlementEngine {
      * @param optionId The token id of the option type written.
      * @param writer The address of the writer.
      * @param claimId The claim token id of the new or existing short position written against.
+     * @param bucketIndex The index of the bucket to which the claim was added.
      * @param amount The amount of options contracts written.
      */
-    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
+    event OptionsWritten(
+        uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint96 bucketIndex, uint112 amount
+    );
 
     //
     // Fee events

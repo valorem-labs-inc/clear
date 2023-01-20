@@ -450,8 +450,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // Add claim bucket indices.
             _addOrUpdateClaimIndex(optionTypeStates[optionKey], nextClaimKey, bucketIndex, amount);
 
+            // TODO resolve stack too deep.
             // Emit event about options written on a new claim.
-            emit OptionsWritten(encodedOptionId, msg.sender, tokenId, amount);
+            // emit OptionsWritten(encodedOptionId, msg.sender, tokenId, bucketIndex, amount);
 
             // Transfer in the requisite underlying asset amount.
             SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
@@ -478,8 +479,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // Add claim bucket indices.
             _addOrUpdateClaimIndex(optionTypeStates[optionKey], claimKey, bucketIndex, amount);
 
+            // TODO resolve stack too deep.
             // Emit event about options written on existing claim.
-            emit OptionsWritten(encodedOptionId, msg.sender, tokenId, amount);
+            // emit OptionsWritten(encodedOptionId, msg.sender, tokenId, bucketIndex, amount);
 
             // Transfer in the requisite underlying asset amount.
             SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
@@ -806,6 +808,10 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             }
             bucketInfo.amountExercised += amountPresentlyExercised;
 
+            // TODO fix specific values.
+            emit BucketAssignedExercise(123, bucketIndex, 456);
+
+            // TODO say what we're doing here.
             if (amount != 0) {
                 exerciseIndex = (exerciseIndex + 1) % numUnexercisedBuckets;
             }

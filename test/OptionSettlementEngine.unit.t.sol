@@ -526,12 +526,13 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     function test_write_whenNewClaim() public {
         uint112 amountWritten = 5;
         uint256 expectedFee = _calculateFee(testUnderlyingAmount * amountWritten);
+        uint96 expectedBucketIndex = 0;
 
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(testOptionId, testUnderlyingAsset, ALICE, expectedFee);
 
         vm.expectEmit(true, true, true, true);
-        emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, amountWritten);
+        emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, expectedBucketIndex, amountWritten);
 
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, amountWritten);
@@ -553,12 +554,13 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         // Alice writes 1 option
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
+        uint96 expectedBucketIndex = 0;
 
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(testOptionId, testUnderlyingAsset, ALICE, _calculateFee(testUnderlyingAmount * 5));
 
         vm.expectEmit(true, true, true, true);
-        emit OptionsWritten(testOptionId, ALICE, claimId, 5);
+        emit OptionsWritten(testOptionId, ALICE, claimId, expectedBucketIndex, 5);
 
         // Alice writes 5 more options on existing claim
         vm.prank(ALICE);
@@ -579,11 +581,13 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     }
 
     function test_write_whenFeeOff() public {
+        uint96 expectedBucketIndex = 0;
+
         vm.prank(FEE_TO);
         engine.setFeesEnabled(false);
 
         vm.expectEmit(true, true, true, true);
-        emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, 5);
+        emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, expectedBucketIndex, 5);
 
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, 5);
@@ -1009,6 +1013,10 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(testOptionId, testExerciseAsset, BOB, expectedExerciseFee);
 
+        uint96 expectedBucketIndex = 789;
+        vm.expectEmit(true, true, true, true);
+        emit BucketAssignedExercise(testOptionId, expectedBucketIndex, 789);
+
         vm.expectEmit(true, true, true, true);
         emit OptionsExercised(testOptionId, BOB, 2);
 
@@ -1056,6 +1064,10 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(testOptionId, testExerciseAsset, BOB, expectedExercise2Fee);
 
+        uint96 expectedBucketIndex = 789;
+        vm.expectEmit(true, true, true, true);
+        emit BucketAssignedExercise(testOptionId, expectedBucketIndex, 789);
+
         vm.expectEmit(true, true, true, true);
         emit OptionsExercised(testOptionId, BOB, 2);
 
@@ -1080,6 +1092,10 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(testOptionId, testExerciseAsset, BOB, expectedExercise3Fee);
+
+        expectedBucketIndex = 789;
+        vm.expectEmit(true, true, true, true);
+        emit BucketAssignedExercise(testOptionId, expectedBucketIndex, 789);
 
         vm.expectEmit(true, true, true, true);
         emit OptionsExercised(testOptionId, BOB, 3);

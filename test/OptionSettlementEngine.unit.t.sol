@@ -532,7 +532,10 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         emit FeeAccrued(testOptionId, testUnderlyingAsset, ALICE, expectedFee);
 
         vm.expectEmit(true, true, true, true);
-        emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, expectedBucketIndex, amountWritten);
+        emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, amountWritten);
+
+        vm.expectEmit(true, true, true, true);
+        emit BucketWrittenInto(testOptionId, expectedBucketIndex, 5);
 
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, amountWritten);
@@ -560,7 +563,10 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         emit FeeAccrued(testOptionId, testUnderlyingAsset, ALICE, _calculateFee(testUnderlyingAmount * 5));
 
         vm.expectEmit(true, true, true, true);
-        emit OptionsWritten(testOptionId, ALICE, claimId, expectedBucketIndex, 5);
+        emit OptionsWritten(testOptionId, ALICE, claimId, 5);
+
+        vm.expectEmit(true, true, true, true);
+        emit BucketWrittenInto(testOptionId, expectedBucketIndex, 5);
 
         // Alice writes 5 more options on existing claim
         vm.prank(ALICE);
@@ -587,7 +593,10 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.setFeesEnabled(false);
 
         vm.expectEmit(true, true, true, true);
-        emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, expectedBucketIndex, 5);
+        emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, 5);
+
+        vm.expectEmit(true, true, true, true);
+        emit BucketWrittenInto(testOptionId, expectedBucketIndex, 5);
 
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, 5);

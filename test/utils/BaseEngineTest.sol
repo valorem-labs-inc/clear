@@ -394,9 +394,7 @@ abstract contract BaseEngineTest is Test {
         uint40 indexed expiryTimestamp
     );
 
-    event OptionsWritten(
-        uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint96 bucketIndex, uint112 amount
-    );
+    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
 
     event ClaimRedeemed(
         uint256 indexed claimId,
@@ -405,6 +403,8 @@ abstract contract BaseEngineTest is Test {
         uint256 exerciseAmountRedeemed,
         uint256 underlyingAmountRedeemed
     );
+
+    event BucketWrittenInto(uint256 indexed optionId, uint96 bucketIndex, uint112 amount);
 
     event BucketAssignedExercise(uint256 indexed optionId, uint96 indexed bucketIndex, uint112 amountAssigned);
 

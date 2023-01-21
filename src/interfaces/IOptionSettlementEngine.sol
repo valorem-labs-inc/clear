@@ -10,24 +10,8 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     //
-    // Write/Redeem events
+    // New Option Type events
     //
-
-    /**
-     * @notice Emitted when a claim is redeemed.
-     * @param optionId The token id of the option type of the claim being redeemed.
-     * @param claimId The token id of the claim being redeemed.
-     * @param redeemer The address redeeming the claim.
-     * @param exerciseAmountRedeemed The amount of the option.exerciseAsset redeemed.
-     * @param underlyingAmountRedeemed The amount of option.underlyingAsset redeemed.
-     */
-    event ClaimRedeemed(
-        uint256 indexed claimId,
-        uint256 indexed optionId,
-        address indexed redeemer,
-        uint256 exerciseAmountRedeemed,
-        uint256 underlyingAmountRedeemed
-    );
 
     /**
      * @notice Emitted when a new option type is created.
@@ -50,16 +34,49 @@ interface IOptionSettlementEngine {
     );
 
     //
-    // Exercise events
+    // Write events
     //
 
     /**
-     * @notice Emitted when a bucket is assigned exercise.
-     * @param optionId The token id of the option type exercised.
-     * @param bucketIndex The index of the bucket which is being assigned exercise.
-     * @param amountAssigned The amount of options contracts assigned exercise in the given bucket.
+     * @notice Emitted when new options contracts are written.
+     * @param optionId The token id of the option type written.
+     * @param writer The address of the writer.
+     * @param claimId The claim token id of the new or existing short position written against.
+     * @param amount The amount of options contracts written.
      */
-    event BucketAssignedExercise(uint256 indexed optionId, uint96 indexed bucketIndex, uint112 amountAssigned);
+    event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
+
+    /**
+     * @notice Emitted when options contracts are written into a bucket.
+     * @param optionId The token id of the option type written.
+     * @param bucketIndex The index of the bucket to which the options were written.
+     * @param amount The amount of options contracts written.
+     */
+    event BucketWrittenInto(uint256 indexed optionId, uint96 bucketIndex, uint112 amount);
+
+    //
+    // Redeem events
+    //
+
+    /**
+     * @notice Emitted when a claim is redeemed.
+     * @param optionId The token id of the option type of the claim being redeemed.
+     * @param claimId The token id of the claim being redeemed.
+     * @param redeemer The address redeeming the claim.
+     * @param exerciseAmountRedeemed The amount of the option.exerciseAsset redeemed.
+     * @param underlyingAmountRedeemed The amount of option.underlyingAsset redeemed.
+     */
+    event ClaimRedeemed(
+        uint256 indexed claimId,
+        uint256 indexed optionId,
+        address indexed redeemer,
+        uint256 exerciseAmountRedeemed,
+        uint256 underlyingAmountRedeemed
+    );
+
+    //
+    // Exercise events
+    //
 
     /**
      * @notice Emitted when option contract(s) is(are) exercised.
@@ -70,16 +87,12 @@ interface IOptionSettlementEngine {
     event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
 
     /**
-     * @notice Emitted when new options contracts are written.
-     * @param optionId The token id of the option type written.
-     * @param writer The address of the writer.
-     * @param claimId The claim token id of the new or existing short position written against.
-     * @param bucketIndex The index of the bucket to which the claim was added.
-     * @param amount The amount of options contracts written.
+     * @notice Emitted when a bucket is assigned exercise.
+     * @param optionId The token id of the option type exercised.
+     * @param bucketIndex The index of the bucket which is being assigned exercise.
+     * @param amountAssigned The amount of options contracts assigned exercise in the given bucket.
      */
-    event OptionsWritten(
-        uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint96 bucketIndex, uint112 amount
-    );
+    event BucketAssignedExercise(uint256 indexed optionId, uint96 indexed bucketIndex, uint112 amountAssigned);
 
     //
     // Fee events

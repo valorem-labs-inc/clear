@@ -10,7 +10,7 @@ interface IOptionSettlementEngine {
     //////////////////////////////////////////////////////////////*/
 
     //
-    // New Option Type events
+    // Write events
     //
 
     /**
@@ -32,10 +32,6 @@ interface IOptionSettlementEngine {
         uint40 exerciseTimestamp,
         uint40 indexed expiryTimestamp
     );
-
-    //
-    // Write events
-    //
 
     /**
      * @notice Emitted when new options contracts are written.

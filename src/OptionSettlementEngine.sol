@@ -814,7 +814,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             emit BucketAssignedExercise(optionId, bucketIndex, amountPresentlyExercised);
 
             if (amount != 0) {
-                // Get an additional bucket.
+                // Get an additional bucket, because we still have options to exercise.
                 exerciseIndex = (exerciseIndex + 1) % numUnexercisedBuckets;
             }
         }

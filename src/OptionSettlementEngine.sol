@@ -600,7 +600,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         address underlyingAsset = optionRecord.underlyingAsset;
 
         // Assign exercise to writers.
-        _assignExercise(optionTypeState, optionRecord, amount);
+        _assignExercise(optionId, optionTypeState, optionRecord, amount);
 
         // Assess a fee (if fee switch enabled) and emit events.
         uint256 fee = 0;
@@ -776,9 +776,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * another bucket, the buckets are iterated from oldest to newest. The pseudorandom
      * index seed is updated accordingly on the option type.
      */
-    function _assignExercise(OptionTypeState storage optionTypeState, Option storage optionRecord, uint112 amount)
-        private
-    {
+    function _assignExercise(
+        uint256 optionId,
+        OptionTypeState storage optionTypeState,
+        Option storage optionRecord,
+        uint112 amount
+    ) private {
         // Setup pointers to buckets and buckets with collateral available for exercise.
         Bucket[] storage buckets = optionTypeState.bucketInfo.buckets;
         uint96[] storage unexercisedBucketIndices = optionTypeState.bucketInfo.unexercisedBucketIndices;
@@ -793,7 +796,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             uint112 amountAvailable = bucketInfo.amountWritten - bucketInfo.amountExercised;
             uint112 amountPresentlyExercised = 0;
             if (amountAvailable <= amount) {
-                // Bucket is fully exercised/assigned
+                // Bucket is fully exercised/assigned.
                 amount -= amountAvailable;
                 amountPresentlyExercised = amountAvailable;
                 // Perform "swap and pop" index management.
@@ -802,17 +805,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 unexercisedBucketIndices[exerciseIndex] = overwrite;
                 unexercisedBucketIndices.pop();
             } else {
-                // Bucket is partially exercised/assigned
+                // Bucket is partially exercised/assigned.
                 amountPresentlyExercised = amount;
                 amount = 0;
             }
             bucketInfo.amountExercised += amountPresentlyExercised;
 
-            // TODO fix specific values.
-            emit BucketAssignedExercise(123, bucketIndex, 456);
-
-            // TODO say what we're doing here.
+            emit BucketAssignedExercise(optionId, bucketIndex, amountPresentlyExercised);
+            
             if (amount != 0) {
+                // Get an additional bucket.
                 exerciseIndex = (exerciseIndex + 1) % numUnexercisedBuckets;
             }
         }

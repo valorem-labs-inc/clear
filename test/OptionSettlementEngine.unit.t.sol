@@ -1018,13 +1018,13 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         // Warp to exercise
         vm.warp(testExerciseTimestamp);
 
+        uint96 expectedBucketIndex = 0;
+        vm.expectEmit(true, true, true, true);
+        emit BucketAssignedExercise(testOptionId, expectedBucketIndex, 2);
+
         uint256 expectedExerciseFee = _calculateFee(testExerciseAmount * 2);
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(testOptionId, testExerciseAsset, BOB, expectedExerciseFee);
-
-        uint96 expectedBucketIndex = 789;
-        vm.expectEmit(true, true, true, true);
-        emit BucketAssignedExercise(testOptionId, expectedBucketIndex, 789);
 
         vm.expectEmit(true, true, true, true);
         emit OptionsExercised(testOptionId, BOB, 2);
@@ -1070,12 +1070,12 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         uint256 expectedExercise2Fee = _calculateFee(testExerciseAmount * 2);
         uint256 expectedExercise3Fee = _calculateFee(testExerciseAmount * 3);
 
+        uint96 expectedBucketIndex = 0;
+        vm.expectEmit(true, true, true, true);
+        emit BucketAssignedExercise(testOptionId, expectedBucketIndex, 2);
+
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(testOptionId, testExerciseAsset, BOB, expectedExercise2Fee);
-
-        uint96 expectedBucketIndex = 789;
-        vm.expectEmit(true, true, true, true);
-        emit BucketAssignedExercise(testOptionId, expectedBucketIndex, 789);
 
         vm.expectEmit(true, true, true, true);
         emit OptionsExercised(testOptionId, BOB, 2);
@@ -1099,12 +1099,12 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(engine.feeBalance(testUnderlyingAsset), expectedWriteFee, "Fee balance underlying after exercising 2");
         assertEq(engine.feeBalance(testExerciseAsset), expectedExercise2Fee, "Fee balance exercise after exercising 2");
 
+        expectedBucketIndex = 0;
+        vm.expectEmit(true, true, true, true);
+        emit BucketAssignedExercise(testOptionId, expectedBucketIndex, 3);
+
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(testOptionId, testExerciseAsset, BOB, expectedExercise3Fee);
-
-        expectedBucketIndex = 789;
-        vm.expectEmit(true, true, true, true);
-        emit BucketAssignedExercise(testOptionId, expectedBucketIndex, 789);
 
         vm.expectEmit(true, true, true, true);
         emit OptionsExercised(testOptionId, BOB, 3);

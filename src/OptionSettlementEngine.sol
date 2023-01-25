@@ -452,7 +452,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
             // Emit events about options written on a new claim.
             emit OptionsWritten(encodedOptionId, msg.sender, tokenId, amount);
-            emit BucketWrittenInto(encodedOptionId, bucketIndex, amount);
+            emit BucketWrittenInto(encodedOptionId, tokenId, bucketIndex, amount);
 
             // Transfer in the requisite underlying asset amount.
             SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
@@ -481,7 +481,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
 
             // Emit events about options written on existing claim.
             emit OptionsWritten(encodedOptionId, msg.sender, tokenId, amount);
-            emit BucketWrittenInto(encodedOptionId, bucketIndex, amount);
+            emit BucketWrittenInto(encodedOptionId, tokenId, bucketIndex, amount);
 
             // Transfer in the requisite underlying asset amount.
             SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));

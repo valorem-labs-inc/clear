@@ -45,10 +45,13 @@ interface IOptionSettlementEngine {
     /**
      * @notice Emitted when options contracts are written into a bucket.
      * @param optionId The token id of the option type written.
+     * @param claimId The claim token id of the new or existing short position written against.
      * @param bucketIndex The index of the bucket to which the options were written.
      * @param amount The amount of options contracts written.
      */
-    event BucketWrittenInto(uint256 indexed optionId, uint96 bucketIndex, uint112 amount);
+    event BucketWrittenInto(
+        uint256 indexed optionId, uint256 indexed claimId, uint96 indexed bucketIndex, uint112 amount
+    );
 
     //
     // Redeem events

@@ -5,6 +5,30 @@ pragma solidity 0.8.16;
 /// TODO
 library Math {
     /*//////////////////////////////////////////////////////////////
+    // Arithmetic
+    //////////////////////////////////////////////////////////////*/
+
+    /// TODO
+    function add(uint256 x, uint256 y) public returns (uint256 result) {
+        // TODO
+    }
+
+    /// TODO
+    function sub(uint256 x, uint256 y) public returns (uint256 result) {
+        // TODO
+    }
+
+    /// TODO
+    function mul(uint256 x, uint256 y) public returns (uint256 result) {
+        // TODO
+    }
+
+    /// TODO
+    function div(uint256 x, uint256 y) public returns (uint256 result) {
+        // TODO
+    }
+
+    /*//////////////////////////////////////////////////////////////
     // Exponents
     //////////////////////////////////////////////////////////////*/
 

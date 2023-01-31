@@ -20,8 +20,8 @@ library Math {
 
     /**
      * @notice Calculate the base-2 "power tower" of order x, with hat m.
-     * @dev For example, a power tower of order 3 with hat 5 is equivalent to 2^2^2^5. A power
-     * tower of order 5 with hat 6 is equivalent to 2^2^2^2^2^6. Supports up to TODO order.
+     * @dev A power tower of order 3 with hat 5 is equivalent to 2^2^2^5. A power tower
+     * of order 5 with hat 6 is equivalent to 2^2^2^2^2^6. Supports up to TODO order.
      * @param x The number of times to iteratively exponentiate 2 to the power of 2.
      * @param m The final exponent in the power tower.
      * @return result The base-2 power tower of order x with hat m.
@@ -59,17 +59,6 @@ library Math {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Round up to the nearest integer.
-     * @dev tbd
-     * @param x The input value.
-     * @return result The value of x rounded up to the nearest integer.
-     * @return remainder The amount by which x was rounded up.
-     */
-    function ceiling(uint256 x) public returns (uint256 result, uint256 remainder) {
-        // TODO
-    }
-
-    /**
      * @notice Round down to the nearest integer.
      * @dev tbd
      * @param x The input value.
@@ -77,6 +66,17 @@ library Math {
      * @return remainder The amount by which x was rounded down.
      */
     function floor(uint256 x) public returns (uint256 result, uint256 remainder) {
+        // TODO
+    }
+
+    /**
+     * @notice Round up to the nearest integer.
+     * @dev tbd
+     * @param x The input value.
+     * @return result The value of x rounded up to the nearest integer.
+     * @return remainder The amount by which x was rounded up.
+     */
+    function ceiling(uint256 x) public returns (uint256 result, uint256 remainder) {
         // TODO
     }
 }

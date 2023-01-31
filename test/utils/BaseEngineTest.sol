@@ -404,6 +404,12 @@ abstract contract BaseEngineTest is Test {
         uint256 underlyingAmountRedeemed
     );
 
+    event BucketWrittenInto(
+        uint256 indexed optionId, uint256 indexed claimId, uint96 indexed bucketIndex, uint112 amount
+    );
+
+    event BucketAssignedExercise(uint256 indexed optionId, uint96 indexed bucketIndex, uint112 amountAssigned);
+
     event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
 
     event FeeAccrued(uint256 indexed optionId, address indexed asset, address indexed payer, uint256 amount);

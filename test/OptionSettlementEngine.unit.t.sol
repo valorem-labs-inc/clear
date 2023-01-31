@@ -526,12 +526,17 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     function test_write_whenNewClaim() public {
         uint112 amountWritten = 5;
         uint256 expectedFee = _calculateFee(testUnderlyingAmount * amountWritten);
+        uint256 expectedClaimId = testOptionId + 1;
+        uint96 expectedBucketIndex = 0;
 
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(testOptionId, testUnderlyingAsset, ALICE, expectedFee);
 
         vm.expectEmit(true, true, true, true);
-        emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, amountWritten);
+        emit OptionsWritten(testOptionId, ALICE, expectedClaimId, amountWritten);
+
+        vm.expectEmit(true, true, true, true);
+        emit BucketWrittenInto(testOptionId, expectedClaimId, expectedBucketIndex, 5);
 
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, amountWritten);
@@ -553,12 +558,16 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         // Alice writes 1 option
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
+        uint96 expectedBucketIndex = 0;
 
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(testOptionId, testUnderlyingAsset, ALICE, _calculateFee(testUnderlyingAmount * 5));
 
         vm.expectEmit(true, true, true, true);
         emit OptionsWritten(testOptionId, ALICE, claimId, 5);
+
+        vm.expectEmit(true, true, true, true);
+        emit BucketWrittenInto(testOptionId, claimId, expectedBucketIndex, 5);
 
         // Alice writes 5 more options on existing claim
         vm.prank(ALICE);
@@ -579,11 +588,17 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     }
 
     function test_write_whenFeeOff() public {
+        uint256 expectedClaimId = testOptionId + 1;
+        uint96 expectedBucketIndex = 0;
+
         vm.prank(FEE_TO);
         engine.setFeesEnabled(false);
 
         vm.expectEmit(true, true, true, true);
-        emit OptionsWritten(testOptionId, ALICE, testOptionId + 1, 5);
+        emit OptionsWritten(testOptionId, ALICE, expectedClaimId, 5);
+
+        vm.expectEmit(true, true, true, true);
+        emit BucketWrittenInto(testOptionId, expectedClaimId, expectedBucketIndex, 5);
 
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, 5);
@@ -1005,6 +1020,10 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         // Warp to exercise
         vm.warp(testExerciseTimestamp);
 
+        uint96 expectedBucketIndex = 0;
+        vm.expectEmit(true, true, true, true);
+        emit BucketAssignedExercise(testOptionId, expectedBucketIndex, 2);
+
         uint256 expectedExerciseFee = _calculateFee(testExerciseAmount * 2);
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(testOptionId, testExerciseAsset, BOB, expectedExerciseFee);
@@ -1053,6 +1072,10 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         uint256 expectedExercise2Fee = _calculateFee(testExerciseAmount * 2);
         uint256 expectedExercise3Fee = _calculateFee(testExerciseAmount * 3);
 
+        uint96 expectedBucketIndex = 0;
+        vm.expectEmit(true, true, true, true);
+        emit BucketAssignedExercise(testOptionId, expectedBucketIndex, 2);
+
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(testOptionId, testExerciseAsset, BOB, expectedExercise2Fee);
 
@@ -1077,6 +1100,10 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(engine.balanceOf(BOB, testOptionId), 4, "Bob Option tokens after exercising 2");
         assertEq(engine.feeBalance(testUnderlyingAsset), expectedWriteFee, "Fee balance underlying after exercising 2");
         assertEq(engine.feeBalance(testExerciseAsset), expectedExercise2Fee, "Fee balance exercise after exercising 2");
+
+        expectedBucketIndex = 0;
+        vm.expectEmit(true, true, true, true);
+        emit BucketAssignedExercise(testOptionId, expectedBucketIndex, 3);
 
         vm.expectEmit(true, true, true, true);
         emit FeeAccrued(testOptionId, testExerciseAsset, BOB, expectedExercise3Fee);

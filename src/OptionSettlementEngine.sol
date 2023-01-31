@@ -450,8 +450,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // Add claim bucket indices.
             _addOrUpdateClaimIndex(optionTypeStates[optionKey], nextClaimKey, bucketIndex, amount);
 
-            // Emit event about options written on a new claim.
+            // Emit events about options written on a new claim.
             emit OptionsWritten(encodedOptionId, msg.sender, tokenId, amount);
+            emit BucketWrittenInto(encodedOptionId, tokenId, bucketIndex, amount);
 
             // Transfer in the requisite underlying asset amount.
             SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
@@ -478,8 +479,9 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             // Add claim bucket indices.
             _addOrUpdateClaimIndex(optionTypeStates[optionKey], claimKey, bucketIndex, amount);
 
-            // Emit event about options written on existing claim.
+            // Emit events about options written on existing claim.
             emit OptionsWritten(encodedOptionId, msg.sender, tokenId, amount);
+            emit BucketWrittenInto(encodedOptionId, tokenId, bucketIndex, amount);
 
             // Transfer in the requisite underlying asset amount.
             SafeTransferLib.safeTransferFrom(ERC20(underlyingAsset), msg.sender, address(this), (rxAmount + fee));
@@ -598,7 +600,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
         address underlyingAsset = optionRecord.underlyingAsset;
 
         // Assign exercise to writers.
-        _assignExercise(optionTypeState, optionRecord, amount);
+        _assignExercise(optionId, optionTypeState, optionRecord, amount);
 
         // Assess a fee (if fee switch enabled) and emit events.
         uint256 fee = 0;
@@ -774,9 +776,12 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
      * another bucket, the buckets are iterated from oldest to newest. The pseudorandom
      * index seed is updated accordingly on the option type.
      */
-    function _assignExercise(OptionTypeState storage optionTypeState, Option storage optionRecord, uint112 amount)
-        private
-    {
+    function _assignExercise(
+        uint256 optionId,
+        OptionTypeState storage optionTypeState,
+        Option storage optionRecord,
+        uint112 amount
+    ) private {
         // Setup pointers to buckets and buckets with collateral available for exercise.
         Bucket[] storage buckets = optionTypeState.bucketInfo.buckets;
         uint96[] storage unexercisedBucketIndices = optionTypeState.bucketInfo.unexercisedBucketIndices;
@@ -791,7 +796,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             uint112 amountAvailable = bucketInfo.amountWritten - bucketInfo.amountExercised;
             uint112 amountPresentlyExercised = 0;
             if (amountAvailable <= amount) {
-                // Bucket is fully exercised/assigned
+                // Bucket is fully exercised/assigned.
                 amount -= amountAvailable;
                 amountPresentlyExercised = amountAvailable;
                 // Perform "swap and pop" index management.
@@ -800,13 +805,16 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 unexercisedBucketIndices[exerciseIndex] = overwrite;
                 unexercisedBucketIndices.pop();
             } else {
-                // Bucket is partially exercised/assigned
+                // Bucket is partially exercised/assigned.
                 amountPresentlyExercised = amount;
                 amount = 0;
             }
             bucketInfo.amountExercised += amountPresentlyExercised;
 
+            emit BucketAssignedExercise(optionId, bucketIndex, amountPresentlyExercised);
+
             if (amount != 0) {
+                // Get an additional bucket, because we still have options to exercise.
                 exerciseIndex = (exerciseIndex + 1) % numUnexercisedBuckets;
             }
         }

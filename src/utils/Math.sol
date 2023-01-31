@@ -8,15 +8,15 @@ library Math {
     // Exponents
     //////////////////////////////////////////////////////////////*/
 
-    // /**
-    //  * @notice Exponentiate e to the power of x.
-    //  * @dev tbd
-    //  * @param x The input value.
-    //  * @return result e to the power of x.
-    //  */
-    // function exp(uint256 x) public returns (uint256 result) {
-    //     // TODO not sure we need
-    // }
+    /**
+     * @notice Exponentiate 2 to the power of x.
+     * @dev tbd
+     * @param x The input value.
+     * @return result 2 to the power of x.
+     */
+    function pow2(uint256 x) public returns (uint256 result) {
+        // TODO not sure we need
+    }
 
     /**
      * @notice Calculate the base-2 "power tower" of order x, with hat m.
@@ -34,16 +34,6 @@ library Math {
     // Logarithms
     //////////////////////////////////////////////////////////////*/
 
-    // /**
-    //  * @notice Calculate the natural logarithm.
-    //  * @dev tbd
-    //  * @param x The input value.
-    //  * @return result The natural logarithm of x.
-    //  */
-    // function ln(uint256 x) public returns (uint256 result) {
-    //     // TODO not sure we need
-    // }
-
     /**
      * @notice Calculate the base-2 logarithm.
      * @dev tbd
@@ -55,22 +45,12 @@ library Math {
     }
 
     /**
-     * @notice Calculate the base-10 logarithm.
+     * @notice Calculate the iterative base-2 logarithm.
      * @dev tbd
      * @param x The input value.
-     * @return result The base-10 logarithm of x.
+     * @return result The iterative base-2 logarithm of x.
      */
-    function log10(uint256 x) public returns (uint256 result) {
-        // TODO
-    }
-
-    /**
-     * @notice Calculate the iterative base-10 logarithm.
-     * @dev tbd
-     * @param x The input value.
-     * @return result The iterative base-10 logarithm of x.
-     */
-    function logStar10(uint256 x) public returns (uint256 result) {
+    function logStar2(uint256 x) public returns (uint256 result) {
         // TODO
     }
 
@@ -79,13 +59,24 @@ library Math {
     //////////////////////////////////////////////////////////////*/
 
     /**
+     * @notice Round up to the nearest integer.
+     * @dev tbd
+     * @param x The input value.
+     * @return result The value of x rounded up to the nearest integer.
+     * @return remainder The amount by which x was rounded up.
+     */
+    function ceiling(uint256 x) public returns (uint256 result, uint256 remainder) {
+        // TODO
+    }
+
+    /**
      * @notice Round down to the nearest integer.
      * @dev tbd
      * @param x The input value.
      * @return result The value of x rounded down to the nearest integer.
      * @return remainder The amount by which x was rounded down.
      */
-    function roundDown(uint256 x) public returns (uint256 result, uint256 remainder) {
+    function floor(uint256 x) public returns (uint256 result, uint256 remainder) {
         // TODO
     }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL 1.1
-// Valorem Labs Inc. (c) 2022.
+// Valorem Labs Inc. (c) 2023.
 pragma solidity 0.8.16;
 
 /// TODO
@@ -87,9 +87,8 @@ library Math {
      * @dev tbd
      * @param x The input value.
      * @return result The value of x rounded down to the nearest integer.
-     * @return remainder The amount by which x was rounded down.
      */
-    function floor(uint256 x) public returns (uint256 result, uint256 remainder) {
+    function floor(uint256 x) public returns (uint256 result) {
         // TODO
     }
 
@@ -98,9 +97,8 @@ library Math {
      * @dev tbd
      * @param x The input value.
      * @return result The value of x rounded up to the nearest integer.
-     * @return remainder The amount by which x was rounded up.
      */
-    function ceiling(uint256 x) public returns (uint256 result, uint256 remainder) {
+    function ceiling(uint256 x) public returns (uint256 result) {
         // TODO
     }
 }

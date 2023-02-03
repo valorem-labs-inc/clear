@@ -98,7 +98,7 @@ library Math {
      * @param x The input value.
      * @return result The value of x rounded up to the nearest integer.
      */
-    function ceiling(uint256 x) public returns (uint256 result) {
+    function ceil(uint256 x) public returns (uint256 result) {
         // TODO
     }
 }

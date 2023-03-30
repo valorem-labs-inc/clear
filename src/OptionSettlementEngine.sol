@@ -810,10 +810,6 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
                 exerciseIndex = (exerciseIndex + 1) % numUnexercisedBuckets;
             }
         }
-
-        // Update the seed for the next exercise.
-        optionRecord.settlementSeed =
-            uint160(uint256(keccak256(abi.encode(optionRecord.settlementSeed, exerciseIndex))));
     }
 
     /// @notice Adds or updates a bucket as needed for a given option type and amount written.

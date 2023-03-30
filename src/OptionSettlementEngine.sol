@@ -398,7 +398,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             underlyingAmount,
             exerciseTimestamp,
             expiryTimestamp
-            );
+        );
     }
 
     /// @inheritdoc IOptionSettlementEngine
@@ -545,7 +545,7 @@ contract OptionSettlementEngine is ERC1155, IOptionSettlementEngine {
             msg.sender,
             totalExerciseAssetAmount,
             totalUnderlyingAssetAmount
-            );
+        );
 
         // Burn the claim NFT and make transfers.
         _burn(msg.sender, claimId, 1);

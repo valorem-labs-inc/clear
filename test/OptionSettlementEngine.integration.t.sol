@@ -259,7 +259,7 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
             totalExercised += claimData.amountExercised;
         }
 
-        assertEq(totalExercised, bucketsCreated * 1e18 - 1);
+        assertEq(totalExercised, bucketsCreated * 1e18);
     }
 
     function test_integrationSweepFeesWhenFeesAccruedForWrite() public {

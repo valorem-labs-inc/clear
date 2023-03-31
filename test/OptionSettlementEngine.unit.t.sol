@@ -406,7 +406,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
             testUnderlyingAmount,
             testExerciseTimestamp,
             testExpiryTimestamp
-            );
+        );
 
         engine.newOptionType(
             address(DAILIKE),

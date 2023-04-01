@@ -100,7 +100,8 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IValoremOptionsClearinghouse
-    uint8 public immutable feeBps = 5;
+    // solhint-disable-next-line const-name-snakecase
+    uint8 public constant feeBps = 5;
 
     /*//////////////////////////////////////////////////////////////
     //  State Variables - Private

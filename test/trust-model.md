@@ -24,7 +24,7 @@ What can each actor do, when, with how much, of each asset?
     - check transfer approvals
     - check supported interfaces (ERC165 and ERC1155)
     - render the URI of any token
-- `OptionSettlementEngine`
+- `ValoremOptionsClearinghouse`
   - `anyone` can
     - view protocol fee (expressed in basis points)
     - view Protocol Admin ("feeTo") address

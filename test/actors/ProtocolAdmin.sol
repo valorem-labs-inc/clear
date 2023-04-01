@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BUSL 1.1
+// Valorem Labs Inc. (c) 2023.
 pragma solidity 0.8.16;
 
 import "./BaseActor.sol";
@@ -6,13 +7,15 @@ import "./BaseActor.sol";
 contract ProtocolAdmin is BaseActor {
     address private defaultFeeTo;
 
-    constructor(OptionSettlementEngine _engine, OptionSettlementEngineInvariantTest _test) BaseActor(_engine, _test) {
-        defaultFeeTo = engine.feeTo();
+    constructor(ValoremOptionsClearinghouse _clearinghouse, ValoremOptionsClearinghouseInvariantTest _test)
+        BaseActor(_clearinghouse, _test)
+    {
+        defaultFeeTo = clearinghouse.feeTo();
     }
 
     function setFeesEnabled(bool enable) external {
         console.logString("setFeesEnabled");
-        engine.setFeesEnabled(enable);
+        clearinghouse.setFeesEnabled(enable);
     }
 
     function setFeeTo(bool set, bool accept) external {
@@ -22,18 +25,18 @@ contract ProtocolAdmin is BaseActor {
             return;
         }
 
-        address currentFeeTo = engine.feeTo();
+        address currentFeeTo = clearinghouse.feeTo();
 
         if (address(this) != currentFeeTo) {
-            engine.setFeeTo(address(this));
+            clearinghouse.setFeeTo(address(this));
             if (accept) {
-                engine.acceptFeeTo();
+                clearinghouse.acceptFeeTo();
             }
         } else {
-            engine.setFeeTo(defaultFeeTo);
+            clearinghouse.setFeeTo(defaultFeeTo);
             if (accept) {
                 vm.prank(defaultFeeTo);
-                engine.acceptFeeTo();
+                clearinghouse.acceptFeeTo();
             }
         }
     }
@@ -48,14 +51,14 @@ contract ProtocolAdmin is BaseActor {
             _mockErc20s[i] = address(mockErc20s[i]);
         }
 
-        address _feeTo = engine.feeTo();
+        address _feeTo = clearinghouse.feeTo();
 
         if (_feeTo == address(this)) {
-            engine.sweepFees(_mockErc20s);
+            clearinghouse.sweepFees(_mockErc20s);
             return;
         }
 
         vm.prank(_feeTo);
-        engine.sweepFees(_mockErc20s);
+        clearinghouse.sweepFees(_mockErc20s);
     }
 }

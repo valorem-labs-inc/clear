@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BUSL 1.1
+// Valorem Labs Inc. (c) 2023.
 pragma solidity 0.8.16;
 
 import "./BaseActor.sol";
@@ -6,9 +7,11 @@ import "./BaseActor.sol";
 contract OptionWriter is BaseActor {
     address private optionHolder;
 
-    constructor(OptionSettlementEngine _engine, OptionSettlementEngineInvariantTest _test, address _optionHolder)
-        BaseActor(_engine, _test)
-    {
+    constructor(
+        ValoremOptionsClearinghouse _clearinghouse,
+        ValoremOptionsClearinghouseInvariantTest _test,
+        address _optionHolder
+    ) BaseActor(_clearinghouse, _test) {
         optionHolder = _optionHolder;
     }
 
@@ -31,7 +34,7 @@ contract OptionWriter is BaseActor {
             durationToExpiry += 1 + durationToExercise - durationToExpiry;
         }
 
-        uint256 optionId = engine.newOptionType(
+        uint256 optionId = clearinghouse.newOptionType(
             address(mockTokens[tokenAIndex]),
             underlyingAmount,
             address(mockTokens[tokenBIndex]),
@@ -52,11 +55,11 @@ contract OptionWriter is BaseActor {
         }
 
         uint256 optionId = _getRandomElement(uint32(block.timestamp), optionTypes);
-        uint256 claimId = engine.write(optionId, amount);
+        uint256 claimId = clearinghouse.write(optionId, amount);
         test.addClaimId(claimId);
 
         // simulates a 'sale' of the options to the holder from writer
-        engine.safeTransferFrom(address(this), optionHolder, optionId, amount, "");
+        clearinghouse.safeTransferFrom(address(this), optionHolder, optionId, amount, "");
     }
 
     function writeExisting(uint112 amount) external {
@@ -70,9 +73,9 @@ contract OptionWriter is BaseActor {
 
         uint256 claimId = _getRandomElement(uint32(block.timestamp), claimsWritten);
         uint256 optionId = (claimId >> 96) << 96;
-        engine.write(claimId, amount);
+        clearinghouse.write(claimId, amount);
         // simulates a 'sale' of the options to the holder from writer
-        engine.safeTransferFrom(address(this), optionHolder, optionId, amount, "");
+        clearinghouse.safeTransferFrom(address(this), optionHolder, optionId, amount, "");
     }
 
     // option writer will opportunistically redeem every claim available
@@ -81,7 +84,7 @@ contract OptionWriter is BaseActor {
         uint256[] memory claimsWritten = test.getClaimIds();
         for (uint256 i = 0; i < claimsWritten.length; i++) {
             uint256 claimId = claimsWritten[i];
-            try engine.redeem(claimId) {
+            try clearinghouse.redeem(claimId) {
                 console.logString("successfully redeemed claim");
             } catch {
                 // no-op

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL 1.1
-// Valorem Labs Inc. (c) 2022.
+// Valorem Labs Inc. (c) 2023.
 pragma solidity 0.8.16;
 
-import "./utils/BaseEngineTest.sol";
+import "./utils/BaseClearinghouseTest.sol";
 
-/// @notice Fuzz tests for OptionSettlementEngine
-contract OptionSettlementFuzzTest is BaseEngineTest {
+/// @notice Fuzz tests for ValoremOptionsClearinghouse
+contract ValoremOptionsClearinghouseFuzzTest is BaseClearinghouseTest {
     struct FuzzMetadata {
         uint256 claimsLength;
         uint256 totalWritten;
@@ -74,7 +74,7 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         vm.assume(underlyingAmount <= WETHLIKE.totalSupply());
         vm.assume(exerciseAmount <= DAILIKE.totalSupply());
 
-        (uint256 optionId, IOptionSettlementEngine.Option memory optionInfo) = _createNewOptionType({
+        (uint256 optionId, IValoremOptionsClearinghouse.Option memory optionInfo) = _createNewOptionType({
             underlyingAsset: address(WETHLIKE),
             underlyingAmount: underlyingAmount,
             exerciseAsset: address(DAILIKE),
@@ -83,7 +83,7 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
             expiryTimestamp: expiryTimestamp
         });
 
-        IOptionSettlementEngine.Option memory optionRecord = engine.option(optionId);
+        IValoremOptionsClearinghouse.Option memory optionRecord = clearinghouse.option(optionId);
 
         // assert the option ID is equal to the upper 160 of the keccak256 hash
         uint160 optionKey = uint160(
@@ -120,24 +120,24 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
     // TODO investigate rounding error
     // [FAIL. Reason: TRANSFER_FROM_FAILED Counterexample: calldata=0xf494d5a9000000000000000000000000000000000000000000000000000000000015c992, args=[1427858]]
     function test_fuzzWrite(uint112 amount) public {
-        uint256 wethBalanceEngine = WETHLIKE.balanceOf(address(engine));
+        uint256 wethBalanceEngine = WETHLIKE.balanceOf(address(clearinghouse));
         uint256 wethBalance = WETHLIKE.balanceOf(ALICE);
 
         vm.assume(amount > 0);
         vm.assume(amount <= wethBalance / testUnderlyingAmount);
 
         uint256 rxAmount = amount * testUnderlyingAmount;
-        uint256 fee = ((rxAmount / 10000) * engine.feeBps());
+        uint256 fee = ((rxAmount / 10000) * clearinghouse.feeBps());
 
         vm.startPrank(ALICE);
-        uint256 claimId = engine.write(testOptionId, amount);
-        IOptionSettlementEngine.Position memory claimPosition = engine.position(claimId);
+        uint256 claimId = clearinghouse.write(testOptionId, amount);
+        IValoremOptionsClearinghouse.Position memory claimPosition = clearinghouse.position(claimId);
 
-        assertEq(WETHLIKE.balanceOf(address(engine)), wethBalanceEngine + rxAmount + fee);
+        assertEq(WETHLIKE.balanceOf(address(clearinghouse)), wethBalanceEngine + rxAmount + fee);
         assertEq(WETHLIKE.balanceOf(ALICE), wethBalance - rxAmount - fee);
 
-        assertEq(engine.balanceOf(ALICE, testOptionId), amount);
-        assertEq(engine.balanceOf(ALICE, claimId), 1);
+        assertEq(clearinghouse.balanceOf(ALICE, testOptionId), amount);
+        assertEq(clearinghouse.balanceOf(ALICE, claimId), 1);
 
         assertEq(uint256(claimPosition.underlyingAmount), testUnderlyingAmount * amount);
 
@@ -152,9 +152,13 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
     //
     // function redeem(uint256 claimId) external;
     //
+
+    //
+    // function exercise(uint256 optionId, uint112 amount) external;
+    //
     function test_fuzzExercise(uint112 amountWrite, uint112 amountExercise) public {
-        uint256 wethBalanceEngine = WETHLIKE.balanceOf(address(engine));
-        uint256 daiBalanceEngine = DAILIKE.balanceOf(address(engine));
+        uint256 wethBalanceEngine = WETHLIKE.balanceOf(address(clearinghouse));
+        uint256 daiBalanceEngine = DAILIKE.balanceOf(address(clearinghouse));
         uint256 wethBalance = WETHLIKE.balanceOf(ALICE);
         uint256 daiBalance = DAILIKE.balanceOf(ALICE);
 
@@ -165,37 +169,36 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         vm.assume(amountExercise <= daiBalance / testExerciseAmount);
 
         uint256 writeAmount = amountWrite * testUnderlyingAmount;
-        uint256 writeFee = ((amountWrite * testUnderlyingAmount) / 10000) * engine.feeBps();
+        uint256 writeFee = ((amountWrite * testUnderlyingAmount) / 10000) * clearinghouse.feeBps();
 
         uint256 rxAmount = amountExercise * testExerciseAmount;
         uint256 txAmount = amountExercise * testUnderlyingAmount;
-        uint256 exerciseFee = (rxAmount / 10000) * engine.feeBps();
+        uint256 exerciseFee = (rxAmount / 10000) * clearinghouse.feeBps();
 
         vm.startPrank(ALICE);
-        uint256 claimId = engine.write(testOptionId, amountWrite);
+        uint256 claimId = clearinghouse.write(testOptionId, amountWrite);
 
         vm.warp(testExpiryTimestamp - 1);
 
-        engine.exercise(testOptionId, amountExercise);
+        clearinghouse.exercise(testOptionId, amountExercise);
 
         _assertClaimAmountExercised(claimId, amountExercise);
 
-        assertEq(WETHLIKE.balanceOf(address(engine)), wethBalanceEngine + writeAmount - txAmount + writeFee);
+        assertEq(WETHLIKE.balanceOf(address(clearinghouse)), wethBalanceEngine + writeAmount - txAmount + writeFee);
         assertEq(WETHLIKE.balanceOf(ALICE), (wethBalance - writeAmount + txAmount - writeFee));
-        assertEq(DAILIKE.balanceOf(address(engine)), daiBalanceEngine + rxAmount + exerciseFee);
+        assertEq(DAILIKE.balanceOf(address(clearinghouse)), daiBalanceEngine + rxAmount + exerciseFee);
         assertEq(DAILIKE.balanceOf(ALICE), (daiBalance - rxAmount - exerciseFee));
-        assertEq(engine.balanceOf(ALICE, testOptionId), amountWrite - amountExercise);
-        assertEq(engine.balanceOf(ALICE, claimId), 1);
+        assertEq(clearinghouse.balanceOf(ALICE, testOptionId), amountWrite - amountExercise);
+        assertEq(clearinghouse.balanceOf(ALICE, claimId), 1);
     }
 
     //
-    // function exercise(uint256 optionId, uint112 amount) external;
-
-    //
     // function setFeesEnabled(bool enabled) external;
+    //
 
     //
     // function setFeeTo(address newFeeTo) external;
+    //
 
     //
     // function setTokenURIGenerator(address newTokenURIGenerator) external;
@@ -217,7 +220,7 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         FuzzMetadata memory opt2 = FuzzMetadata(0, 0, 0);
 
         // create monthly option
-        (uint256 optionId1M, IOptionSettlementEngine.Option memory option1M) = _createNewOptionType({
+        (uint256 optionId1M, IValoremOptionsClearinghouse.Option memory option1M) = _createNewOptionType({
             underlyingAsset: address(WETHLIKE),
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: address(DAILIKE),
@@ -227,7 +230,7 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         });
 
         // create quarterly option
-        (uint256 optionId3M, IOptionSettlementEngine.Option memory option3M) = _createNewOptionType({
+        (uint256 optionId3M, IValoremOptionsClearinghouse.Option memory option3M) = _createNewOptionType({
             underlyingAsset: address(WETHLIKE),
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: address(DAILIKE),
@@ -267,7 +270,7 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
 
     function _writeExerciseOptions(
         uint32 seed,
-        IOptionSettlementEngine.Option memory option1M,
+        IValoremOptionsClearinghouse.Option memory option1M,
         uint256 optionId1M,
         uint256[] memory claimIds1,
         FuzzMetadata memory opt1
@@ -294,10 +297,10 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
     function _claimAndAssert(address claimant, uint256 claimId) internal {
         vm.startPrank(claimant);
 
-        IOptionSettlementEngine.Position memory position = engine.position(claimId);
+        IValoremOptionsClearinghouse.Position memory position = clearinghouse.position(claimId);
         uint256 exerciseAssetAmount = ERC20(position.exerciseAsset).balanceOf(claimant);
         uint256 underlyingAssetAmount = ERC20(position.underlyingAsset).balanceOf(claimant);
-        engine.redeem(claimId);
+        clearinghouse.redeem(claimId);
 
         assertEq(
             ERC20(position.underlyingAsset).balanceOf(claimant),
@@ -316,7 +319,7 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         uint16 writeChanceBips,
         uint16 maxWrite,
         uint16 exerciseChanceBips,
-        IOptionSettlementEngine.Option memory option,
+        IValoremOptionsClearinghouse.Option memory option,
         uint256 optionId,
         uint256[] memory claimIds,
         uint256 claimIdLength
@@ -336,20 +339,20 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
                 // 50/50 to add to existing claim lot or create new claim lot
                 if (claimIdLength == 0 || _coinflip(seed++, 5000)) {
                     newClaim = true;
-                    uint256 claimId = engine.write(optionId, toWrite);
+                    uint256 claimId = clearinghouse.write(optionId, toWrite);
                     emit log_named_uint("ADD NEW CLAIM", claimId);
                     claimIds[claimIdLength] = claimId;
                 } else {
                     uint256 claimId = claimIds[_randBetween(seed++, claimIdLength)];
                     emit log_named_uint("ADD EXISTING CLAIM", claimId);
-                    engine.write(claimId, toWrite);
+                    clearinghouse.write(claimId, toWrite);
                 }
 
                 // add to total written
                 written += toWrite;
 
                 // transfer to exerciser
-                engine.safeTransferFrom(writer, exerciser, optionId, written, "");
+                clearinghouse.safeTransferFrom(writer, exerciser, optionId, written, "");
                 vm.stopPrank();
             } else {
                 emit log_named_uint("SKIP WRITING", optionId);
@@ -361,7 +364,7 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
             return (written, 0, newClaim);
         }
 
-        uint256 maxToExercise = engine.balanceOf(exerciser, optionId);
+        uint256 maxToExercise = clearinghouse.balanceOf(exerciser, optionId);
         // with Y pctg chance, exercise some amount of options
         unchecked {
             // allow seed to overflow
@@ -372,7 +375,7 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
                 emit log_named_uint("amount", toExercise);
 
                 vm.prank(exerciser);
-                engine.exercise(optionId, toExercise);
+                clearinghouse.exercise(optionId, toExercise);
 
                 // add to total exercised
                 exercised += toExercise;

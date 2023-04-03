@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL 1.1
-// Valorem Labs Inc. (c) 2022.
+// Valorem Labs Inc. (c) 2023.
 pragma solidity 0.8.16;
 
 import "base64/Base64.sol";
 import "solmate/tokens/ERC20.sol";
 
-import "./interfaces/IOptionSettlementEngine.sol";
+import "./interfaces/IValoremOptionsClearinghouse.sol";
 import "./interfaces/ITokenURIGenerator.sol";
 
 /// @title Library to dynamically generate Valorem token URIs
@@ -65,7 +65,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
     function generateDescription(TokenURIParams memory params) public pure returns (string memory) {
         return string(
             abi.encodePacked(
-                "NFT representing a Valorem options contract. ",
+                "NFT representing a Valorem option contract. ",
                 params.underlyingSymbol,
                 " Address: ",
                 addressToString(params.underlyingAsset),
@@ -108,7 +108,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
     function _generateHeaderSection(
         string memory _underlyingSymbol,
         string memory _exerciseSymbol,
-        IOptionSettlementEngine.TokenType _tokenType
+        IValoremOptionsClearinghouse.TokenType _tokenType
     ) internal pure returns (string memory) {
         return string(
             abi.encodePacked(
@@ -119,7 +119,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
                     _exerciseSymbol,
                     "</text>"
                 ),
-                _tokenType == IOptionSettlementEngine.TokenType.Option
+                _tokenType == IValoremOptionsClearinghouse.TokenType.Option
                     ?
                     "<text x='16px' y='80px' font-size='16' fill='#fff' font-family='Helvetica' font-weight='300'>Long Call</text>"
                     :

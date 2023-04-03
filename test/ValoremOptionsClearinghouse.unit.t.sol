@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: BUSL 1.1
-// Valorem Labs Inc. (c) 2022.
+// Valorem Labs Inc. (c) 2023.
 pragma solidity 0.8.16;
 
 import "solmate/utils/FixedPointMathLib.sol";
 import "forge-std/Test.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
-import "./utils/BaseEngineTest.sol";
+import "./utils/BaseClearinghouseTest.sol";
 
-contract OptionSettlementUnitTest is BaseEngineTest {
+/// @notice Unit tests for ValoremOptionsClearinghouse
+contract ValoremOptionsClearinghouseUnitTest is BaseClearinghouseTest {
     /*//////////////////////////////////////////////////////////////
     //  function option(uint256 tokenId) external view returns (Option memory optionInfo)
     //////////////////////////////////////////////////////////////*/
 
     function test_option_returnsOptionInfo() public {
-        IOptionSettlementEngine.Option memory optionInfo = engine.option(testOptionId);
+        IValoremOptionsClearinghouse.Option memory optionInfo = engine.option(testOptionId);
         assertEq(optionInfo.underlyingAsset, testUnderlyingAsset);
         assertEq(optionInfo.underlyingAmount, testUnderlyingAmount);
         assertEq(optionInfo.exerciseAsset, testExerciseAsset);
@@ -26,7 +27,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     function testRevert_option_whenOptionDoesNotExist() public {
         uint256 badOptionId = 123;
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, badOptionId));
+        vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.TokenNotFound.selector, badOptionId));
         engine.option(badOptionId);
     }
 
@@ -39,7 +40,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, amountWritten);
 
-        IOptionSettlementEngine.Claim memory claim = engine.claim(claimId);
+        IValoremOptionsClearinghouse.Claim memory claim = engine.claim(claimId);
         assertEq(claim.amountWritten, amountWritten * WAD);
         assertEq(claim.amountExercised, 0);
         assertEq(claim.optionId, testOptionId);
@@ -66,7 +67,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.prank(ALICE);
         engine.redeem(claimId);
 
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, claimId));
+        vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.TokenNotFound.selector, claimId));
         claim = engine.claim(claimId);
     }
 
@@ -75,7 +76,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, amountWritten);
 
-        IOptionSettlementEngine.Claim memory claim = engine.claim(claimId);
+        IValoremOptionsClearinghouse.Claim memory claim = engine.claim(claimId);
         assertEq(claim.amountWritten, amountWritten * WAD);
         assertEq(claim.amountExercised, 0);
         assertEq(claim.optionId, testOptionId);
@@ -109,7 +110,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.prank(ALICE);
         engine.redeem(claimId);
 
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, claimId));
+        vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.TokenNotFound.selector, claimId));
         claim = engine.claim(claimId);
     }
 
@@ -117,12 +118,12 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.startPrank(ALICE);
 
         uint256 claimId1 = engine.write(testOptionId, 1);
-        IOptionSettlementEngine.Claim memory claim1 = engine.claim(claimId1);
+        IValoremOptionsClearinghouse.Claim memory claim1 = engine.claim(claimId1);
         assertEq(claim1.amountWritten, WAD);
         assertEq(claim1.amountExercised, 0);
 
         uint256 claimId2 = engine.write(testOptionId, 1);
-        IOptionSettlementEngine.Claim memory claim2 = engine.claim(claimId2);
+        IValoremOptionsClearinghouse.Claim memory claim2 = engine.claim(claimId2);
         assertEq(claim1.amountWritten, WAD);
         assertEq(claim1.amountExercised, 0);
         assertEq(claim2.amountWritten, WAD);
@@ -161,7 +162,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     function testRevert_claim_whenClaimDoesNotExist() public {
         uint256 badClaimId = testOptionId + 69;
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, badClaimId));
+        vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.TokenNotFound.selector, badClaimId));
         engine.claim(badClaimId);
     }
 
@@ -170,7 +171,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //////////////////////////////////////////////////////////////*/
 
     function test_position_whenOption() public {
-        IOptionSettlementEngine.Position memory position = engine.position(testOptionId);
+        IValoremOptionsClearinghouse.Position memory position = engine.position(testOptionId);
         assertEq(position.underlyingAsset, testUnderlyingAsset);
         assertEq(position.underlyingAmount, int256(uint256(testUnderlyingAmount)));
         assertEq(position.exerciseAsset, testExerciseAsset);
@@ -179,7 +180,9 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.warp(testOption.expiryTimestamp);
         // The token is now expired/worthless, and this should revert.
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
+            abi.encodeWithSelector(
+                IValoremOptionsClearinghouse.ExpiredOption.selector, testOptionId, testExpiryTimestamp
+            )
         );
         position = engine.position(testOptionId);
     }
@@ -189,7 +192,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, amountWritten);
 
-        IOptionSettlementEngine.Position memory position = engine.position(claimId);
+        IValoremOptionsClearinghouse.Position memory position = engine.position(claimId);
         assertEq(position.underlyingAsset, testUnderlyingAsset);
         assertEq(position.underlyingAmount, int256(uint256(testUnderlyingAmount) * amountWritten));
         assertEq(position.exerciseAsset, testExerciseAsset);
@@ -209,7 +212,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
         amountWritten = amountWritten * 2;
 
-        IOptionSettlementEngine.Position memory position = engine.position(claimId);
+        IValoremOptionsClearinghouse.Position memory position = engine.position(claimId);
         assertEq(position.underlyingAsset, testUnderlyingAsset);
         assertEq(
             position.underlyingAmount,
@@ -227,7 +230,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.prank(ALICE);
         engine.exercise(testOptionId, amountWritten);
 
-        IOptionSettlementEngine.Position memory position = engine.position(claimId);
+        IValoremOptionsClearinghouse.Position memory position = engine.position(claimId);
         assertEq(position.underlyingAsset, testUnderlyingAsset);
         assertEq(position.underlyingAmount, int256(uint256(0)));
         assertEq(position.exerciseAsset, testExerciseAsset);
@@ -237,14 +240,16 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // Negative behavior
 
     function testRevert_position_whenTokenNotFound() public {
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, 1));
+        vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.TokenNotFound.selector, 1));
         engine.position(1);
     }
 
     function testRevert_position_whenExpiredOption() public {
         vm.warp(testExpiryTimestamp);
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
+            abi.encodeWithSelector(
+                IValoremOptionsClearinghouse.ExpiredOption.selector, testOptionId, testExpiryTimestamp
+            )
         );
         engine.position(testOptionId);
     }
@@ -384,7 +389,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     //////////////////////////////////////////////////////////////*/
 
     function test_newOptionType() public {
-        IOptionSettlementEngine.Option memory optionInfo = IOptionSettlementEngine.Option({
+        IValoremOptionsClearinghouse.Option memory optionInfo = IValoremOptionsClearinghouse.Option({
             underlyingAsset: address(DAILIKE),
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: address(WETHLIKE),
@@ -421,7 +426,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // Negative behavior
 
     function testRevert_newOptionType_whenOptionsTypeExists() public {
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.OptionsTypeExists.selector, testOptionId));
+        vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.OptionsTypeExists.selector, testOptionId));
         _createNewOptionType({
             underlyingAsset: address(WETHLIKE),
             underlyingAmount: testUnderlyingAmount,
@@ -434,7 +439,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     function testRevert_newOptionType_whenExpiryWindowTooShort() public {
         uint40 tooSoonExpiryTimestamp = uint40(block.timestamp + 1 days - 1 seconds);
-        IOptionSettlementEngine.Option memory option = IOptionSettlementEngine.Option({
+        IValoremOptionsClearinghouse.Option memory option = IValoremOptionsClearinghouse.Option({
             underlyingAsset: address(DAILIKE),
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: address(WETHLIKE),
@@ -447,7 +452,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         _createOptionIdFromStruct(option);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ExpiryWindowTooShort.selector, testExpiryTimestamp - 1)
+            abi.encodeWithSelector(IValoremOptionsClearinghouse.ExpiryWindowTooShort.selector, testExpiryTimestamp - 1)
         );
         engine.newOptionType({
             underlyingAsset: address(WETHLIKE),
@@ -461,7 +466,9 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     function testRevert_newOptionType_whenExerciseWindowTooShort() public {
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ExerciseWindowTooShort.selector, uint40(block.timestamp + 1))
+            abi.encodeWithSelector(
+                IValoremOptionsClearinghouse.ExerciseWindowTooShort.selector, uint40(block.timestamp + 1)
+            )
         );
         engine.newOptionType({
             underlyingAsset: address(WETHLIKE),
@@ -475,7 +482,9 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
     function testRevert_newOptionType_whenInvalidAssets() public {
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(DAILIKE), address(DAILIKE))
+            abi.encodeWithSelector(
+                IValoremOptionsClearinghouse.InvalidAssets.selector, address(DAILIKE), address(DAILIKE)
+            )
         );
         engine.newOptionType({
             underlyingAsset: address(DAILIKE),
@@ -491,7 +500,9 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         uint96 underlyingAmountExceedsTotalSupply = uint96(DAILIKE.totalSupply() + 1);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(DAILIKE), address(WETHLIKE))
+            abi.encodeWithSelector(
+                IValoremOptionsClearinghouse.InvalidAssets.selector, address(DAILIKE), address(WETHLIKE)
+            )
         );
 
         engine.newOptionType({
@@ -506,7 +517,9 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         uint96 exerciseAmountExceedsTotalSupply = uint96(USDCLIKE.totalSupply() + 1);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.InvalidAssets.selector, address(USDCLIKE), address(WETHLIKE))
+            abi.encodeWithSelector(
+                IValoremOptionsClearinghouse.InvalidAssets.selector, address(USDCLIKE), address(WETHLIKE)
+            )
         );
 
         engine.newOptionType({
@@ -622,7 +635,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     function testRevert_write_whenAmountWrittenCannotBeZero() public {
         uint112 invalidWriteAmount = 0;
 
-        vm.expectRevert(IOptionSettlementEngine.AmountWrittenCannotBeZero.selector);
+        vm.expectRevert(IValoremOptionsClearinghouse.AmountWrittenCannotBeZero.selector);
 
         engine.write(testOptionId, invalidWriteAmount);
     }
@@ -632,7 +645,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         uint256 invalidOptionId = testOptionId + 1;
         // Option ID not initialized
         invalidOptionId = encodeTokenId(0x1, 0x0);
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId));
+        vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.InvalidOption.selector, invalidOptionId));
         engine.write(invalidOptionId, 1);
     }
 
@@ -640,7 +653,9 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.warp(testExpiryTimestamp + 1 seconds);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
+            abi.encodeWithSelector(
+                IValoremOptionsClearinghouse.ExpiredOption.selector, testOptionId, testExpiryTimestamp
+            )
         );
 
         vm.prank(ALICE);
@@ -652,7 +667,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         uint256 claimId = engine.write(testOptionId, 1);
         vm.stopPrank();
 
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
+        vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.CallerDoesNotOwnClaimId.selector, claimId));
 
         vm.prank(BOB);
         engine.write(claimId, 1);
@@ -695,7 +710,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(engine.balanceOf(other, optionId), amountWritten, "Other option tokens");
     }
 
-    function testRevert_write_whenCallerHasNotGrantedSufficientApprovalToEngine() public {
+    function testRevert_write_whenCallerHasNotGrantedSufficientApprovalToengine() public {
         uint112 amountWritten = 5;
 
         uint256 optionId = engine.newOptionType({
@@ -942,7 +957,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     function testRevert_redeem_whenInvalidClaim() public {
         uint256 badClaimId = encodeTokenId(0xDEADBEEF, 0);
 
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidClaim.selector, badClaimId));
+        vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.InvalidClaim.selector, badClaimId));
 
         vm.prank(ALICE);
         engine.redeem(badClaimId);
@@ -956,13 +971,13 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
         vm.warp(testExpiryTimestamp);
 
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
+        vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.CallerDoesNotOwnClaimId.selector, claimId));
 
         engine.redeem(claimId);
         vm.stopPrank();
 
         // Carol feels left out and tries to redeem what she can't
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
+        vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.CallerDoesNotOwnClaimId.selector, claimId));
 
         vm.prank(CAROL);
         engine.redeem(claimId);
@@ -971,7 +986,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.startPrank(BOB);
         engine.redeem(claimId);
 
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.CallerDoesNotOwnClaimId.selector, claimId));
+        vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.CallerDoesNotOwnClaimId.selector, claimId));
 
         engine.redeem(claimId);
         vm.stopPrank();
@@ -984,7 +999,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.warp(testExerciseTimestamp - 1 seconds);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ClaimTooSoon.selector, claimId, testExpiryTimestamp)
+            abi.encodeWithSelector(IValoremOptionsClearinghouse.ClaimTooSoon.selector, claimId, testExpiryTimestamp)
         );
 
         engine.redeem(claimId);
@@ -1143,7 +1158,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
         uint256 invalidOptionId = testOptionId + 1;
 
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidOption.selector, invalidOptionId));
+        vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.InvalidOption.selector, invalidOptionId));
 
         engine.exercise(invalidOptionId, 1);
         vm.stopPrank();
@@ -1162,7 +1177,9 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         // Bob exercises
         vm.startPrank(BOB);
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.ExpiredOption.selector, testOptionId, testExpiryTimestamp)
+            abi.encodeWithSelector(
+                IValoremOptionsClearinghouse.ExpiredOption.selector, testOptionId, testExpiryTimestamp
+            )
         );
         engine.exercise(testOptionId, 1);
         vm.stopPrank();
@@ -1181,7 +1198,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.startPrank(BOB);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOptionSettlementEngine.ExerciseTooEarly.selector, testOptionId, testExerciseTimestamp
+                IValoremOptionsClearinghouse.ExerciseTooEarly.selector, testOptionId, testExerciseTimestamp
             )
         );
         engine.exercise(testOptionId, 1);
@@ -1193,7 +1210,9 @@ contract OptionSettlementUnitTest is BaseEngineTest {
 
         // Should revert if you hold 0
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.CallerHoldsInsufficientOptions.selector, testOptionId, 1)
+            abi.encodeWithSelector(
+                IValoremOptionsClearinghouse.CallerHoldsInsufficientOptions.selector, testOptionId, 1
+            )
         );
         engine.exercise(testOptionId, 1);
 
@@ -1201,7 +1220,9 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         vm.startPrank(ALICE);
         engine.write(testOptionId, 1);
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.CallerHoldsInsufficientOptions.selector, testOptionId, 2)
+            abi.encodeWithSelector(
+                IValoremOptionsClearinghouse.CallerHoldsInsufficientOptions.selector, testOptionId, 2
+            )
         );
         engine.exercise(testOptionId, 2);
         vm.stopPrank();
@@ -1248,7 +1269,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         assertEq(engine.balanceOf(other, optionId), 1, "Other option tokens"); // 1 left after 3 are burned on exercise
     }
 
-    function testRevert_exercise_whenCallerHasNotGrantedSufficientApprovalToEngine() public {
+    function testRevert_exercise_whenCallerHasNotGrantedSufficientApprovalToengine() public {
         uint256 optionId = engine.newOptionType({
             underlyingAsset: address(ERC20A),
             underlyingAmount: 1 ether,
@@ -1315,7 +1336,9 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // Negative behavior
 
     function testRevert_setFeesEnabled_whenNotFeeTo() public {
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
+        vm.expectRevert(
+            abi.encodeWithSelector(IValoremOptionsClearinghouse.AccessControlViolation.selector, ALICE, FEE_TO)
+        );
 
         vm.prank(ALICE);
         engine.setFeesEnabled(true);
@@ -1373,13 +1396,15 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     }
 
     function testRevert_setFeeTo_whenNotCurrentFeeTo() public {
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
+        vm.expectRevert(
+            abi.encodeWithSelector(IValoremOptionsClearinghouse.AccessControlViolation.selector, ALICE, FEE_TO)
+        );
         vm.prank(ALICE);
         engine.setFeeTo(address(0xCAFE));
     }
 
     function testRevert_setFeeTo_whenZeroAddress() public {
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAddress.selector, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.InvalidAddress.selector, address(0)));
         vm.prank(FEE_TO);
         engine.setFeeTo(address(0));
     }
@@ -1391,7 +1416,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         engine.setFeeTo(newFeeTo);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, newFeeTo)
+            abi.encodeWithSelector(IValoremOptionsClearinghouse.AccessControlViolation.selector, ALICE, newFeeTo)
         );
         vm.prank(ALICE);
         engine.acceptFeeTo();
@@ -1416,13 +1441,15 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     // Negative behavior
 
     function testRevert_setTokenURIGenerator_whenNotCurrentFeeTo() public {
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
+        vm.expectRevert(
+            abi.encodeWithSelector(IValoremOptionsClearinghouse.AccessControlViolation.selector, ALICE, FEE_TO)
+        );
         vm.prank(ALICE);
         engine.setTokenURIGenerator(address(0xCAFE));
     }
 
     function testRevert_setTokenURIGenerator_whenZeroAddress() public {
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAddress.selector, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.InvalidAddress.selector, address(0)));
         vm.prank(FEE_TO);
         engine.setTokenURIGenerator(address(0));
     }
@@ -1485,7 +1512,9 @@ contract OptionSettlementUnitTest is BaseEngineTest {
         tokens[0] = address(WETHLIKE);
         tokens[1] = address(DAILIKE);
 
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.AccessControlViolation.selector, ALICE, FEE_TO));
+        vm.expectRevert(
+            abi.encodeWithSelector(IValoremOptionsClearinghouse.AccessControlViolation.selector, ALICE, FEE_TO)
+        );
 
         vm.prank(ALICE);
         engine.sweepFees(tokens);
@@ -1504,7 +1533,7 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     function testRevert_uri_whenTokenNotFound() public {
         uint256 tokenId = 420;
 
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.TokenNotFound.selector, tokenId));
+        vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.TokenNotFound.selector, tokenId));
         engine.uri(tokenId);
     }
 
@@ -1515,12 +1544,12 @@ contract OptionSettlementUnitTest is BaseEngineTest {
     function testRevert_construction_whenFeeToIsZeroAddress() public {
         TokenURIGenerator localGenerator = new TokenURIGenerator();
 
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAddress.selector, address(0)));
-        new OptionSettlementEngine(address(0), address(localGenerator));
+        vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.InvalidAddress.selector, address(0)));
+        new ValoremOptionsClearinghouse(address(0), address(localGenerator));
     }
 
     function testRevert_construction_whenTokenURIGeneratorIsZeroAddress() public {
-        vm.expectRevert(abi.encodeWithSelector(IOptionSettlementEngine.InvalidAddress.selector, address(0)));
-        new OptionSettlementEngine(FEE_TO, address(0));
+        vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.InvalidAddress.selector, address(0)));
+        new ValoremOptionsClearinghouse(FEE_TO, address(0));
     }
 }

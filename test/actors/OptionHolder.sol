@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: BUSL 1.1
+// Valorem Labs Inc. (c) 2023.
 pragma solidity 0.8.16;
 
 import "./BaseActor.sol";
 
 contract OptionHolder is BaseActor {
-    constructor(OptionSettlementEngine _engine, OptionSettlementEngineInvariantTest _test) BaseActor(_engine, _test) {
+    constructor(ValoremOptionsClearinghouse _engine, ValoremOptionsClearinghouseInvariantTest _test)
+        BaseActor(_engine, _test)
+    {
         //
     }
 

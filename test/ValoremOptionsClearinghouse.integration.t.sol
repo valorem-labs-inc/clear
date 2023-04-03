@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL 1.1
-// Valorem Labs Inc. (c) 2022.
+// Valorem Labs Inc. (c) 2023.
 pragma solidity 0.8.16;
 
-import "./utils/BaseEngineTest.sol";
+import "./utils/BaseClearinghouseTest.sol";
 
-/// @notice Integration tests for OptionSettlementEngine
-contract OptionSettlementIntegrationTest is BaseEngineTest {
+/// @notice Integration tests for ValoremOptionsClearinghouse
+contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
     function test_integrationFairAssignment() public {
         // write 2, exercise 1, write 2 should create two buckets
         vm.startPrank(ALICE);
@@ -19,9 +19,9 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
         // this bucket should be zero
         uint256 claimId3 = engine.write(testOptionId, 2);
 
-        IOptionSettlementEngine.Claim memory claim1 = engine.claim(claimId1);
-        IOptionSettlementEngine.Claim memory claim2 = engine.claim(claimId2);
-        IOptionSettlementEngine.Claim memory claim3 = engine.claim(claimId3);
+        IValoremOptionsClearinghouse.Claim memory claim1 = engine.claim(claimId1);
+        IValoremOptionsClearinghouse.Claim memory claim2 = engine.claim(claimId2);
+        IValoremOptionsClearinghouse.Claim memory claim3 = engine.claim(claimId3);
 
         assertEq(claim1.amountWritten, WAD);
         assertEq(claim1.amountExercised, FixedPointMathLib.divWadDown(1 * 1, 2));
@@ -189,7 +189,7 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, 1);
 
-        IOptionSettlementEngine.Position memory claimPosition = engine.position(claimId);
+        IValoremOptionsClearinghouse.Position memory claimPosition = engine.position(claimId);
 
         assertEq(testUnderlyingAmount, uint256(claimPosition.underlyingAmount));
         _assertClaimAmountExercised(claimId, 0);
@@ -255,7 +255,7 @@ contract OptionSettlementIntegrationTest is BaseEngineTest {
 
         // 49 written, 7 exercised
         for (i = 1; i <= bucketsCreated; i++) {
-            IOptionSettlementEngine.Claim memory claimData = engine.claim(testOptionId + i);
+            IValoremOptionsClearinghouse.Claim memory claimData = engine.claim(testOptionId + i);
             totalExercised += claimData.amountExercised;
         }
 

@@ -1,10 +1,37 @@
 // SPDX-License-Identifier: BUSL 1.1
-// Valorem Labs Inc. (c) 2022
+// Valorem Labs Inc. (c) 2023.
 pragma solidity 0.8.16;
 
 import "./ITokenURIGenerator.sol";
 
-interface IOptionSettlementEngine {
+/*//////////////////////////////////////////////////////////////////////////////////////////////////
+//                                                                                                //
+//   $$$$$$$$$$                                                                                   //
+//    $$$$$$$$                                  _|                                                //
+//     $$$$$$ $$$$$$$$$$   _|      _|   _|_|_|  _|    _|_|    _|  _|_|   _|_|    _|_|_|  _|_|     //
+//       $$    $$$$$$$$    _|      _| _|    _|  _|  _|    _|  _|_|     _|_|_|_|  _|    _|    _|   //
+//   $$$$$$$$$$ $$$$$$       _|  _|   _|    _|  _|  _|    _|  _|       _|        _|    _|    _|   //
+//    $$$$$$$$    $$           _|       _|_|_|  _|    _|_|    _|         _|_|_|  _|    _|    _|   //
+//     $$$$$$                                                                                     //
+//       $$                                                                                       //
+//                                                                                                //
+//////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+/**
+ * @title A clearing and settling engine for options on ERC20 tokens.
+ * @author 0xAlcibiades
+ * @author Flip-Liquid
+ * @author neodaoist
+ * @notice Valorem Options V1 is a DeFi money lego for writing physically
+ * settled covered call and covered put options. All Valorem options are fully
+ * collateralized with an ERC-20 underlying asset and exercised with an
+ * ERC-20 exercise asset using a fair assignment process. Option contracts, or
+ * long positions, are issued as fungible ERC-1155 tokens, with each token
+ * representing a contract. Option writers are additionally issued an ERC-1155
+ * NFT claim, or short position, which is used to claim collateral and for
+ * option exercise assignment.
+ */
+interface IValoremOptionsClearinghouse {
     /*//////////////////////////////////////////////////////////////
     //  Events
     //////////////////////////////////////////////////////////////*/
@@ -160,7 +187,7 @@ interface IOptionSettlementEngine {
     // Input errors
     //
 
-    /// @notice The amount of options contracts written must be greater than zero.
+    /// @notice The amount of option contracts written must be greater than zero.
     error AmountWrittenCannotBeZero();
 
     /**
@@ -170,10 +197,10 @@ interface IOptionSettlementEngine {
     error CallerDoesNotOwnClaimId(uint256 claimId);
 
     /**
-     * @notice The caller does not have enough options contracts to exercise the amount
+     * @notice The caller does not have enough option contracts to exercise the amount
      * specified.
      * @param optionId The supplied option id.
-     * @param amount The amount of options contracts which the caller attempted to exercise.
+     * @param amount The amount of option contracts which the caller attempted to exercise.
      */
     error CallerHoldsInsufficientOptions(uint256 optionId, uint112 amount);
 
@@ -251,7 +278,7 @@ interface IOptionSettlementEngine {
     //  Data Structures
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice The type of an ERC1155 subtoken in the engine.
+    /// @notice The type of an ERC1155 subtoken in the clearinghouse.
     enum TokenType {
         None,
         Option,
@@ -365,6 +392,7 @@ interface IOptionSettlementEngine {
     function tokenType(uint256 tokenId) external view returns (TokenType typeOfToken);
 
     /**
+     * @notice Gets the contract address for generating token URIs for tokens.
      * @return uriGenerator the address of the URI generator contract.
      */
     function tokenURIGenerator() external view returns (ITokenURIGenerator uriGenerator);

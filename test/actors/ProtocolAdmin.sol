@@ -7,15 +7,15 @@ import "./BaseActor.sol";
 contract ProtocolAdmin is BaseActor {
     address private defaultFeeTo;
 
-    constructor(ValoremOptionsClearinghouse _clearinghouse, ValoremOptionsClearinghouseInvariantTest _test)
-        BaseActor(_clearinghouse, _test)
+    constructor(ValoremOptionsClearinghouse _engine, ValoremOptionsClearinghouseInvariantTest _test)
+        BaseActor(_engine, _test)
     {
-        defaultFeeTo = clearinghouse.feeTo();
+        defaultFeeTo = engine.feeTo();
     }
 
     function setFeesEnabled(bool enable) external {
         console.logString("setFeesEnabled");
-        clearinghouse.setFeesEnabled(enable);
+        engine.setFeesEnabled(enable);
     }
 
     function setFeeTo(bool set, bool accept) external {
@@ -25,18 +25,18 @@ contract ProtocolAdmin is BaseActor {
             return;
         }
 
-        address currentFeeTo = clearinghouse.feeTo();
+        address currentFeeTo = engine.feeTo();
 
         if (address(this) != currentFeeTo) {
-            clearinghouse.setFeeTo(address(this));
+            engine.setFeeTo(address(this));
             if (accept) {
-                clearinghouse.acceptFeeTo();
+                engine.acceptFeeTo();
             }
         } else {
-            clearinghouse.setFeeTo(defaultFeeTo);
+            engine.setFeeTo(defaultFeeTo);
             if (accept) {
                 vm.prank(defaultFeeTo);
-                clearinghouse.acceptFeeTo();
+                engine.acceptFeeTo();
             }
         }
     }
@@ -51,14 +51,14 @@ contract ProtocolAdmin is BaseActor {
             _mockErc20s[i] = address(mockErc20s[i]);
         }
 
-        address _feeTo = clearinghouse.feeTo();
+        address _feeTo = engine.feeTo();
 
         if (_feeTo == address(this)) {
-            clearinghouse.sweepFees(_mockErc20s);
+            engine.sweepFees(_mockErc20s);
             return;
         }
 
         vm.prank(_feeTo);
-        clearinghouse.sweepFees(_mockErc20s);
+        engine.sweepFees(_mockErc20s);
     }
 }

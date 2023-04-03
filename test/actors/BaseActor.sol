@@ -9,11 +9,11 @@ import "../../src/ValoremOptionsClearinghouse.sol";
 import "../ValoremOptionsClearinghouse.invariant.t.sol";
 
 abstract contract BaseActor is StdUtils, CommonBase {
-    ValoremOptionsClearinghouse internal clearinghouse;
+    ValoremOptionsClearinghouse internal engine;
     ValoremOptionsClearinghouseInvariantTest internal test;
 
-    constructor(ValoremOptionsClearinghouse _clearinghouse, ValoremOptionsClearinghouseInvariantTest _test) {
-        clearinghouse = _clearinghouse;
+    constructor(ValoremOptionsClearinghouse _engine, ValoremOptionsClearinghouseInvariantTest _test) {
+        engine = _engine;
         test = _test;
     }
 

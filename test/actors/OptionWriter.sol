@@ -8,10 +8,10 @@ contract OptionWriter is BaseActor {
     address private optionHolder;
 
     constructor(
-        ValoremOptionsClearinghouse _clearinghouse,
+        ValoremOptionsClearinghouse _engine,
         ValoremOptionsClearinghouseInvariantTest _test,
         address _optionHolder
-    ) BaseActor(_clearinghouse, _test) {
+    ) BaseActor(_engine, _test) {
         optionHolder = _optionHolder;
     }
 
@@ -34,7 +34,7 @@ contract OptionWriter is BaseActor {
             durationToExpiry += 1 + durationToExercise - durationToExpiry;
         }
 
-        uint256 optionId = clearinghouse.newOptionType(
+        uint256 optionId = engine.newOptionType(
             address(mockTokens[tokenAIndex]),
             underlyingAmount,
             address(mockTokens[tokenBIndex]),
@@ -55,11 +55,11 @@ contract OptionWriter is BaseActor {
         }
 
         uint256 optionId = _getRandomElement(uint32(block.timestamp), optionTypes);
-        uint256 claimId = clearinghouse.write(optionId, amount);
+        uint256 claimId = engine.write(optionId, amount);
         test.addClaimId(claimId);
 
         // simulates a 'sale' of the options to the holder from writer
-        clearinghouse.safeTransferFrom(address(this), optionHolder, optionId, amount, "");
+        engine.safeTransferFrom(address(this), optionHolder, optionId, amount, "");
     }
 
     function writeExisting(uint112 amount) external {
@@ -73,9 +73,9 @@ contract OptionWriter is BaseActor {
 
         uint256 claimId = _getRandomElement(uint32(block.timestamp), claimsWritten);
         uint256 optionId = (claimId >> 96) << 96;
-        clearinghouse.write(claimId, amount);
+        engine.write(claimId, amount);
         // simulates a 'sale' of the options to the holder from writer
-        clearinghouse.safeTransferFrom(address(this), optionHolder, optionId, amount, "");
+        engine.safeTransferFrom(address(this), optionHolder, optionId, amount, "");
     }
 
     // option writer will opportunistically redeem every claim available
@@ -84,7 +84,7 @@ contract OptionWriter is BaseActor {
         uint256[] memory claimsWritten = test.getClaimIds();
         for (uint256 i = 0; i < claimsWritten.length; i++) {
             uint256 claimId = claimsWritten[i];
-            try clearinghouse.redeem(claimId) {
+            try engine.redeem(claimId) {
                 console.logString("successfully redeemed claim");
             } catch {
                 // no-op

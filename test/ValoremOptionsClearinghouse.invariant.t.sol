@@ -25,11 +25,11 @@ contract ValoremOptionsClearinghouseInvariantTest is BaseClearinghouseTest, Inva
     function setUp() public override {
         super.setUp();
 
-        defaultFeeTo = clearinghouse.feeTo();
+        defaultFeeTo = engine.feeTo();
 
-        holder = new OptionHolder(clearinghouse, this);
-        writer = new OptionWriter(clearinghouse, this, address(holder));
-        admin = new ProtocolAdmin(clearinghouse, this);
+        holder = new OptionHolder(engine, this);
+        writer = new OptionWriter(engine, this, address(holder));
+        admin = new ProtocolAdmin(engine, this);
         timekeeper = new Timekeeper();
 
         targetContract(address(writer));
@@ -37,7 +37,7 @@ contract ValoremOptionsClearinghouseInvariantTest is BaseClearinghouseTest, Inva
         targetContract(address(admin));
         targetContract(address(timekeeper));
 
-        excludeContract(address(clearinghouse));
+        excludeContract(address(engine));
         excludeContract(address(generator));
 
         targetSender(address(0xDEAD));
@@ -56,7 +56,7 @@ contract ValoremOptionsClearinghouseInvariantTest is BaseClearinghouseTest, Inva
             uint256 minted = erc20.balanceOf(address(writer));
             minted += erc20.balanceOf(address(holder));
             minted += erc20.balanceOf(address(admin));
-            minted += erc20.balanceOf(address(clearinghouse));
+            minted += erc20.balanceOf(address(engine));
             minted += erc20.balanceOf(defaultFeeTo);
 
             // Not used for invariant tests, but accounting is necessary
@@ -74,17 +74,15 @@ contract ValoremOptionsClearinghouseInvariantTest is BaseClearinghouseTest, Inva
         for (uint256 i = 0; i < optionTypes.length; i++) {
             // get option type balance from erc1155 impl
             uint256 optionTypeId = optionTypes[i];
-            uint256 totalWrittenERC20 = clearinghouse.balanceOf(address(holder), optionTypeId);
-            totalWrittenERC20 += clearinghouse.balanceOf(address(writer), optionTypeId);
+            uint256 totalWrittenERC20 = engine.balanceOf(address(holder), optionTypeId);
+            totalWrittenERC20 += engine.balanceOf(address(writer), optionTypeId);
 
             // get option type balance from checking all claims sequentially
             uint256 claimIndex = 1;
             uint256 totalWrittenFromClaims = 0;
             while (true) {
                 IValoremOptionsClearinghouse.Claim memory claim;
-                try clearinghouse.claim(optionTypeId + claimIndex) returns (
-                    IValoremOptionsClearinghouse.Claim memory _claim
-                ) {
+                try engine.claim(optionTypeId + claimIndex) returns (IValoremOptionsClearinghouse.Claim memory _claim) {
                     claim = _claim;
                 } catch {
                     // token not found
@@ -104,7 +102,7 @@ contract ValoremOptionsClearinghouseInvariantTest is BaseClearinghouseTest, Inva
         // tally positions for claims
         for (uint256 i = 0; i < claimsWritten.length; i++) {
             uint256 claimId = claimsWritten[i];
-            IValoremOptionsClearinghouse.Position memory position = clearinghouse.position(claimId);
+            IValoremOptionsClearinghouse.Position memory position = engine.position(claimId);
             positionBalances[position.underlyingAsset] += uint256(position.underlyingAmount);
             positionBalances[position.exerciseAsset] += uint256(position.exerciseAmount);
         }
@@ -113,10 +111,10 @@ contract ValoremOptionsClearinghouseInvariantTest is BaseClearinghouseTest, Inva
         for (uint256 i = 0; i < ERC20S.length; i++) {
             IERC20 erc20 = ERC20S[i];
             uint256 positionBalance = positionBalances[address(erc20)];
-            uint256 feeBalance = clearinghouse.feeBalance(address(erc20));
+            uint256 feeBalance = engine.feeBalance(address(erc20));
             // balances should be equal within 10 wei; this wei is the dust which accrues on the
             // contract from fractional exercise
-            assertApproxEqAbs(erc20.balanceOf(address(clearinghouse)), positionBalance + feeBalance, 10);
+            assertApproxEqAbs(erc20.balanceOf(address(engine)), positionBalance + feeBalance, 10);
             positionBalances[address(erc20)] = 0;
         }
     }

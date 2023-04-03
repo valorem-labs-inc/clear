@@ -10,18 +10,18 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
         // write 2, exercise 1, write 2 should create two buckets
         vm.startPrank(ALICE);
 
-        uint256 claimId1 = clearinghouse.write(testOptionId, 1);
-        uint256 claimId2 = clearinghouse.write(testOptionId, 1);
+        uint256 claimId1 = engine.write(testOptionId, 1);
+        uint256 claimId2 = engine.write(testOptionId, 1);
 
-        clearinghouse.exercise(testOptionId, 1);
+        engine.exercise(testOptionId, 1);
 
         // This should be written into a new bucket, and so the ratio of exercised to written in
         // this bucket should be zero
-        uint256 claimId3 = clearinghouse.write(testOptionId, 2);
+        uint256 claimId3 = engine.write(testOptionId, 2);
 
-        IValoremOptionsClearinghouse.Claim memory claim1 = clearinghouse.claim(claimId1);
-        IValoremOptionsClearinghouse.Claim memory claim2 = clearinghouse.claim(claimId2);
-        IValoremOptionsClearinghouse.Claim memory claim3 = clearinghouse.claim(claimId3);
+        IValoremOptionsClearinghouse.Claim memory claim1 = engine.claim(claimId1);
+        IValoremOptionsClearinghouse.Claim memory claim2 = engine.claim(claimId2);
+        IValoremOptionsClearinghouse.Claim memory claim3 = engine.claim(claimId3);
 
         assertEq(claim1.amountWritten, WAD);
         assertEq(claim1.amountExercised, FixedPointMathLib.divWadDown(1 * 1, 2));
@@ -32,11 +32,11 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
         assertEq(claim3.amountWritten, 2 * WAD);
         assertEq(claim3.amountExercised, 0);
 
-        clearinghouse.exercise(testOptionId, 1);
+        engine.exercise(testOptionId, 1);
 
-        claim1 = clearinghouse.claim(claimId1);
-        claim2 = clearinghouse.claim(claimId2);
-        claim3 = clearinghouse.claim(claimId3);
+        claim1 = engine.claim(claimId1);
+        claim2 = engine.claim(claimId2);
+        claim3 = engine.claim(claimId3);
 
         // 50/50 chance of exercising in first (claim 1 & 2) bucket or second bucket (claim 3)
         // 1 option is written in this claim, two options are exercised in the bucket, and in
@@ -51,11 +51,11 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
         assertEq(claim3.amountExercised, 0);
 
         // First bucket is fully exercised, this will be performed on the second
-        clearinghouse.exercise(testOptionId, 1);
+        engine.exercise(testOptionId, 1);
 
-        claim1 = clearinghouse.claim(claimId1);
-        claim2 = clearinghouse.claim(claimId2);
-        claim3 = clearinghouse.claim(claimId3);
+        claim1 = engine.claim(claimId1);
+        claim2 = engine.claim(claimId2);
+        claim3 = engine.claim(claimId3);
 
         assertEq(claim1.amountWritten, WAD);
         assertEq(claim1.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
@@ -67,11 +67,11 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
         assertEq(claim3.amountExercised, FixedPointMathLib.divWadDown(2 * 1, 2));
 
         // Both buckets are fully exercised
-        clearinghouse.exercise(testOptionId, 1);
+        engine.exercise(testOptionId, 1);
 
-        claim1 = clearinghouse.claim(claimId1);
-        claim2 = clearinghouse.claim(claimId2);
-        claim3 = clearinghouse.claim(claimId3);
+        claim1 = engine.claim(claimId1);
+        claim2 = engine.claim(claimId2);
+        claim3 = engine.claim(claimId3);
 
         assertEq(claim1.amountWritten, WAD);
         assertEq(claim1.amountExercised, FixedPointMathLib.divWadDown(1 * 2, 2));
@@ -86,7 +86,7 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
     function test_integrationDustHandling() public {
         // Alice writes a new option
         vm.startPrank(ALICE);
-        uint256 optionId = clearinghouse.newOptionType(
+        uint256 optionId = engine.newOptionType(
             address(ERC20A),
             1 ether,
             address(ERC20B),
@@ -94,37 +94,37 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
             uint40(block.timestamp),
             uint40(block.timestamp + 30 days)
         );
-        uint256 claim1 = clearinghouse.write(optionId, 1);
+        uint256 claim1 = engine.write(optionId, 1);
 
         // Alice writes 6 more options on separate claims
-        uint256 claim2 = clearinghouse.write(optionId, 1);
-        uint256 claim3 = clearinghouse.write(optionId, 1);
-        uint256 claim4 = clearinghouse.write(optionId, 1);
-        uint256 claim5 = clearinghouse.write(optionId, 1);
-        uint256 claim6 = clearinghouse.write(optionId, 1);
-        uint256 claim7 = clearinghouse.write(optionId, 1);
+        uint256 claim2 = engine.write(optionId, 1);
+        uint256 claim3 = engine.write(optionId, 1);
+        uint256 claim4 = engine.write(optionId, 1);
+        uint256 claim5 = engine.write(optionId, 1);
+        uint256 claim6 = engine.write(optionId, 1);
+        uint256 claim7 = engine.write(optionId, 1);
         vm.stopPrank();
 
         // Quick check of Alice balances
         uint256 costToWrite = 1 ether + _calculateFee(1 ether); // underlyingAmount + fee
         assertEq(ERC20A.balanceOf(ALICE), STARTING_BALANCE - (costToWrite * 7), "Alice underlying balance before");
-        assertEq(clearinghouse.balanceOf(ALICE, optionId), 7, "Alice option balance before");
-        assertEq(clearinghouse.balanceOf(ALICE, claim1), 1, "Alice claim 1 balance before");
-        assertEq(clearinghouse.balanceOf(ALICE, claim2), 1, "Alice claim 2 balance before");
-        assertEq(clearinghouse.balanceOf(ALICE, claim3), 1, "Alice claim 3 balance before");
-        assertEq(clearinghouse.balanceOf(ALICE, claim4), 1, "Alice claim 4 balance before");
-        assertEq(clearinghouse.balanceOf(ALICE, claim5), 1, "Alice claim 5 balance before");
-        assertEq(clearinghouse.balanceOf(ALICE, claim6), 1, "Alice claim 6 balance before");
-        assertEq(clearinghouse.balanceOf(ALICE, claim7), 1, "Alice claim 7 balance before");
+        assertEq(engine.balanceOf(ALICE, optionId), 7, "Alice option balance before");
+        assertEq(engine.balanceOf(ALICE, claim1), 1, "Alice claim 1 balance before");
+        assertEq(engine.balanceOf(ALICE, claim2), 1, "Alice claim 2 balance before");
+        assertEq(engine.balanceOf(ALICE, claim3), 1, "Alice claim 3 balance before");
+        assertEq(engine.balanceOf(ALICE, claim4), 1, "Alice claim 4 balance before");
+        assertEq(engine.balanceOf(ALICE, claim5), 1, "Alice claim 5 balance before");
+        assertEq(engine.balanceOf(ALICE, claim6), 1, "Alice claim 6 balance before");
+        assertEq(engine.balanceOf(ALICE, claim7), 1, "Alice claim 7 balance before");
 
         // Alice sells 1 to Bob
         vm.prank(ALICE);
-        clearinghouse.safeTransferFrom(ALICE, BOB, optionId, 1, "");
+        engine.safeTransferFrom(ALICE, BOB, optionId, 1, "");
 
         // Warp right before expiry time and Bob exercises
         vm.warp(block.timestamp + 30 days - 1 seconds);
         vm.prank(BOB);
-        clearinghouse.exercise(optionId, 1);
+        engine.exercise(optionId, 1);
 
         // Check balances after exercise
         // Bob +underlying -exercise, No change to Alice until she redeems
@@ -135,9 +135,9 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
         // Warp to expiry time and Alice redeems 3 claims
         vm.warp(block.timestamp + 1 seconds);
         vm.startPrank(ALICE);
-        clearinghouse.redeem(claim1);
-        clearinghouse.redeem(claim3);
-        clearinghouse.redeem(claim4);
+        engine.redeem(claim1);
+        engine.redeem(claim3);
+        engine.redeem(claim4);
         vm.stopPrank();
 
         // Check balances after redeeming just 3
@@ -160,10 +160,10 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
         // Alice redeems remaining 4 claims
         vm.warp(block.timestamp + 1 seconds);
         vm.startPrank(ALICE);
-        clearinghouse.redeem(claim2);
-        clearinghouse.redeem(claim5);
-        clearinghouse.redeem(claim6);
-        clearinghouse.redeem(claim7);
+        engine.redeem(claim2);
+        engine.redeem(claim5);
+        engine.redeem(claim6);
+        engine.redeem(claim7);
         vm.stopPrank();
 
         // Check balances after redeeming all 7
@@ -187,28 +187,28 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
     function test_integrationAddOptionsToExistingClaim() public {
         // write some options, grab a claim
         vm.startPrank(ALICE);
-        uint256 claimId = clearinghouse.write(testOptionId, 1);
+        uint256 claimId = engine.write(testOptionId, 1);
 
-        IValoremOptionsClearinghouse.Position memory claimPosition = clearinghouse.position(claimId);
+        IValoremOptionsClearinghouse.Position memory claimPosition = engine.position(claimId);
 
         assertEq(testUnderlyingAmount, uint256(claimPosition.underlyingAmount));
         _assertClaimAmountExercised(claimId, 0);
-        assertEq(1, clearinghouse.balanceOf(ALICE, claimId));
-        assertEq(1, clearinghouse.balanceOf(ALICE, testOptionId));
+        assertEq(1, engine.balanceOf(ALICE, claimId));
+        assertEq(1, engine.balanceOf(ALICE, testOptionId));
 
         // write some more options, get a new claim NFT
-        uint256 claimId2 = clearinghouse.write(testOptionId, 1);
+        uint256 claimId2 = engine.write(testOptionId, 1);
         assertFalse(claimId == claimId2);
-        assertEq(1, clearinghouse.balanceOf(ALICE, claimId2));
-        assertEq(2, clearinghouse.balanceOf(ALICE, testOptionId));
+        assertEq(1, engine.balanceOf(ALICE, claimId2));
+        assertEq(2, engine.balanceOf(ALICE, testOptionId));
 
         // write some more options, adding to existing claim
-        uint256 claimId3 = clearinghouse.write(claimId, 1);
+        uint256 claimId3 = engine.write(claimId, 1);
         assertEq(claimId, claimId3);
-        assertEq(1, clearinghouse.balanceOf(ALICE, claimId3));
-        assertEq(3, clearinghouse.balanceOf(ALICE, testOptionId));
+        assertEq(1, engine.balanceOf(ALICE, claimId3));
+        assertEq(3, engine.balanceOf(ALICE, testOptionId));
 
-        claimPosition = clearinghouse.position(claimId3);
+        claimPosition = engine.position(claimId3);
         assertEq(2 * testUnderlyingAmount, uint256(claimPosition.underlyingAmount));
         _assertClaimAmountExercised(claimId, 0);
     }
@@ -232,11 +232,11 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
         vm.startPrank(ALICE);
         for (uint256 i = 0; i < numDays; i++) {
             // write a single option
-            uint256 claimId = clearinghouse.write(optionId, 1);
+            uint256 claimId = engine.write(optionId, 1);
             claimIds[i] = claimId;
             vm.warp(block.timestamp + 1 days);
         }
-        clearinghouse.safeTransferFrom(ALICE, BOB, optionId, numDays, "");
+        engine.safeTransferFrom(ALICE, BOB, optionId, numDays, "");
         vm.stopPrank();
 
         vm.startPrank(BOB);
@@ -249,13 +249,13 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
         uint256 totalExercised;
 
         for (i = 0; i < bucketsCreated; i++) {
-            clearinghouse.write(testOptionId, bucketsCreated);
-            clearinghouse.exercise(testOptionId, 1);
+            engine.write(testOptionId, bucketsCreated);
+            engine.exercise(testOptionId, 1);
         }
 
         // 49 written, 7 exercised
         for (i = 1; i <= bucketsCreated; i++) {
-            IValoremOptionsClearinghouse.Claim memory claimData = clearinghouse.claim(testOptionId + i);
+            IValoremOptionsClearinghouse.Claim memory claimData = engine.claim(testOptionId + i);
             totalExercised += claimData.amountExercised;
         }
 
@@ -277,7 +277,7 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
 
         // Write option that will generate WETH fees
         vm.startPrank(ALICE);
-        clearinghouse.write(testOptionId, optionsWrittenWethUnderlying);
+        engine.write(testOptionId, optionsWrittenWethUnderlying);
 
         // Write option that will generate DAI fees
         (uint256 daiOptionId,) = _createNewOptionType({
@@ -288,7 +288,7 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
-        clearinghouse.write(daiOptionId, optionsWrittenDaiUnderlying);
+        engine.write(daiOptionId, optionsWrittenDaiUnderlying);
 
         // Write option that will generate USDC fees
         (uint256 usdcOptionId,) = _createNewOptionType({
@@ -299,14 +299,14 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
-        clearinghouse.write(usdcOptionId, optionsWrittenUsdcUnderlying);
+        engine.write(usdcOptionId, optionsWrittenUsdcUnderlying);
         vm.stopPrank();
 
         // Then assert expected fee amounts
         uint256[] memory expectedFees = new uint256[](3);
-        expectedFees[0] = (((testUnderlyingAmount * optionsWrittenWethUnderlying) / 10_000) * clearinghouse.feeBps());
-        expectedFees[1] = (((daiUnderlyingAmount * optionsWrittenDaiUnderlying) / 10_000) * clearinghouse.feeBps());
-        expectedFees[2] = (((usdcUnderlyingAmount * optionsWrittenUsdcUnderlying) / 10_000) * clearinghouse.feeBps());
+        expectedFees[0] = (((testUnderlyingAmount * optionsWrittenWethUnderlying) / 10_000) * engine.feeBps());
+        expectedFees[1] = (((daiUnderlyingAmount * optionsWrittenDaiUnderlying) / 10_000) * engine.feeBps());
+        expectedFees[2] = (((usdcUnderlyingAmount * optionsWrittenUsdcUnderlying) / 10_000) * engine.feeBps());
 
         // Pre feeTo balance check
         assertEq(WETHLIKE.balanceOf(FEE_TO), 0);
@@ -315,12 +315,12 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
 
         for (uint256 i = 0; i < tokens.length; i++) {
             vm.expectEmit(true, true, true, true);
-            emit FeeSwept(tokens[i], clearinghouse.feeTo(), expectedFees[i] - 1); // sweeps 1 wei less as gas optimization
+            emit FeeSwept(tokens[i], engine.feeTo(), expectedFees[i] - 1); // sweeps 1 wei less as gas optimization
         }
 
         // When fees are swept
         vm.prank(FEE_TO);
-        clearinghouse.sweepFees(tokens);
+        engine.sweepFees(tokens);
 
         // Post feeTo balance check, first sweep
         uint256 feeToBalanceWeth = WETHLIKE.balanceOf(FEE_TO);
@@ -336,22 +336,22 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
         optionsWrittenDaiUnderlying = 3;
         optionsWrittenUsdcUnderlying = 2;
         vm.startPrank(ALICE);
-        clearinghouse.write(testOptionId, optionsWrittenWethUnderlying);
-        clearinghouse.write(daiOptionId, optionsWrittenDaiUnderlying);
-        clearinghouse.write(usdcOptionId, optionsWrittenUsdcUnderlying);
+        engine.write(testOptionId, optionsWrittenWethUnderlying);
+        engine.write(daiOptionId, optionsWrittenDaiUnderlying);
+        engine.write(usdcOptionId, optionsWrittenUsdcUnderlying);
         vm.stopPrank();
-        expectedFees[0] = (((testUnderlyingAmount * optionsWrittenWethUnderlying) / 10_000) * clearinghouse.feeBps());
+        expectedFees[0] = (((testUnderlyingAmount * optionsWrittenWethUnderlying) / 10_000) * engine.feeBps());
 
-        expectedFees[1] = (((daiUnderlyingAmount * optionsWrittenDaiUnderlying) / 10_000) * clearinghouse.feeBps());
+        expectedFees[1] = (((daiUnderlyingAmount * optionsWrittenDaiUnderlying) / 10_000) * engine.feeBps());
 
-        expectedFees[2] = (((usdcUnderlyingAmount * optionsWrittenUsdcUnderlying) / 10_000) * clearinghouse.feeBps());
+        expectedFees[2] = (((usdcUnderlyingAmount * optionsWrittenUsdcUnderlying) / 10_000) * engine.feeBps());
 
         for (uint256 i = 0; i < tokens.length; i++) {
             vm.expectEmit(true, true, true, true);
-            emit FeeSwept(tokens[i], clearinghouse.feeTo(), expectedFees[i]); // true amount
+            emit FeeSwept(tokens[i], engine.feeTo(), expectedFees[i]); // true amount
         }
         vm.prank(FEE_TO);
-        clearinghouse.sweepFees(tokens);
+        engine.sweepFees(tokens);
 
         // Post feeTo balance check, second sweep
         assertEq(WETHLIKE.balanceOf(FEE_TO), feeToBalanceWeth + expectedFees[0]);
@@ -383,7 +383,7 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
-        clearinghouse.write(daiExerciseOptionId, optionsWrittenDaiExercise);
+        engine.write(daiExerciseOptionId, optionsWrittenDaiExercise);
 
         // Write option for DAI-WETH pair
         (uint256 wethExerciseOptionId,) = _createNewOptionType({
@@ -394,7 +394,7 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
-        clearinghouse.write(wethExerciseOptionId, optionsWrittenWethExercise);
+        engine.write(wethExerciseOptionId, optionsWrittenWethExercise);
 
         // Write option for DAI-USDC pair
         (uint256 usdcExerciseOptionId,) = _createNewOptionType({
@@ -405,7 +405,7 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
-        clearinghouse.write(usdcExerciseOptionId, optionsWrittenUsdcExercise);
+        engine.write(usdcExerciseOptionId, optionsWrittenUsdcExercise);
 
         // Write option for USDC-DAI pair, so that USDC feeBalance will be 1 wei after writing
         (uint256 usdcUnderlyingOptionId,) = _createNewOptionType({
@@ -416,19 +416,19 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
             exerciseTimestamp: testExerciseTimestamp,
             expiryTimestamp: testExpiryTimestamp
         });
-        clearinghouse.write(usdcUnderlyingOptionId, 1);
+        engine.write(usdcUnderlyingOptionId, 1);
 
         // Transfer all option contracts to Bob
-        clearinghouse.safeTransferFrom(ALICE, BOB, daiExerciseOptionId, optionsWrittenDaiExercise, "");
-        clearinghouse.safeTransferFrom(ALICE, BOB, wethExerciseOptionId, optionsWrittenWethExercise, "");
-        clearinghouse.safeTransferFrom(ALICE, BOB, usdcExerciseOptionId, optionsWrittenUsdcExercise, "");
+        engine.safeTransferFrom(ALICE, BOB, daiExerciseOptionId, optionsWrittenDaiExercise, "");
+        engine.safeTransferFrom(ALICE, BOB, wethExerciseOptionId, optionsWrittenWethExercise, "");
+        engine.safeTransferFrom(ALICE, BOB, usdcExerciseOptionId, optionsWrittenUsdcExercise, "");
         vm.stopPrank();
 
         vm.warp(testExpiryTimestamp - 1 seconds);
 
         // Clear away fees generated by writing options
         vm.prank(FEE_TO);
-        clearinghouse.sweepFees(tokens);
+        engine.sweepFees(tokens);
 
         // Get feeTo balances after sweeping fees from write
         uint256[] memory initialFeeToBalances = new uint256[](3);
@@ -438,33 +438,33 @@ contract ValoremOptionsClearinghouseIntegrationTest is BaseClearinghouseTest {
 
         // Exercise option that will generate WETH fees
         vm.startPrank(BOB);
-        clearinghouse.exercise(daiExerciseOptionId, optionsWrittenDaiExercise);
+        engine.exercise(daiExerciseOptionId, optionsWrittenDaiExercise);
 
         // // Exercise option that will generate DAI fees
-        clearinghouse.exercise(wethExerciseOptionId, optionsWrittenWethExercise);
+        engine.exercise(wethExerciseOptionId, optionsWrittenWethExercise);
 
         // Exercise option that will generate USDC fees
-        clearinghouse.exercise(usdcExerciseOptionId, optionsWrittenUsdcExercise);
+        engine.exercise(usdcExerciseOptionId, optionsWrittenUsdcExercise);
         vm.stopPrank();
 
         // Then assert expected fee amounts, but because this isn't the first fee
         // taken for any of these assets, and the 1 wei-left-behind gas optimization
         // has already happened, therefore actual fee swept amount = true fee amount.
         uint256[] memory expectedFees = new uint256[](3);
-        expectedFees[0] = (((daiExerciseAmount * optionsWrittenDaiExercise) / 10_000) * clearinghouse.feeBps());
+        expectedFees[0] = (((daiExerciseAmount * optionsWrittenDaiExercise) / 10_000) * engine.feeBps());
 
-        expectedFees[1] = (((wethExerciseAmount * optionsWrittenWethExercise) / 10_000) * clearinghouse.feeBps());
+        expectedFees[1] = (((wethExerciseAmount * optionsWrittenWethExercise) / 10_000) * engine.feeBps());
 
-        expectedFees[2] = (((usdcExerciseAmount * optionsWrittenUsdcExercise) / 10_000) * clearinghouse.feeBps());
+        expectedFees[2] = (((usdcExerciseAmount * optionsWrittenUsdcExercise) / 10_000) * engine.feeBps());
 
         for (uint256 i = 0; i < tokens.length; i++) {
             vm.expectEmit(true, true, true, true);
-            emit FeeSwept(tokens[i], clearinghouse.feeTo(), expectedFees[i]);
+            emit FeeSwept(tokens[i], engine.feeTo(), expectedFees[i]);
         }
 
         // When fees are swept
         vm.prank(FEE_TO);
-        clearinghouse.sweepFees(tokens);
+        engine.sweepFees(tokens);
 
         // Check feeTo balances after sweeping fees from exercise
         assertEq(DAILIKE.balanceOf(FEE_TO), initialFeeToBalances[0] + expectedFees[0]);

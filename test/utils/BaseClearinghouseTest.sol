@@ -13,7 +13,7 @@ import "../../src/ValoremOptionsClearinghouse.sol";
 abstract contract BaseClearinghouseTest is Test {
     using stdStorage for StdStorage;
 
-    ValoremOptionsClearinghouse internal clearinghouse;
+    ValoremOptionsClearinghouse internal engine;
     ITokenURIGenerator internal generator;
 
     // Scalars
@@ -59,11 +59,11 @@ abstract contract BaseClearinghouseTest is Test {
     function setUp() public virtual {
         // Deploy ValoremOptionsClearinghouse
         generator = new TokenURIGenerator();
-        clearinghouse = new ValoremOptionsClearinghouse(FEE_TO, address(generator));
+        engine = new ValoremOptionsClearinghouse(FEE_TO, address(generator));
 
         // Enable fee switch
         vm.prank(FEE_TO);
-        clearinghouse.setFeesEnabled(true);
+        engine.setFeesEnabled(true);
 
         // Deploy mock ERC20 contracts
         WETHLIKE = IERC20(address(new MockERC20("Wrapped Ether", "WETH", 18)));
@@ -131,13 +131,13 @@ abstract contract BaseClearinghouseTest is Test {
 
         // Approve settlement engine to spend ERC20 token balances on behalf of user
         vm.startPrank(recipient);
-        WETHLIKE.approve(address(clearinghouse), type(uint256).max);
-        DAILIKE.approve(address(clearinghouse), type(uint256).max);
-        USDCLIKE.approve(address(clearinghouse), type(uint256).max);
-        UNILIKE.approve(address(clearinghouse), type(uint256).max);
+        WETHLIKE.approve(address(engine), type(uint256).max);
+        DAILIKE.approve(address(engine), type(uint256).max);
+        USDCLIKE.approve(address(engine), type(uint256).max);
+        UNILIKE.approve(address(engine), type(uint256).max);
 
         for (uint256 i = 0; i < ERC20S.length; i++) {
-            ERC20S[i].approve(address(clearinghouse), type(uint256).max);
+            ERC20S[i].approve(address(engine), type(uint256).max);
         }
         vm.stopPrank();
     }
@@ -201,7 +201,7 @@ abstract contract BaseClearinghouseTest is Test {
             exerciseTimestamp: exerciseTimestamp,
             expiryTimestamp: expiryTimestamp
         });
-        optionId = clearinghouse.newOptionType({
+        optionId = engine.newOptionType({
             underlyingAsset: underlyingAsset,
             underlyingAmount: underlyingAmount,
             exerciseAsset: exerciseAsset,
@@ -248,15 +248,15 @@ abstract contract BaseClearinghouseTest is Test {
     ) internal returns (uint256 claimId) {
         if (toWrite > 0) {
             vm.startPrank(writer);
-            claimId = clearinghouse.write(optionId, toWrite);
-            clearinghouse.safeTransferFrom(writer, exerciser, optionId, toWrite, "");
+            claimId = engine.write(optionId, toWrite);
+            engine.safeTransferFrom(writer, exerciser, optionId, toWrite, "");
             vm.stopPrank();
         }
 
         if (toExercise > 0) {
             vm.warp(testExerciseTimestamp + 1);
             vm.startPrank(exerciser);
-            clearinghouse.exercise(optionId, toExercise);
+            engine.exercise(optionId, toExercise);
             vm.stopPrank();
         }
     }
@@ -297,7 +297,7 @@ abstract contract BaseClearinghouseTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function _calculateFee(uint256 amount) internal view returns (uint256) {
-        uint256 fee = (amount * clearinghouse.feeBps()) / 10_000;
+        uint256 fee = (amount * engine.feeBps()) / 10_000;
         if (fee == 0) {
             fee = 1;
         }
@@ -309,19 +309,19 @@ abstract contract BaseClearinghouseTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function _assertTokenIsNone(uint256 tokenId) internal {
-        if (clearinghouse.tokenType(tokenId) != IValoremOptionsClearinghouse.TokenType.None) {
+        if (engine.tokenType(tokenId) != IValoremOptionsClearinghouse.TokenType.None) {
             assertTrue(false);
         }
     }
 
     function _assertTokenIsClaim(uint256 tokenId) internal {
-        if (clearinghouse.tokenType(tokenId) != IValoremOptionsClearinghouse.TokenType.Claim) {
+        if (engine.tokenType(tokenId) != IValoremOptionsClearinghouse.TokenType.Claim) {
             assertTrue(false);
         }
     }
 
     function _assertTokenIsOption(uint256 tokenId) internal {
-        if (clearinghouse.tokenType(tokenId) != IValoremOptionsClearinghouse.TokenType.Option) {
+        if (engine.tokenType(tokenId) != IValoremOptionsClearinghouse.TokenType.Option) {
             assertTrue(false);
         }
     }
@@ -332,8 +332,8 @@ abstract contract BaseClearinghouseTest is Test {
     }
 
     function _assertClaimAmountExercised(uint256 claimId, uint112 amount, string memory where) internal {
-        IValoremOptionsClearinghouse.Position memory position = clearinghouse.position(claimId);
-        IValoremOptionsClearinghouse.Option memory option = clearinghouse.option(claimId);
+        IValoremOptionsClearinghouse.Position memory position = engine.position(claimId);
+        IValoremOptionsClearinghouse.Option memory option = engine.option(claimId);
         uint112 amountExercised = uint112(uint256(position.exerciseAmount) / option.exerciseAmount);
         assertEq(amount, amountExercised, where);
     }

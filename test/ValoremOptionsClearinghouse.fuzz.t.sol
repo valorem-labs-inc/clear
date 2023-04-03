@@ -83,7 +83,7 @@ contract ValoremOptionsClearinghouseFuzzTest is BaseClearinghouseTest {
             expiryTimestamp: expiryTimestamp
         });
 
-        IValoremOptionsClearinghouse.Option memory optionRecord = clearinghouse.option(optionId);
+        IValoremOptionsClearinghouse.Option memory optionRecord = engine.option(optionId);
 
         // assert the option ID is equal to the upper 160 of the keccak256 hash
         uint160 optionKey = uint160(
@@ -120,24 +120,24 @@ contract ValoremOptionsClearinghouseFuzzTest is BaseClearinghouseTest {
     // TODO investigate rounding error
     // [FAIL. Reason: TRANSFER_FROM_FAILED Counterexample: calldata=0xf494d5a9000000000000000000000000000000000000000000000000000000000015c992, args=[1427858]]
     function test_fuzzWrite(uint112 amount) public {
-        uint256 wethBalanceEngine = WETHLIKE.balanceOf(address(clearinghouse));
+        uint256 wethBalanceEngine = WETHLIKE.balanceOf(address(engine));
         uint256 wethBalance = WETHLIKE.balanceOf(ALICE);
 
         vm.assume(amount > 0);
         vm.assume(amount <= wethBalance / testUnderlyingAmount);
 
         uint256 rxAmount = amount * testUnderlyingAmount;
-        uint256 fee = ((rxAmount / 10000) * clearinghouse.feeBps());
+        uint256 fee = ((rxAmount / 10000) * engine.feeBps());
 
         vm.startPrank(ALICE);
-        uint256 claimId = clearinghouse.write(testOptionId, amount);
-        IValoremOptionsClearinghouse.Position memory claimPosition = clearinghouse.position(claimId);
+        uint256 claimId = engine.write(testOptionId, amount);
+        IValoremOptionsClearinghouse.Position memory claimPosition = engine.position(claimId);
 
-        assertEq(WETHLIKE.balanceOf(address(clearinghouse)), wethBalanceEngine + rxAmount + fee);
+        assertEq(WETHLIKE.balanceOf(address(engine)), wethBalanceEngine + rxAmount + fee);
         assertEq(WETHLIKE.balanceOf(ALICE), wethBalance - rxAmount - fee);
 
-        assertEq(clearinghouse.balanceOf(ALICE, testOptionId), amount);
-        assertEq(clearinghouse.balanceOf(ALICE, claimId), 1);
+        assertEq(engine.balanceOf(ALICE, testOptionId), amount);
+        assertEq(engine.balanceOf(ALICE, claimId), 1);
 
         assertEq(uint256(claimPosition.underlyingAmount), testUnderlyingAmount * amount);
 
@@ -157,8 +157,8 @@ contract ValoremOptionsClearinghouseFuzzTest is BaseClearinghouseTest {
     // function exercise(uint256 optionId, uint112 amount) external;
     //
     function test_fuzzExercise(uint112 amountWrite, uint112 amountExercise) public {
-        uint256 wethBalanceEngine = WETHLIKE.balanceOf(address(clearinghouse));
-        uint256 daiBalanceEngine = DAILIKE.balanceOf(address(clearinghouse));
+        uint256 wethBalanceEngine = WETHLIKE.balanceOf(address(engine));
+        uint256 daiBalanceEngine = DAILIKE.balanceOf(address(engine));
         uint256 wethBalance = WETHLIKE.balanceOf(ALICE);
         uint256 daiBalance = DAILIKE.balanceOf(ALICE);
 
@@ -169,27 +169,27 @@ contract ValoremOptionsClearinghouseFuzzTest is BaseClearinghouseTest {
         vm.assume(amountExercise <= daiBalance / testExerciseAmount);
 
         uint256 writeAmount = amountWrite * testUnderlyingAmount;
-        uint256 writeFee = ((amountWrite * testUnderlyingAmount) / 10000) * clearinghouse.feeBps();
+        uint256 writeFee = ((amountWrite * testUnderlyingAmount) / 10000) * engine.feeBps();
 
         uint256 rxAmount = amountExercise * testExerciseAmount;
         uint256 txAmount = amountExercise * testUnderlyingAmount;
-        uint256 exerciseFee = (rxAmount / 10000) * clearinghouse.feeBps();
+        uint256 exerciseFee = (rxAmount / 10000) * engine.feeBps();
 
         vm.startPrank(ALICE);
-        uint256 claimId = clearinghouse.write(testOptionId, amountWrite);
+        uint256 claimId = engine.write(testOptionId, amountWrite);
 
         vm.warp(testExpiryTimestamp - 1);
 
-        clearinghouse.exercise(testOptionId, amountExercise);
+        engine.exercise(testOptionId, amountExercise);
 
         _assertClaimAmountExercised(claimId, amountExercise);
 
-        assertEq(WETHLIKE.balanceOf(address(clearinghouse)), wethBalanceEngine + writeAmount - txAmount + writeFee);
+        assertEq(WETHLIKE.balanceOf(address(engine)), wethBalanceEngine + writeAmount - txAmount + writeFee);
         assertEq(WETHLIKE.balanceOf(ALICE), (wethBalance - writeAmount + txAmount - writeFee));
-        assertEq(DAILIKE.balanceOf(address(clearinghouse)), daiBalanceEngine + rxAmount + exerciseFee);
+        assertEq(DAILIKE.balanceOf(address(engine)), daiBalanceEngine + rxAmount + exerciseFee);
         assertEq(DAILIKE.balanceOf(ALICE), (daiBalance - rxAmount - exerciseFee));
-        assertEq(clearinghouse.balanceOf(ALICE, testOptionId), amountWrite - amountExercise);
-        assertEq(clearinghouse.balanceOf(ALICE, claimId), 1);
+        assertEq(engine.balanceOf(ALICE, testOptionId), amountWrite - amountExercise);
+        assertEq(engine.balanceOf(ALICE, claimId), 1);
     }
 
     //
@@ -297,10 +297,10 @@ contract ValoremOptionsClearinghouseFuzzTest is BaseClearinghouseTest {
     function _claimAndAssert(address claimant, uint256 claimId) internal {
         vm.startPrank(claimant);
 
-        IValoremOptionsClearinghouse.Position memory position = clearinghouse.position(claimId);
+        IValoremOptionsClearinghouse.Position memory position = engine.position(claimId);
         uint256 exerciseAssetAmount = ERC20(position.exerciseAsset).balanceOf(claimant);
         uint256 underlyingAssetAmount = ERC20(position.underlyingAsset).balanceOf(claimant);
-        clearinghouse.redeem(claimId);
+        engine.redeem(claimId);
 
         assertEq(
             ERC20(position.underlyingAsset).balanceOf(claimant),
@@ -339,20 +339,20 @@ contract ValoremOptionsClearinghouseFuzzTest is BaseClearinghouseTest {
                 // 50/50 to add to existing claim lot or create new claim lot
                 if (claimIdLength == 0 || _coinflip(seed++, 5000)) {
                     newClaim = true;
-                    uint256 claimId = clearinghouse.write(optionId, toWrite);
+                    uint256 claimId = engine.write(optionId, toWrite);
                     emit log_named_uint("ADD NEW CLAIM", claimId);
                     claimIds[claimIdLength] = claimId;
                 } else {
                     uint256 claimId = claimIds[_randBetween(seed++, claimIdLength)];
                     emit log_named_uint("ADD EXISTING CLAIM", claimId);
-                    clearinghouse.write(claimId, toWrite);
+                    engine.write(claimId, toWrite);
                 }
 
                 // add to total written
                 written += toWrite;
 
                 // transfer to exerciser
-                clearinghouse.safeTransferFrom(writer, exerciser, optionId, written, "");
+                engine.safeTransferFrom(writer, exerciser, optionId, written, "");
                 vm.stopPrank();
             } else {
                 emit log_named_uint("SKIP WRITING", optionId);
@@ -364,7 +364,7 @@ contract ValoremOptionsClearinghouseFuzzTest is BaseClearinghouseTest {
             return (written, 0, newClaim);
         }
 
-        uint256 maxToExercise = clearinghouse.balanceOf(exerciser, optionId);
+        uint256 maxToExercise = engine.balanceOf(exerciser, optionId);
         // with Y pctg chance, exercise some amount of options
         unchecked {
             // allow seed to overflow
@@ -375,7 +375,7 @@ contract ValoremOptionsClearinghouseFuzzTest is BaseClearinghouseTest {
                 emit log_named_uint("amount", toExercise);
 
                 vm.prank(exerciser);
-                clearinghouse.exercise(optionId, toExercise);
+                engine.exercise(optionId, toExercise);
 
                 // add to total exercised
                 exercised += toExercise;

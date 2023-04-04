@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL 1.1
-// Valorem Labs Inc. (c) 2022.
+// Valorem Labs Inc. (c) 2023.
 pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
@@ -7,13 +7,13 @@ import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
 import "./MockERC20.sol";
 
-import "../../src/OptionSettlementEngine.sol";
+import "../../src/ValoremOptionsClearinghouse.sol";
 
-/// @notice Base for OptionSettlementEngine test suite
-abstract contract BaseEngineTest is Test {
+/// @notice Base for ValoremOptionsClearinghouse test suite
+abstract contract BaseClearinghouseTest is Test {
     using stdStorage for StdStorage;
 
-    OptionSettlementEngine internal engine;
+    ValoremOptionsClearinghouse internal engine;
     ITokenURIGenerator internal generator;
 
     // Scalars
@@ -54,12 +54,12 @@ abstract contract BaseEngineTest is Test {
     uint96 internal testUnderlyingAmount = 7 ether; // Uneven number to test for division rounding
     uint96 internal testExerciseAmount = 3000 ether;
     uint256 internal testDuration = 1 days;
-    IOptionSettlementEngine.Option internal testOption;
+    IValoremOptionsClearinghouse.Option internal testOption;
 
     function setUp() public virtual {
-        // Deploy OptionSettlementEngine
+        // Deploy ValoremOptionsClearinghouse
         generator = new TokenURIGenerator();
-        engine = new OptionSettlementEngine(FEE_TO, address(generator));
+        engine = new ValoremOptionsClearinghouse(FEE_TO, address(generator));
 
         // Enable fee switch
         vm.prank(FEE_TO);
@@ -192,7 +192,7 @@ abstract contract BaseEngineTest is Test {
         uint96 exerciseAmount,
         uint40 exerciseTimestamp,
         uint40 expiryTimestamp
-    ) internal returns (uint256 optionId, IOptionSettlementEngine.Option memory option) {
+    ) internal returns (uint256 optionId, IValoremOptionsClearinghouse.Option memory option) {
         (, option) = _getNewOptionType({
             underlyingAsset: underlyingAsset,
             underlyingAmount: underlyingAmount,
@@ -218,8 +218,8 @@ abstract contract BaseEngineTest is Test {
         uint96 exerciseAmount,
         uint40 exerciseTimestamp,
         uint40 expiryTimestamp
-    ) internal pure returns (uint256 optionId, IOptionSettlementEngine.Option memory option) {
-        option = IOptionSettlementEngine.Option({
+    ) internal pure returns (uint256 optionId, IValoremOptionsClearinghouse.Option memory option) {
+        option = IValoremOptionsClearinghouse.Option({
             underlyingAsset: underlyingAsset,
             underlyingAmount: underlyingAmount,
             exerciseAsset: exerciseAsset,
@@ -269,7 +269,7 @@ abstract contract BaseEngineTest is Test {
         return uint16((ts + daysFrom * 1 days) / 1 days);
     }
 
-    function _createOptionIdFromStruct(IOptionSettlementEngine.Option memory optionInfo)
+    function _createOptionIdFromStruct(IValoremOptionsClearinghouse.Option memory optionInfo)
         internal
         pure
         returns (uint256)
@@ -309,19 +309,19 @@ abstract contract BaseEngineTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function _assertTokenIsNone(uint256 tokenId) internal {
-        if (engine.tokenType(tokenId) != IOptionSettlementEngine.TokenType.None) {
+        if (engine.tokenType(tokenId) != IValoremOptionsClearinghouse.TokenType.None) {
             assertTrue(false);
         }
     }
 
     function _assertTokenIsClaim(uint256 tokenId) internal {
-        if (engine.tokenType(tokenId) != IOptionSettlementEngine.TokenType.Claim) {
+        if (engine.tokenType(tokenId) != IValoremOptionsClearinghouse.TokenType.Claim) {
             assertTrue(false);
         }
     }
 
     function _assertTokenIsOption(uint256 tokenId) internal {
-        if (engine.tokenType(tokenId) != IOptionSettlementEngine.TokenType.Option) {
+        if (engine.tokenType(tokenId) != IValoremOptionsClearinghouse.TokenType.Option) {
             assertTrue(false);
         }
     }
@@ -332,8 +332,8 @@ abstract contract BaseEngineTest is Test {
     }
 
     function _assertClaimAmountExercised(uint256 claimId, uint112 amount, string memory where) internal {
-        IOptionSettlementEngine.Position memory position = engine.position(claimId);
-        IOptionSettlementEngine.Option memory option = engine.option(claimId);
+        IValoremOptionsClearinghouse.Position memory position = engine.position(claimId);
+        IValoremOptionsClearinghouse.Option memory option = engine.option(claimId);
         uint112 amountExercised = uint112(uint256(position.exerciseAmount) / option.exerciseAmount);
         assertEq(amount, amountExercised, where);
     }
@@ -342,9 +342,10 @@ abstract contract BaseEngineTest is Test {
         _assertClaimAmountExercised(claimId, amount, "");
     }
 
-    function assertEq(IOptionSettlementEngine.Option memory actual, IOptionSettlementEngine.Option memory expected)
-        public
-    {
+    function assertEq(
+        IValoremOptionsClearinghouse.Option memory actual,
+        IValoremOptionsClearinghouse.Option memory expected
+    ) public {
         assertEq(actual.underlyingAsset, expected.underlyingAsset);
         assertEq(actual.underlyingAmount, expected.underlyingAmount);
         assertEq(actual.exerciseAsset, expected.exerciseAsset);
@@ -403,6 +404,12 @@ abstract contract BaseEngineTest is Test {
         uint256 exerciseAmountRedeemed,
         uint256 underlyingAmountRedeemed
     );
+
+    event BucketWrittenInto(
+        uint256 indexed optionId, uint256 indexed claimId, uint96 indexed bucketIndex, uint112 amount
+    );
+
+    event BucketAssignedExercise(uint256 indexed optionId, uint96 indexed bucketIndex, uint112 amountAssigned);
 
     event OptionsExercised(uint256 indexed optionId, address indexed exerciser, uint112 amount);
 

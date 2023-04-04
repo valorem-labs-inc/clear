@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL 1.1
-// Valorem Labs Inc. (c) 2022.
+// Valorem Labs Inc. (c) 2023.
 pragma solidity 0.8.16;
 
-import "./utils/BaseEngineTest.sol";
+import "./utils/BaseClearinghouseTest.sol";
 
-/// @notice Fuzz tests for OptionSettlementEngine
-contract OptionSettlementFuzzTest is BaseEngineTest {
+/// @notice Fuzz tests for ValoremOptionsClearinghouse
+contract ValoremOptionsClearinghouseFuzzTest is BaseClearinghouseTest {
     struct FuzzMetadata {
         uint256 claimsLength;
         uint256 totalWritten;
@@ -74,7 +74,7 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         vm.assume(underlyingAmount <= WETHLIKE.totalSupply());
         vm.assume(exerciseAmount <= DAILIKE.totalSupply());
 
-        (uint256 optionId, IOptionSettlementEngine.Option memory optionInfo) = _createNewOptionType({
+        (uint256 optionId, IValoremOptionsClearinghouse.Option memory optionInfo) = _createNewOptionType({
             underlyingAsset: address(WETHLIKE),
             underlyingAmount: underlyingAmount,
             exerciseAsset: address(DAILIKE),
@@ -83,7 +83,7 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
             expiryTimestamp: expiryTimestamp
         });
 
-        IOptionSettlementEngine.Option memory optionRecord = engine.option(optionId);
+        IValoremOptionsClearinghouse.Option memory optionRecord = engine.option(optionId);
 
         // assert the option ID is equal to the upper 160 of the keccak256 hash
         uint160 optionKey = uint160(
@@ -131,7 +131,7 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
 
         vm.startPrank(ALICE);
         uint256 claimId = engine.write(testOptionId, amount);
-        IOptionSettlementEngine.Position memory claimPosition = engine.position(claimId);
+        IValoremOptionsClearinghouse.Position memory claimPosition = engine.position(claimId);
 
         assertEq(WETHLIKE.balanceOf(address(engine)), wethBalanceEngine + rxAmount + fee);
         assertEq(WETHLIKE.balanceOf(ALICE), wethBalance - rxAmount - fee);
@@ -151,6 +151,10 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
 
     //
     // function redeem(uint256 claimId) external;
+    //
+
+    //
+    // function exercise(uint256 optionId, uint112 amount) external;
     //
     function test_fuzzExercise(uint112 amountWrite, uint112 amountExercise) public {
         uint256 wethBalanceEngine = WETHLIKE.balanceOf(address(engine));
@@ -189,13 +193,12 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
     }
 
     //
-    // function exercise(uint256 optionId, uint112 amount) external;
-
-    //
     // function setFeesEnabled(bool enabled) external;
+    //
 
     //
     // function setFeeTo(address newFeeTo) external;
+    //
 
     //
     // function setTokenURIGenerator(address newTokenURIGenerator) external;
@@ -217,7 +220,7 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         FuzzMetadata memory opt2 = FuzzMetadata(0, 0, 0);
 
         // create monthly option
-        (uint256 optionId1M, IOptionSettlementEngine.Option memory option1M) = _createNewOptionType({
+        (uint256 optionId1M, IValoremOptionsClearinghouse.Option memory option1M) = _createNewOptionType({
             underlyingAsset: address(WETHLIKE),
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: address(DAILIKE),
@@ -227,7 +230,7 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         });
 
         // create quarterly option
-        (uint256 optionId3M, IOptionSettlementEngine.Option memory option3M) = _createNewOptionType({
+        (uint256 optionId3M, IValoremOptionsClearinghouse.Option memory option3M) = _createNewOptionType({
             underlyingAsset: address(WETHLIKE),
             underlyingAmount: testUnderlyingAmount,
             exerciseAsset: address(DAILIKE),
@@ -267,7 +270,7 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
 
     function _writeExerciseOptions(
         uint32 seed,
-        IOptionSettlementEngine.Option memory option1M,
+        IValoremOptionsClearinghouse.Option memory option1M,
         uint256 optionId1M,
         uint256[] memory claimIds1,
         FuzzMetadata memory opt1
@@ -294,7 +297,7 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
     function _claimAndAssert(address claimant, uint256 claimId) internal {
         vm.startPrank(claimant);
 
-        IOptionSettlementEngine.Position memory position = engine.position(claimId);
+        IValoremOptionsClearinghouse.Position memory position = engine.position(claimId);
         uint256 exerciseAssetAmount = ERC20(position.exerciseAsset).balanceOf(claimant);
         uint256 underlyingAssetAmount = ERC20(position.underlyingAsset).balanceOf(claimant);
         engine.redeem(claimId);
@@ -316,7 +319,7 @@ contract OptionSettlementFuzzTest is BaseEngineTest {
         uint16 writeChanceBips,
         uint16 maxWrite,
         uint16 exerciseChanceBips,
-        IOptionSettlementEngine.Option memory option,
+        IValoremOptionsClearinghouse.Option memory option,
         uint256 optionId,
         uint256[] memory claimIds,
         uint256 claimIdLength

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL 1.1
-// Valorem Labs Inc. (c) 2022.
+// Valorem Labs Inc. (c) 2023.
 pragma solidity 0.8.16;
 
-import "./utils/BaseEngineTest.sol";
+import "./utils/BaseClearinghouseTest.sol";
 import "./utils/InvariantTest.sol";
 
 import {OptionWriter} from "./actors/OptionWriter.sol";
@@ -10,8 +10,8 @@ import {OptionHolder} from "./actors/OptionHolder.sol";
 import {ProtocolAdmin} from "./actors/ProtocolAdmin.sol";
 import {Timekeeper} from "./actors/Timekeeper.sol";
 
-/// @notice Invariant tests for OptionSettlementEngine
-contract OptionSettlementEngineInvariantTest is BaseEngineTest, InvariantTest {
+/// @notice Invariant tests for ValoremOptionsClearinghouse
+contract ValoremOptionsClearinghouseInvariantTest is BaseClearinghouseTest, InvariantTest {
     OptionWriter internal writer;
     OptionHolder internal holder;
     ProtocolAdmin internal admin;
@@ -60,7 +60,7 @@ contract OptionSettlementEngineInvariantTest is BaseEngineTest, InvariantTest {
             minted += erc20.balanceOf(defaultFeeTo);
 
             // Not used for invariant tests, but accounting is necessary
-            // for accounts minted to when BaseEngineTest.setUp() is called
+            // for accounts minted to when BaseClearinghouseTest.setUp() is called
             minted += erc20.balanceOf(ALICE);
             minted += erc20.balanceOf(BOB);
             minted += erc20.balanceOf(CAROL);
@@ -81,8 +81,8 @@ contract OptionSettlementEngineInvariantTest is BaseEngineTest, InvariantTest {
             uint256 claimIndex = 1;
             uint256 totalWrittenFromClaims = 0;
             while (true) {
-                IOptionSettlementEngine.Claim memory claim;
-                try engine.claim(optionTypeId + claimIndex) returns (IOptionSettlementEngine.Claim memory _claim) {
+                IValoremOptionsClearinghouse.Claim memory claim;
+                try engine.claim(optionTypeId + claimIndex) returns (IValoremOptionsClearinghouse.Claim memory _claim) {
                     claim = _claim;
                 } catch {
                     // token not found
@@ -102,7 +102,7 @@ contract OptionSettlementEngineInvariantTest is BaseEngineTest, InvariantTest {
         // tally positions for claims
         for (uint256 i = 0; i < claimsWritten.length; i++) {
             uint256 claimId = claimsWritten[i];
-            IOptionSettlementEngine.Position memory position = engine.position(claimId);
+            IValoremOptionsClearinghouse.Position memory position = engine.position(claimId);
             positionBalances[position.underlyingAsset] += uint256(position.underlyingAmount);
             positionBalances[position.exerciseAsset] += uint256(position.exerciseAmount);
         }

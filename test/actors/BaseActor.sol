@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: BUSL 1.1
+// Valorem Labs Inc. (c) 2023.
 pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
-import "../../src/OptionSettlementEngine.sol";
-import "../OptionSettlementEngine.invariant.t.sol";
+import "../../src/ValoremOptionsClearinghouse.sol";
+import "../ValoremOptionsClearinghouse.invariant.t.sol";
 
 abstract contract BaseActor is StdUtils, CommonBase {
-    OptionSettlementEngine internal engine;
-    OptionSettlementEngineInvariantTest internal test;
+    ValoremOptionsClearinghouse internal engine;
+    ValoremOptionsClearinghouseInvariantTest internal test;
 
-    constructor(OptionSettlementEngine _engine, OptionSettlementEngineInvariantTest _test) {
+    constructor(ValoremOptionsClearinghouse _engine, ValoremOptionsClearinghouseInvariantTest _test) {
         engine = _engine;
         test = _test;
     }

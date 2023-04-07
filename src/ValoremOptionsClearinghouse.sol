@@ -777,7 +777,8 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
     /**
      * @notice Performs fair exercise assignment via the pseudorandom selection of an
      * unexercised or partially exercised bucket. If the exercise amount overflows into
-     * another bucket, the buckets are iterated from oldest to newest.
+     * another bucket, the buckets are iterated in a sequence which dynamically changes
+     * based on the evolving exercise state of all buckets for this option type.
      */
     function _assignExercise(
         uint256 optionId,

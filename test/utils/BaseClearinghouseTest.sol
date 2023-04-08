@@ -5,7 +5,7 @@ pragma solidity 0.8.16;
 import "forge-std/Test.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
-import "./MockERC20.sol";
+import "../mocks/MockERC20.sol";
 
 import "../../src/ValoremOptionsClearinghouse.sol";
 

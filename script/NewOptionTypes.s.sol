@@ -92,7 +92,7 @@ contract NewOptionTypes is Script {
                     expiryTimestamp: EXPIRIES[j]
                 });
             }
-            
+
             // Create new option types for WBTC.
             for (uint256 i = 0; i < WBTC_STRIKES.length; i++) {
                 // Create new Call option type.

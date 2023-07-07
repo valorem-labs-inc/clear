@@ -15,17 +15,16 @@ contract DeployScript is Script {
         // Get environment variables.
         address feeTo = vm.envAddress("FEE_TO");
         uint256 privateKey = vm.envUint("PRIVATE_KEY");
-        bytes32 saltGenerator = keccak256(bytes(vm.envString("SALT_GENERATOR")));
-        bytes32 saltEngine = keccak256(bytes(vm.envString("SALT_ENGINE")));
+        bytes32 salt = keccak256(bytes(vm.envString("SALT")));
 
         // Deploy TokenURIGenerator.
         vm.startBroadcast(privateKey);
-        TokenURIGenerator generator = new TokenURIGenerator{salt: saltGenerator}();
+        TokenURIGenerator generator = new TokenURIGenerator{salt: salt}();
         vm.stopBroadcast();
 
         // Deploy ValoremOptionsClearinghouse.
         vm.startBroadcast(privateKey);
-        new ValoremOptionsClearinghouse{salt: saltEngine}(feeTo, address(generator));
+        new ValoremOptionsClearinghouse{salt: salt}(feeTo, address(generator));
         vm.stopBroadcast();
     }
 }

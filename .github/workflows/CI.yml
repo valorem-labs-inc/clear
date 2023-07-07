@@ -25,24 +25,18 @@ jobs:
 
       - name: Run solhint lint check
         run: npm run lint:check
-      
+
       - name: Install submodules
         run: forge install
 
       - name: Check gas snapshots
-        run: forge snapshot # --check TODO re-enable once /master gas snapshot is up-to-date
-        env:
-          RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
+        run: forge snapshot --check
 
       - name: Run tests
         run: forge test --optimize
-        env:
-          RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
       - name: Run coverage
         run: forge coverage --report summary --report lcov
-        env:
-          RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
       - name: Filter coverage directories
         run: |
@@ -64,12 +58,12 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
-      
+
       - name: Install submodules
         run: forge install
 
       - name: Run Slither
-        uses: crytic/slither-action@v0.2.0
+        uses: crytic/slither-action@v0.3.0
         with:
           target: "src/"
           slither-config: slither.config.json

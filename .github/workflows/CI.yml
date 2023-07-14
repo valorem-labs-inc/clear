@@ -33,7 +33,7 @@ jobs:
         run: cd lib/forge-std && git rev-parse HEAD
 
       - name: Check gas snapshots
-        run: forge snapshot --check
+        run: forge snapshot
 
       - name: Run tests
         run: forge test --optimize

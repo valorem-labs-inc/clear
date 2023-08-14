@@ -358,7 +358,7 @@ contract ValoremOptionsClearinghouseUnitTest is BaseClearinghouseTest {
     //////////////////////////////////////////////////////////////*/
 
     function test_feeBps() public {
-        assertEq(engine.feeBps(), 25);
+        assertEq(engine.feeBps(), 15);
     }
 
     /*//////////////////////////////////////////////////////////////

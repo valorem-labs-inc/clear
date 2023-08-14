@@ -358,7 +358,7 @@ contract ValoremOptionsClearinghouseUnitTest is BaseClearinghouseTest {
     //////////////////////////////////////////////////////////////*/
 
     function test_feeBps() public {
-        assertEq(engine.feeBps(), 5);
+        assertEq(engine.feeBps(), 15);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -1463,6 +1463,9 @@ contract ValoremOptionsClearinghouseUnitTest is BaseClearinghouseTest {
         assertEq(WETHLIKE.balanceOf(FEE_TO), 0);
         assertEq(DAILIKE.balanceOf(FEE_TO), 0);
         assertEq(USDCLIKE.balanceOf(FEE_TO), 0);
+        assertEq(engine.feeBalance(address(WETHLIKE)), 0);
+        assertEq(engine.feeBalance(address(DAILIKE)), 0);
+        assertEq(engine.feeBalance(address(USDCLIKE)), 0);
 
         address[] memory tokens = new address[](3);
         tokens[0] = address(WETHLIKE);
@@ -1476,6 +1479,9 @@ contract ValoremOptionsClearinghouseUnitTest is BaseClearinghouseTest {
         assertEq(WETHLIKE.balanceOf(FEE_TO), 0);
         assertEq(DAILIKE.balanceOf(FEE_TO), 0);
         assertEq(USDCLIKE.balanceOf(FEE_TO), 0);
+        assertEq(engine.feeBalance(address(WETHLIKE)), 0);
+        assertEq(engine.feeBalance(address(DAILIKE)), 0);
+        assertEq(engine.feeBalance(address(USDCLIKE)), 0);
     }
 
     function test_sweepFees() public {
@@ -1489,22 +1495,33 @@ contract ValoremOptionsClearinghouseUnitTest is BaseClearinghouseTest {
         engine.exercise(testOptionId, 10);
         vm.stopPrank();
 
-        uint256 wethFee = _calculateFee(10 * testUnderlyingAmount);
-        uint256 daiFee = _calculateFee(10 * testExerciseAmount);
+        uint256 underlyingFee = _calculateFee(10 * testUnderlyingAmount);
+        uint256 exerciseFee = _calculateFee(10 * testExerciseAmount);
 
         // Precondition checks
-        assertEq(WETHLIKE.balanceOf(FEE_TO), 0);
-        assertEq(DAILIKE.balanceOf(FEE_TO), 0);
+        assertEq(WETHLIKE.balanceOf(FEE_TO), 0, "feeTo underlying balance before sweep");
+        assertEq(DAILIKE.balanceOf(FEE_TO), 0, "feeTo exercise balance before sweep");
+        assertEq(
+            engine.feeBalance(address(WETHLIKE)), underlyingFee, "clearinghouse underlying fee balance before sweep"
+        );
+        assertEq(engine.feeBalance(address(DAILIKE)), exerciseFee, "clearinghouse exercise fee balance before sweep");
 
-        emit FeeSwept(testUnderlyingAsset, FEE_TO, wethFee);
-        emit FeeSwept(testExerciseAsset, FEE_TO, daiFee);
+        // Event log assertions -- 1 dust left in fee balance as gas optimization
+        vm.expectEmit(true, true, true, true);
+        emit FeeSwept(address(WETHLIKE), FEE_TO, underlyingFee - 1);
+        vm.expectEmit(true, true, true, true);
+        emit FeeSwept(address(DAILIKE), FEE_TO, exerciseFee - 1);
 
         vm.prank(FEE_TO);
         engine.sweepFees(tokens);
 
-        // Balance assertions -- with tolerance of 1 wei for loss of precision
-        assertApproxEqAbs(WETHLIKE.balanceOf(FEE_TO), wethFee, 1, "FeeTo underlying balance");
-        assertApproxEqAbs(DAILIKE.balanceOf(FEE_TO), daiFee, 1, "FeeTo exercise balance");
+        // Balance assertions -- ditto
+        assertEq(WETHLIKE.balanceOf(FEE_TO), underlyingFee - 1, "feeTo underlying balance after sweep");
+        assertEq(DAILIKE.balanceOf(FEE_TO), exerciseFee - 1, "feeTo exercise balance after sweep");
+
+        // Fee assertions -- ditto
+        assertEq(engine.feeBalance(address(WETHLIKE)), 1, "clearinghouse underlying fee balance after sweep");
+        assertEq(engine.feeBalance(address(DAILIKE)), 1, "clearinghouse exercise fee balance after sweep");
     }
 
     function testRevert_sweepFees_whenNotFeeTo() public {

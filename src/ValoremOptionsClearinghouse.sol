@@ -101,7 +101,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
 
     /// @inheritdoc IValoremOptionsClearinghouse
     // solhint-disable-next-line const-name-snakecase
-    uint8 public constant feeBps = 5;
+    uint8 public constant feeBps = 15;
 
     /*//////////////////////////////////////////////////////////////
     //  State Variables - Private
@@ -360,12 +360,12 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         }
 
         // Check that the expiry window is of sufficient length.
-        if (expiryTimestamp < (block.timestamp + 1 days)) {
+        if (expiryTimestamp < (block.timestamp + 1 minutes)) {
             revert ExpiryWindowTooShort(expiryTimestamp);
         }
 
         // Check that the exercise window is of sufficient length.
-        if (expiryTimestamp < (exerciseTimestamp + 1 days)) {
+        if (expiryTimestamp < (exerciseTimestamp + 1 minutes)) {
             revert ExerciseWindowTooShort(exerciseTimestamp);
         }
 

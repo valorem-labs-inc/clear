@@ -46,6 +46,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
         bytes memory monthDigits = bytes(_toString(month));
         bytes memory dayDigits = bytes(_toString(day));
 
+        // slither-disable-next-line encode-packed-collision
         return string(
             abi.encodePacked(
                 _escapeQuotes(params.underlyingSymbol),
@@ -83,6 +84,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
         uint8 underlyingDecimals = ERC20(params.underlyingAsset).decimals();
         uint8 exerciseDecimals = ERC20(params.exerciseAsset).decimals();
 
+        // slither-disable-next-line encode-packed-collision
         return string(
             abi.encodePacked(
                 "<svg width='400' height='300' viewBox='0 0 400 300' xmlns='http://www.w3.org/2000/svg'>",
@@ -341,12 +343,14 @@ contract TokenURIGenerator is ITokenURIGenerator {
             s = _toString(0);
         }
 
+        // slither-disable-next-line encode-packed-collision
         s = string(abi.encodePacked(s, _toString(uint256(m)), bytes1(0x2F)));
 
         if (d < 10) {
             s = string(abi.encodePacked(s, bytes1(0x30)));
         }
 
+        // slither-disable-next-line encode-packed-collision
         s = string(abi.encodePacked(s, _toString(uint256(d)), bytes1(0x2F), _toString(uint256(y))));
 
         return string(s);

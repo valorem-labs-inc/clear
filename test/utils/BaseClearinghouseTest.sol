@@ -53,7 +53,7 @@ abstract contract BaseClearinghouseTest is Test {
     address internal testExerciseAsset;
     uint96 internal testUnderlyingAmount = 7 ether; // Uneven number to test for division rounding
     uint96 internal testExerciseAmount = 3000 ether;
-    uint256 internal testDuration = 1 days;
+    uint256 internal testDuration = 1 minutes;
     IValoremOptionsClearinghouse.Option internal testOption;
 
     function setUp() public virtual {

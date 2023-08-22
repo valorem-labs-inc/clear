@@ -438,7 +438,7 @@ contract ValoremOptionsClearinghouseUnitTest is BaseClearinghouseTest {
     }
 
     function testRevert_newOptionType_whenExpiryWindowTooShort() public {
-        uint40 tooSoonExpiryTimestamp = uint40(block.timestamp + 1 days - 1 seconds);
+        uint40 tooSoonExpiryTimestamp = uint40(block.timestamp + 1 minutes - 1 seconds);
         IValoremOptionsClearinghouse.Option memory option = IValoremOptionsClearinghouse.Option({
             underlyingAsset: address(DAILIKE),
             underlyingAmount: testUnderlyingAmount,

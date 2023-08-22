@@ -29,9 +29,6 @@ jobs:
       - name: Install submodules
         run: forge install
 
-      - name: debug
-        run: cd lib/forge-std && git rev-parse HEAD
-
       - name: Check gas snapshots
         run: forge snapshot
 

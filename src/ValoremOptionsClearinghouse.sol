@@ -45,8 +45,8 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
 
     /**
      * @notice Stores the state of options written and exercised for a bucket.
-     * Used in fair exercise assignment assignment to calculate the ratio of
-     * underlying assets to exercise assets to be transferred to claimants.
+     * Used in fair exercise assignment to calculate the ratio of underlying
+     * assets to exercise assets to be transferred to claimants.
      */
     struct Bucket {
         /// @custom:member amountWritten The number of option contracts written into this bucket.
@@ -180,7 +180,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
     }
 
     /// @inheritdoc IValoremOptionsClearinghouse
-    function claim(uint256 claimId) external view returns (Claim memory claimInfo) {
+    function claim(uint256 claimId) public view returns (Claim memory claimInfo) {
         (uint160 optionKey, uint96 claimKey) = _decodeTokenId(claimId);
 
         if (!_isClaimInitialized(optionKey, claimKey)) {
@@ -498,11 +498,18 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
     }
 
     //
+    //  Net Offsetting Positions
+    //
+
+    /// @inheritdoc IValoremOptionsClearinghouse
+    function net(uint256 claimId) external {}
+
+    //
     //  Redeem Claims
     //
 
     /// @inheritdoc IValoremOptionsClearinghouse
-    function redeem(uint256 claimId) external {
+    function redeem(uint256 claimId) public {
         (uint160 optionKey, uint96 claimKey) = _decodeTokenId(claimId);
 
         // You can't redeem an option.
@@ -533,14 +540,17 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         uint256 totalUnderlyingAssetAmount;
         uint256 totalExerciseAssetAmount;
 
+        // Calculate the collateral of the Claim.
         for (uint256 i = len; i > 0; i--) {
             (uint256 indexUnderlyingAmount, uint256 indexExerciseAmount) = _getAssetAmountsForClaimIndex(
                 underlyingAssetAmount, exerciseAssetAmount, optionTypeState, claimIndices, i - 1
             );
+
             // Accumulate the amount exercised and unexercised in these variables
             // for later multiplication by optionRecord.exerciseAmount/underlyingAmount.
             totalUnderlyingAssetAmount += indexUnderlyingAmount;
             totalExerciseAssetAmount += indexExerciseAmount;
+
             // This zeroes out the array during the redemption process for a gas refund.
             claimIndices.pop();
         }

@@ -81,167 +81,116 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
 
     // TODO
 
-    // function test_close() public {
-    //     uint256 balanceA = ERC20A.balanceOf(ALICE);
-    //     uint256 balanceB = ERC20B.balanceOf(ALICE);
+    function test_net_whenUnassigned() public {
+        uint256 balanceA = ERC20A.balanceOf(ALICE);
+        uint256 balanceB = ERC20B.balanceOf(ALICE);
 
-    //     // Alice writes 10 options
-    //     vm.startPrank(ALICE);
-    //     uint256 optionId = engine.newOptionType({
-    //         underlyingAsset: address(ERC20A),
-    //         underlyingAmount: 1 ether,
-    //         exerciseAsset: address(ERC20B),
-    //         exerciseAmount: 8 ether,
-    //         exerciseTimestamp: uint40(block.timestamp),
-    //         expiryTimestamp: uint40(block.timestamp + 30 days)
-    //     });
-    //     uint256 claimId = engine.write(optionId, 10);
+        // Alice writes 10 Options
+        vm.startPrank(ALICE);
+        uint256 optionId = engine.newOptionType({
+            underlyingAsset: address(ERC20A),
+            underlyingAmount: 1 ether,
+            exerciseAsset: address(ERC20B),
+            exerciseAmount: 8 ether,
+            exerciseTimestamp: uint40(block.timestamp),
+            expiryTimestamp: uint40(block.timestamp + 30 days)
+        });
+        uint256 claimId = engine.write(optionId, 10);
 
-    //     uint256 expectedWriteAmount = 10 * 1 ether;
+        uint256 expectedWriteAmount = 10 * 1 ether;
 
-    //     assertEq(engine.balanceOf(ALICE, optionId), 10, "Alice option tokens before");
-    //     assertEq(engine.balanceOf(ALICE, claimId), 1, "Alice claim tokens before");
-    //     assertEq(
-    //         ERC20A.balanceOf(ALICE),
-    //         balanceA - expectedWriteAmount - _calculateFee(expectedWriteAmount),
-    //         "Alice underlying asset before"
-    //     );
-    //     assertEq(ERC20B.balanceOf(ALICE), balanceB, "Alice exercise asset before");
+        assertEq(engine.balanceOf(ALICE, optionId), 10, "Alice option tokens before");
+        assertEq(engine.balanceOf(ALICE, claimId), 1, "Alice claim tokens before");
+        assertEq(
+            ERC20A.balanceOf(ALICE),
+            balanceA - expectedWriteAmount - _calculateFee(expectedWriteAmount),
+            "Alice underlying asset before"
+        );
+        assertEq(ERC20B.balanceOf(ALICE), balanceB, "Alice exercise asset before");
 
-    //     // Alice closes offsetting positions after no Longs have been exercised
-    //     engine.close(optionId);
+        // Alice nets offsetting positions after no Options have been exercised
+        engine.net(claimId);
 
-    //     assertEq(engine.balanceOf(ALICE, optionId), 0, "Alice option tokens after");
-    //     assertEq(engine.balanceOf(ALICE, claimId), 0, "Alice claim tokens after");
-    //     assertEq(ERC20A.balanceOf(ALICE), balanceA, "Alice underlying asset after");
-    //     assertEq(ERC20B.balanceOf(ALICE), balanceB, "Alice exercise asset after");
-    // }
+        assertEq(engine.balanceOf(ALICE, optionId), 0, "Alice option tokens after");
+        assertEq(engine.balanceOf(ALICE, claimId), 0, "Alice claim tokens after");
+        assertEq(ERC20A.balanceOf(ALICE), balanceA - _calculateFee(expectedWriteAmount), "Alice underlying asset after"); // still less write fee
+        assertEq(ERC20B.balanceOf(ALICE), balanceB, "Alice exercise asset after");
+    }
 
-    // function test_close_whenPartiallyExercisedByWriter() public {
-    //     uint256 balanceA = ERC20A.balanceOf(ALICE);
-    //     uint256 balanceB = ERC20B.balanceOf(ALICE);
+    function test_net_whenPartiallyExercised() public {
+        uint256 aliceBalanceA = ERC20A.balanceOf(ALICE);
+        uint256 aliceBalanceB = ERC20B.balanceOf(ALICE);
+        uint256 bobBalanceA = ERC20A.balanceOf(BOB);
+        uint256 bobBalanceB = ERC20B.balanceOf(BOB);
 
-    //     // Alice writes 10 options
-    //     vm.startPrank(ALICE);
-    //     uint256 optionId = engine.newOptionType({
-    //         underlyingAsset: address(ERC20A),
-    //         underlyingAmount: 1 ether,
-    //         exerciseAsset: address(ERC20B),
-    //         exerciseAmount: 8 ether,
-    //         exerciseTimestamp: uint40(block.timestamp),
-    //         expiryTimestamp: uint40(block.timestamp + 30 days)
-    //     });
-    //     uint256 claimId = engine.write(optionId, 10);
+        // Alice writes 10 Options
+        vm.startPrank(ALICE);
+        uint256 optionId = engine.newOptionType({
+            underlyingAsset: address(ERC20A),
+            underlyingAmount: 1 ether,
+            exerciseAsset: address(ERC20B),
+            exerciseAmount: 8 ether,
+            exerciseTimestamp: uint40(block.timestamp),
+            expiryTimestamp: uint40(block.timestamp + 30 days)
+        });
+        uint256 claimId = engine.write(optionId, 10);
 
-    //     uint256 expectedWriteAmount = 10 * 1 ether;
-    //     uint256 expectedExerciseAmount = 3 * 8 ether;
+        uint256 expectedWriteAmount = 10 * 1 ether;
+        uint256 expectedExerciseAmount = 3 * 8 ether;
 
-    //     assertEq(engine.balanceOf(ALICE, optionId), 10, "Alice option tokens before");
-    //     assertEq(engine.balanceOf(ALICE, claimId), 1, "Alice claim tokens before");
-    //     assertEq(
-    //         ERC20A.balanceOf(ALICE),
-    //         balanceA - expectedWriteAmount - _calculateFee(expectedWriteAmount),
-    //         "Alice underlying asset before"
-    //     );
-    //     assertEq(ERC20B.balanceOf(ALICE), balanceB, "Alice exercise asset before");
+        assertEq(engine.balanceOf(ALICE, optionId), 10, "Alice option tokens before");
+        assertEq(engine.balanceOf(ALICE, claimId), 1, "Alice claim tokens before");
+        assertEq(
+            ERC20A.balanceOf(ALICE),
+            aliceBalanceA - expectedWriteAmount - _calculateFee(expectedWriteAmount),
+            "Alice underlying asset before"
+        );
+        assertEq(ERC20B.balanceOf(ALICE), aliceBalanceB, "Alice exercise asset before");
 
-    //     // Alice exercises 3 Longs
-    //     engine.exercise(optionId, 3);
+        // Alice transfers 3 Options to Bob
+        engine.safeTransferFrom(ALICE, BOB, optionId, 3, "");
+        vm.stopPrank();
 
-    //     assertEq(engine.balanceOf(ALICE, optionId), 7, "Alice option tokens after exercise");
-    //     assertEq(engine.balanceOf(ALICE, claimId), 0, "Alice claim tokens after exercise");
-    //     assertEq(
-    //         ERC20A.balanceOf(ALICE),
-    //         balanceA - expectedWriteAmount - _calculateFee(expectedWriteAmount) + (3 * 1 ether),
-    //         "Alice underlying asset after exercise"
-    //     );
-    //     assertEq(
-    //         ERC20B.balanceOf(ALICE),
-    //         balanceB - expectedExerciseAmount - _calculateFee(expectedExerciseAmount),
-    //         "Alice exercise asset after exercise"
-    //     );
+        assertEq(engine.balanceOf(ALICE, optionId), 7, "Alice option tokens after transfer");
+        assertEq(engine.balanceOf(ALICE, claimId), 1, "Alice claim tokens after transfer");
 
-    //     // Alice closes remaining 7 Longs and claims collateral back from 3 Longs that she exercised
-    //     engine.close(optionId);
+        // Bob exercises 3 Options
+        vm.prank(BOB);
+        engine.exercise(optionId, 3);
 
-    //     assertEq(engine.balanceOf(ALICE, optionId), 0, "Alice option tokens after close");
-    //     assertEq(engine.balanceOf(ALICE, claimId), 0, "Alice claim tokens after close");
-    //     assertEq(ERC20A.balanceOf(ALICE), balanceA, "Alice underlying asset after close");
-    //     assertEq(ERC20B.balanceOf(ALICE), balanceB, "Alice exercise asset after close");
-    // }
+        assertEq(
+            ERC20A.balanceOf(ALICE),
+            aliceBalanceA - expectedWriteAmount - _calculateFee(expectedWriteAmount),
+            "Alice underlying asset after exercise"
+        );
+        assertEq(ERC20B.balanceOf(ALICE), aliceBalanceB, "Alice exercise asset after exercise");
+        assertEq(ERC20A.balanceOf(BOB), bobBalanceA + (3 * 1 ether), "Bob underlying asset after exercise");
+        assertEq(
+            ERC20B.balanceOf(BOB),
+            bobBalanceB - expectedExerciseAmount - _calculateFee(expectedExerciseAmount),
+            "Bob exercise asset after exercise"
+        );
 
-    // function test_close_whenPartiallyExercisedByOtherHolder() public {
-    //     uint256 aliceBalanceA = ERC20A.balanceOf(ALICE);
-    //     uint256 aliceBalanceB = ERC20B.balanceOf(ALICE);
-    //     uint256 bobBalanceA = ERC20A.balanceOf(BOB);
-    //     uint256 bobBalanceB = ERC20B.balanceOf(BOB);
+        // Alice closes remaining 7 Options and gets collateral back from 3 Options that Bob exercised
+        engine.net(claimId);
 
-    //     // Alice writes 10 options
-    //     vm.startPrank(ALICE);
-    //     uint256 optionId = engine.newOptionType({
-    //         underlyingAsset: address(ERC20A),
-    //         underlyingAmount: 1 ether,
-    //         exerciseAsset: address(ERC20B),
-    //         exerciseAmount: 8 ether,
-    //         exerciseTimestamp: uint40(block.timestamp),
-    //         expiryTimestamp: uint40(block.timestamp + 30 days)
-    //     });
-    //     uint256 claimId = engine.write(optionId, 10);
+        assertEq(engine.balanceOf(ALICE, optionId), 0, "Alice option tokens after close");
+        assertEq(engine.balanceOf(ALICE, claimId), 0, "Alice claim tokens after close");
+        assertEq(
+            ERC20A.balanceOf(ALICE),
+            aliceBalanceA - expectedWriteAmount - _calculateFee(expectedWriteAmount) + (3 * 1 ether),
+            "Alice underlying asset after close"
+        );
+        assertEq(ERC20B.balanceOf(ALICE), aliceBalanceB + expectedExerciseAmount, "Alice exercise asset after close");
+        assertEq(ERC20A.balanceOf(BOB), bobBalanceA + (3 * 1 ether), "Bob underlying asset after close");
+        assertEq(
+            ERC20B.balanceOf(BOB),
+            bobBalanceB - expectedExerciseAmount - _calculateFee(expectedExerciseAmount),
+            "Bob exercise asset after close"
+        );
+    }
 
-    //     uint256 expectedWriteAmount = 10 * 1 ether;
-    //     uint256 expectedExerciseAmount = 3 * 8 ether;
-
-    //     assertEq(engine.balanceOf(ALICE, optionId), 10, "Alice option tokens before");
-    //     assertEq(engine.balanceOf(ALICE, claimId), 1, "Alice claim tokens before");
-    //     assertEq(
-    //         ERC20A.balanceOf(ALICE),
-    //         aliceBalanceA - expectedWriteAmount - _calculateFee(expectedWriteAmount),
-    //         "Alice underlying asset before"
-    //     );
-    //     assertEq(ERC20B.balanceOf(ALICE), aliceBalanceB, "Alice exercise asset before");
-
-    //     // Alice transfers 3 Longs to Bob
-    //     engine.safeTransferFrom(ALICE, BOB, optionId, 3, "");
-    //     vm.stopPrank();
-
-    //     assertEq(engine.balanceOf(ALICE, optionId), 7, "Alice option tokens after transfer");
-    //     assertEq(engine.balanceOf(ALICE, claimId), 1, "Alice claim tokens after transfer");
-
-    //     // Bob exercises 3 Longs
-    //     vm.prank(BOB);
-    //     engine.exercise(optionId, 3);
-
-    //     assertEq(
-    //         ERC20A.balanceOf(ALICE),
-    //         aliceBalanceA - expectedWriteAmount - _calculateFee(expectedWriteAmount),
-    //         "Alice underlying asset after exercise"
-    //     );
-    //     assertEq(
-    //         ERC20B.balanceOf(ALICE),
-    //         aliceBalanceB,
-    //         "Alice exercise asset after exercise"
-    //     );
-    //     assertEq(
-    //         ERC20A.balanceOf(BOB),
-    //         bobBalanceA + (3 * 1 ether),
-    //         "Bob underlying asset after exercise"
-    //     );
-    //     assertEq(
-    //         ERC20B.balanceOf(BOB),
-    //         bobBalanceB - expectedExerciseAmount - _calculateFee(expectedExerciseAmount),
-    //         "Bob exercise asset after exercise"
-    //     );
-
-    //     // Alice closes remaining 7 Longs and claims collateral back from 3 Longs that Bob exercised
-    //     engine.close(optionId);
-
-    //     assertEq(engine.balanceOf(ALICE, optionId), 0, "Alice option tokens after close");
-    //     assertEq(engine.balanceOf(ALICE, claimId), 0, "Alice claim tokens after close");
-    //     assertEq(ERC20A.balanceOf(ALICE), aliceBalanceA - expectedWriteAmount - _calculateFee(expectedWriteAmount) + (3 * 1 ether), "Alice underlying asset after close");
-    //     assertEq(ERC20B.balanceOf(ALICE), aliceBalanceB + expectedExerciseAmount, "Alice exercise asset after close");
-    //     assertEq(ERC20A.balanceOf(BOB), bobBalanceA, "Bob underlying asset after close");
-    //     assertEq(ERC20B.balanceOf(BOB), bobBalanceB, "Bob exercise asset after close");
-    // }
+    // TODO remaining scenarios
 
     /*//////////////////////////////////////////////////////////////
     // redeem() early

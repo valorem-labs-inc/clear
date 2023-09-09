@@ -483,9 +483,9 @@ interface IValoremOptionsClearinghouse {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * TODO
+     * @notice TODO
      */
-    // function net(uint256 optionid) external;
+    function net(uint256 optionId) external;
 
     /*//////////////////////////////////////////////////////////////
     //  Redeem Claims

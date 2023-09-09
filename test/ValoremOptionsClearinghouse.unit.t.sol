@@ -554,7 +554,7 @@ contract ValoremOptionsClearinghouseUnitTest is BaseClearinghouseTest {
         vm.prank(ALICE);
         uint256 claimId = engine.write(testOptionId, amountWritten);
 
-        assertEq(claimId, testOptionId + 1, "claimId");
+        assertEq(claimId, expectedClaimId, "claimId");
         assertEq(engine.balanceOf(ALICE, claimId), 1, "Alice Claim NFT"); // 1 Claim NFT
         assertEq(engine.balanceOf(ALICE, testOptionId), amountWritten, "Alice Option tokens"); // 5 fungible Option tokens
         assertEq(
@@ -1269,7 +1269,7 @@ contract ValoremOptionsClearinghouseUnitTest is BaseClearinghouseTest {
         assertEq(engine.balanceOf(other, optionId), 1, "Other option tokens"); // 1 left after 3 are burned on exercise
     }
 
-    function testRevert_exercise_whenCallerHasNotGrantedSufficientApprovalToengine() public {
+    function testRevert_exercise_whenCallerHasNotGrantedSufficientApprovalToEngine() public {
         uint256 optionId = engine.newOptionType({
             underlyingAsset: address(ERC20A),
             underlyingAmount: 1 ether,

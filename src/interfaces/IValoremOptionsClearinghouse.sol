@@ -305,6 +305,7 @@ interface IValoremOptionsClearinghouse {
         uint96 nextClaimKey;
     }
 
+    // TODO add early redeem
     /**
      * @notice Data about a claim to a short position written on an option type.
      * When writing an amount of options of a particular type, the writer will be issued an ERC 1155 NFT
@@ -478,9 +479,19 @@ interface IValoremOptionsClearinghouse {
     function write(uint256 tokenId, uint112 amount) external returns (uint256 claimId);
 
     /*//////////////////////////////////////////////////////////////
+    //  Net Offsetting Positions
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * TODO
+     */
+    // function net(uint256 optionid) external;
+
+    /*//////////////////////////////////////////////////////////////
     //  Redeem Claims
     //////////////////////////////////////////////////////////////*/
 
+    // TODO add early redeem
     /**
      * @notice Redeems a claim NFT, transfers the underlying/exercise tokens to the caller.
      * Can be called after option expiry timestamp (inclusive).

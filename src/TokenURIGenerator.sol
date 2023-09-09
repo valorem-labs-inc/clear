@@ -415,6 +415,7 @@ contract TokenURIGenerator is ITokenURIGenerator {
             buffer[i] = ALPHABET[value & 0xf];
             value >>= 4;
         }
+        // solhint-disable custom-errors
         require(value == 0, "Strings: hex length insufficient");
         return string(buffer);
     }

@@ -247,5 +247,64 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
     // redeem() early
     //////////////////////////////////////////////////////////////*/
 
-    // TODO
+    function test_redeem_whenBeforeExpiryAndClaimIsFullyAssigned() public {
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 10);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 10, "");
+        vm.stopPrank();
+
+        vm.warp(testExerciseTimestamp);
+        vm.prank(BOB);
+        engine.exercise(testOptionId, 10);
+
+        // pre-redeem check
+        assertEq(
+            ERC20(testExerciseAsset).balanceOf(ALICE), STARTING_BALANCE, "Alice exercise asset balance, pre-redeem"
+        );
+
+        // vm.warp(testExpiryTimestamp);
+        vm.prank(ALICE);
+        engine.redeem(claimId);
+
+        // post-redeem check
+        uint256 expectedPostRedeemBalance = STARTING_BALANCE + (testExerciseAmount * 10);
+        assertEq(
+            ERC20(testExerciseAsset).balanceOf(ALICE),
+            expectedPostRedeemBalance,
+            "Alice exercise asset balance, post-redeem"
+        );
+    }
+
+    function testRevert_redeem_whenBeforeExpiryAndClaimIsUnassigned() public {
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 2);
+
+        vm.warp(testExpiryTimestamp - 1 seconds);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IValoremOptionsClearinghouse.ClaimTooSoon.selector, claimId, testExpiryTimestamp)
+        );
+
+        engine.redeem(claimId);
+        vm.stopPrank();
+    }
+
+    function testRevert_redeem_whenBeforeExpiryAndClaimIsPartiallyAssigned() public {
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 2);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 2, "");
+        vm.stopPrank();
+
+        vm.warp(testExpiryTimestamp - 1 seconds);
+
+        vm.prank(BOB);
+        engine.exercise(testOptionId, 1);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IValoremOptionsClearinghouse.ClaimTooSoon.selector, claimId, testExpiryTimestamp)
+        );
+
+        vm.prank(ALICE);
+        engine.redeem(claimId);
+    }
 }

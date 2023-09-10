@@ -502,7 +502,9 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
     //
 
     /// @inheritdoc IValoremOptionsClearinghouse
-    function net(uint256 claimId) external {}
+    function net(uint256 claimId) external {
+       
+    }
 
     //
     //  Redeem Claims

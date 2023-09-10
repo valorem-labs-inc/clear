@@ -23,6 +23,13 @@ abstract contract BaseClearinghouseTest is Test {
     address internal constant ALICE = address(0xA);
     address internal constant BOB = address(0xB);
     address internal constant CAROL = address(0xC);
+    address internal constant userD = address(0xD);
+    address internal constant userE = address(0xE);
+    address internal constant userF = address(0xF);
+    address internal constant userG = address(0xFF);
+    address internal constant userH = address(0xFFF);
+    address internal constant userI = address(0xFFFF);
+    address internal constant userJ = address(0xFFFFF);
 
     // Admin
     address internal constant FEE_TO = address(0xBEEF);
@@ -84,7 +91,7 @@ abstract contract BaseClearinghouseTest is Test {
         ERC20S.push(ERC20F);
 
         // Setup token balances and approvals
-        address[3] memory recipients = [ALICE, BOB, CAROL];
+        address[10] memory recipients = [ALICE, BOB, CAROL, userD, userE, userF, userG, userH, userI, userJ];
         for (uint256 i = 0; i < recipients.length; i++) {
             _mintTokensForAddress(recipients[i]);
         }

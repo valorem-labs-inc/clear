@@ -2,10 +2,11 @@
 // Valorem Labs Inc. (c) 2023.
 pragma solidity 0.8.16;
 
-import "solmate/utils/FixedPointMathLib.sol";
 import "forge-std/Test.sol";
-import {pp, SolPretty} from "SolPretty/SolPretty.sol";
+import "forge-std/console.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
+import "solmate/utils/FixedPointMathLib.sol";
+import {pp, SolPretty} from "SolPretty/SolPretty.sol";
 
 import "./utils/BaseClearinghouseTest.sol";
 
@@ -117,7 +118,7 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         assertEq(ERC20B.balanceOf(ALICE), balanceB, "Alice exercise asset after");
     }
 
-    function test_net_whenPartiallyExercised() public {
+    function test_net_whenPartiallyAssigned() public {
         uint256 aliceBalanceA = ERC20A.balanceOf(ALICE);
         uint256 aliceBalanceB = ERC20B.balanceOf(ALICE);
         uint256 bobBalanceA = ERC20A.balanceOf(BOB);
@@ -188,6 +189,155 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
             bobBalanceB - expectedExerciseAmount - _calculateFee(expectedExerciseAmount),
             "Bob exercise asset after close"
         );
+    }
+
+    function test_netScenario() public {
+        address writer1 = ALICE;
+        address writer2 = BOB;
+        address writer3 = CAROL;
+        address exerciser1 = userD;
+        address exerciser2 = userE;
+
+        // t = 1
+
+        // writer1 writes 1.15 options, of which exerciser1 takes 1
+        vm.startPrank(writer1);
+        uint256 optionId = engine.newOptionType({
+            underlyingAsset: address(WETHLIKE),
+            underlyingAmount: 1e12,
+            exerciseAsset: address(USDCLIKE),
+            exerciseAmount: 1750,
+            exerciseTimestamp: uint40(block.timestamp + 1 days),
+            expiryTimestamp: uint40(block.timestamp + 8 days)
+        });
+        uint256 claimId1 = engine.write(optionId, 0.01e6); // write 0.01 options, not taken
+        engine.write(claimId1, 0.04e6); // write 0.04 options, not taken
+        engine.write(claimId1, 0.95e6); // write 0.95 options, taken
+        engine.safeTransferFrom(writer1, exerciser1, optionId, 1e6, "");
+        engine.write(claimId1, 0.15e6); // write 0.15 options, not taken
+        vm.stopPrank();
+
+        // bucket state -- 1 claim, 1 bucket
+        // option type inventory check
+        assertEq(engine.balanceOf(writer1, optionId), 0.15e6, "writer1 option balance t1");
+        assertEq(engine.balanceOf(exerciser1, optionId), 1e6, "exerciser1 option balance t1");
+
+        // t = 2
+
+        // writer2 writes 0.1 options, exerciser2 takes all
+        vm.startPrank(writer2);
+        uint256 claimId2 = engine.write(optionId, 0.1e6);
+        engine.safeTransferFrom(writer2, exerciser2, optionId, 0.1e6, "");
+        vm.stopPrank();
+
+        // bucket state -- 2 claims, 1 bucket
+        // inventory check
+        assertEq(engine.balanceOf(writer1, optionId), 0.15e6, "writer1 option balance t2");
+        assertEq(engine.balanceOf(exerciser1, optionId), 1e6, "exerciser1 option balance t2");
+        assertEq(engine.balanceOf(writer2, optionId), 0, "writer2 option balance t2");
+        assertEq(engine.balanceOf(exerciser2, optionId), 0.1e6, "exerciser2 option balance t2");
+
+        // t = 3
+        vm.warp(block.timestamp + 1 days);
+    
+        // FIRST EXERCISE -- Bob exercises his 1 option
+        vm.prank(exerciser1);
+        engine.exercise(optionId, 1e6);
+
+        // inventory check
+        assertEq(engine.balanceOf(writer1, optionId), 0.15e6, "writer1 option balance t3");
+        assertEq(engine.balanceOf(exerciser1, optionId), 0, "exerciser1 option balance t3");
+        assertEq(engine.balanceOf(writer2, optionId), 0, "writer2 option balance t3");
+        assertEq(engine.balanceOf(exerciser2, optionId), 0.1e6, "exerciser2 option balance t3");
+
+        // t = 4
+        
+        // writer3 writes 0.01 options, no taker
+        vm.prank(writer3);
+        uint256 claimId3 = engine.write(optionId, 0.01e6);
+
+        // writer1 writes 0.75 options, no taker
+        vm.prank(writer1);
+        engine.write(claimId1, 0.85e6);
+
+        // writer2 writes 0.01 options, no taker
+        vm.prank(writer2);
+        engine.write(claimId2, 0.01e6);
+
+        // bucket state -- 
+        // B1 contains {Claim 1, Claim 2}
+        // B2 contains {Claim 3, Claim 1, Claim 2}
+
+        // inventory check
+        assertEq(engine.balanceOf(writer1, optionId), 1e6, "writer1 option balance t4");
+        assertEq(engine.balanceOf(exerciser1, optionId), 0, "exerciser1 option balance t4");
+        assertEq(engine.balanceOf(writer2, optionId), 0.01e6, "writer2 option balance t4");
+        assertEq(engine.balanceOf(exerciser2, optionId), 0.1e6, "exerciser2 option balance t4");
+        assertEq(engine.balanceOf(writer3, optionId), 0.01e6, "writer3 option balance t4");
+
+        // t = 5
+
+        // SECOND EXERCISE
+        vm.prank(exerciser2);
+        engine.exercise(optionId, 0.05e6);
+
+        // inventory check
+        assertEq(engine.balanceOf(writer1, optionId), 1e6, "writer1 option balance t5");
+        assertEq(engine.balanceOf(exerciser1, optionId), 0, "exerciser1 option balance t5");
+        assertEq(engine.balanceOf(writer2, optionId), 0.01e6, "writer2 option balance t5");
+        assertEq(engine.balanceOf(exerciser2, optionId), 0.05e6, "exerciser2 option balance t5");
+        assertEq(engine.balanceOf(writer3, optionId), 0.01e6, "writer3 option balance t5");
+
+        // t = 6
+
+        // writer1 writes 1 option, no takers
+        vm.prank(writer1);
+        engine.write(claimId1, 1e6);
+
+        // bucket state -- 
+        // B1 contains {Claim 1, Claim 2}
+        // B2 contains {Claim 3, Claim 1, Claim 2}
+        // B3 contains {Claim 1}
+
+        // inventory check
+        assertEq(engine.balanceOf(writer1, optionId), 2e6, "writer1 option balance t6");
+        assertEq(engine.balanceOf(exerciser1, optionId), 0, "exerciser1 option balance t6");
+        assertEq(engine.balanceOf(writer2, optionId), 0.01e6, "writer2 option balance t6");
+        assertEq(engine.balanceOf(exerciser2, optionId), 0.05e6, "exerciser2 option balance t6");
+        assertEq(engine.balanceOf(writer3, optionId), 0.01e6, "writer3 option balance t6");
+
+        IValoremOptionsClearinghouse.Claim memory claimState1 = engine.claim(claimId1);
+        IValoremOptionsClearinghouse.Claim memory claimState2 = engine.claim(claimId2);
+        IValoremOptionsClearinghouse.Claim memory claimState3 = engine.claim(claimId3);
+
+        console.log("Claim 1 ------------");
+        console.log("amountWritten", claimState1.amountWritten, "amountExercised", claimState1.amountExercised);
+        console.log("Claim 2 ------------");
+        console.log("amountWritten", claimState2.amountWritten, "amountExercised", claimState2.amountExercised);
+        console.log("Claim 3 ------------");
+        console.log("amountWritten", claimState3.amountWritten, "amountExercised", claimState3.amountExercised);
+
+        // 3000000000000000000000000+110000000000000000000000+10000000000000000000000
+        // = 3120000.000000000000000000
+        // for a total of 3.12 options written (.01+.04+.95+.15+.1+.01+.85+.01+1)
+
+        // 968850574712643678160919+80574712643678160919540+574712643678160919540
+        // = 1049999.999999999999999999
+        // for a total of ~1.05 options exercised (1 + .05)
+
+        // writer1 has a claim worth 2031149.425287356321839081 options
+
+        // other pseudorandom assignment selection, by changing exercise amount
+        /*
+        Claim 1 ------------
+        amountWritten 3000000000000000000000000 amountExercised 966000000000000000000000
+        Claim 2 ------------
+        amountWritten 110000000000000000000000 amountExercised 84000000000000000000000
+        Claim 3 ------------
+        amountWritten 10000000000000000000000 amountExercised 0
+         */
+
+        //
     }
 
     // TODO remaining scenarios

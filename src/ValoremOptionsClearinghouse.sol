@@ -267,6 +267,12 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         }
     }
 
+    /// @inheritdoc IValoremOptionsClearinghouse
+    function nettable(uint256 claimId) public view returns (uint256 amountOptionsNettable) {
+        Claim memory claimState = claim(claimId);
+        return (claimState.amountWritten - claimState.amountExercised) / 1e18; // desirable loss of precision
+    }
+
     //
     // Token information
     //
@@ -502,8 +508,66 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
     //
 
     /// @inheritdoc IValoremOptionsClearinghouse
-    function net(uint256 claimId) external {
-       
+    function net(uint256 claimId, uint256 amountOptionsToNet) external {
+        (, uint96 claimKey) = _decodeTokenId(claimId);
+
+        if (claimKey == 0) {
+            // TODO revert can't net an option
+        }
+
+        uint256 claimBalance = balanceOf[msg.sender][claimId];
+        if (claimBalance != 1) {
+            revert CallerDoesNotOwnClaimId(claimId);
+        }
+
+        Claim memory claimState = claim(claimId);
+        uint256 optionBalance = balanceOf[msg.sender][claimState.optionId];
+
+        // Naive implementation
+        // if (claimState.amountExercised > 0) {
+        //     // TODO revert can't net an assigned Claim
+        // }
+
+        // TODO revert can't net on or after expiry
+
+        // Must hold sufficient options and must request to net a nettable amount of options.
+        uint256 amountOptionsNettable = nettable(claimId);
+        if (amountOptionsToNet > optionBalance || amountOptionsToNet > amountOptionsNettable) {
+            revert CallerHoldsInsufficientClaimToNetOptions(claimId, amountOptionsToNet, amountOptionsNettable);
+        }
+
+        // TODO consume Claim
+
+        // Burn options, burn the claim (only if fully consumed in the claim flames ❤️‍🔥), and make ERC20 transfers.
+        _burn(msg.sender, claimState.optionId, amountOptionsToNet);
+        // _burn(msg.sender, claimId, 1);
+
+        // TODO make transfers
+
+        emit ClaimNetted(
+            claimId,
+            claimState.optionId,
+            msg.sender,
+            amountOptionsToNet,
+            123,
+            456
+        );
+
+
+
+
+
+        // // Check assignment status of Claim.
+        // Claim memory claimInfo = claim(claimId);
+        // // TODO compare balanceOfBatch gas usage
+        // uint256 optionBalance = balanceOf[msg.sender][claimInfo.optionId];
+        // if (optionBalance * 1e18 == claimInfo.amountWritten - claimInfo.amountExercised) {
+        //     redeem(claimId);
+        // }
+
+        // Setup pointers to the option and info.
+        // OptionTypeState storage optionTypeState = optionTypeStates[optionKey];
+        // Option memory optionRecord = optionTypeState.option;
     }
 
     //

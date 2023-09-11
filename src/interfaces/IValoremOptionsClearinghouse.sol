@@ -81,6 +81,20 @@ interface IValoremOptionsClearinghouse {
     );
 
     //
+    // Net events
+    //
+
+    // TODO new
+    event ClaimNetted(
+        uint256 indexed claimId,
+        uint256 indexed optionId,
+        address netter,
+        uint256 indexed amountOptionsNetted,
+        uint256 exerciseAmountRedeemed,
+        uint256 underlyingAmountRedeemed
+    );
+
+    //
     // Redeem events
     //
 
@@ -203,6 +217,9 @@ interface IValoremOptionsClearinghouse {
      * @param amount The amount of option contracts which the caller attempted to exercise.
      */
     error CallerHoldsInsufficientOptions(uint256 optionId, uint112 amount);
+
+    // TODO new
+    error CallerHoldsInsufficientClaimToNetOptions(uint256 claimId, uint256 amountOptionsRequested, uint256 amountOptionsNettable);
 
     /**
      * @notice Claims cannot be redeemed before expiry.
@@ -367,6 +384,11 @@ interface IValoremOptionsClearinghouse {
      */
     function position(uint256 tokenId) external view returns (Position memory positionInfo);
 
+    /**
+     * // TODO
+     */
+    function nettable(uint256 claimId) external view returns (uint256 amountOptionsNettable);
+
     //
     // Token information
     //
@@ -485,7 +507,7 @@ interface IValoremOptionsClearinghouse {
     /**
      * @notice TODO
      */
-    function net(uint256 optionId) external;
+    function net(uint256 claimId, uint256 amountOptionsToNet) external;
 
     /*//////////////////////////////////////////////////////////////
     //  Redeem Claims

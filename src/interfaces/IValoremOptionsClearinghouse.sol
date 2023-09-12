@@ -219,7 +219,9 @@ interface IValoremOptionsClearinghouse {
     error CallerHoldsInsufficientOptions(uint256 optionId, uint112 amount);
 
     // TODO new
-    error CallerHoldsInsufficientClaimToNetOptions(uint256 claimId, uint256 amountOptionsRequested, uint256 amountOptionsNettable);
+    error CallerHoldsInsufficientClaimToNetOptions(
+        uint256 claimId, uint256 amountOptionsRequested, uint256 amountOptionsNettable
+    );
 
     /**
      * @notice Claims cannot be redeemed before expiry.
@@ -322,7 +324,7 @@ interface IValoremOptionsClearinghouse {
         uint96 nextClaimKey;
     }
 
-    // TODO add early redeem
+    // TODO add info about early redeem
     /**
      * @notice Data about a claim to a short position written on an option type.
      * When writing an amount of options of a particular type, the writer will be issued an ERC 1155 NFT

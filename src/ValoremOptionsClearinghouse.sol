@@ -270,7 +270,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
     /// @inheritdoc IValoremOptionsClearinghouse
     function nettable(uint256 claimId) public view returns (uint256 amountOptionsNettable) {
         Claim memory claimState = claim(claimId);
-        return (claimState.amountWritten - claimState.amountExercised) / 1e18; // desirable loss of precision
+        return (claimState.amountWritten - claimState.amountExercised) / 1e18; // desirable loss of precision, rounding down
     }
 
     //
@@ -544,18 +544,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
 
         // TODO make transfers
 
-        emit ClaimNetted(
-            claimId,
-            claimState.optionId,
-            msg.sender,
-            amountOptionsToNet,
-            123,
-            456
-        );
-
-
-
-
+        emit ClaimNetted(claimId, claimState.optionId, msg.sender, amountOptionsToNet, 123, 456);
 
         // // Check assignment status of Claim.
         // Claim memory claimInfo = claim(claimId);

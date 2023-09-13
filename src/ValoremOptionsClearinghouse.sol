@@ -578,12 +578,13 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
             revert CallerDoesNotOwnClaimId(claimId);
         }
 
-        // Setup pointers to the option and info.
+        // Setup pointers to the option and claim info.
         OptionTypeState storage optionTypeState = optionTypeStates[optionKey];
         Option memory optionRecord = optionTypeState.option;
+        Claim memory claimInfo = claim(claimId); // TODO can we combine this with Claim accounting below?
 
-        // Can't redeem until expiry.
-        if (optionRecord.expiryTimestamp > block.timestamp) {
+        // Can't redeem before expiry, unless Claim is fully assigned.
+        if (optionRecord.expiryTimestamp > block.timestamp && claimInfo.amountWritten > claimInfo.amountExercised) {
             revert ClaimTooSoon(claimId, optionRecord.expiryTimestamp);
         }
 

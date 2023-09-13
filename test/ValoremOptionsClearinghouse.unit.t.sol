@@ -751,7 +751,7 @@ contract ValoremOptionsClearinghouseUnitTest is BaseClearinghouseTest {
     // function redeem(uint256 claimId) external
     //////////////////////////////////////////////////////////////*/
 
-    function test_redeem_whenUnexercised() public {
+    function test_redeem_whenUnassigned() public {
         uint112 amountWritten = 7;
         uint256 expectedUnderlyingAmount = testUnderlyingAmount * amountWritten;
         uint256 expectedUnderlyingFee = _calculateFee(expectedUnderlyingAmount);
@@ -792,7 +792,7 @@ contract ValoremOptionsClearinghouseUnitTest is BaseClearinghouseTest {
         assertEq(DAILIKE.balanceOf(ALICE), STARTING_BALANCE, "Alice exercise post redeem"); // no change
     }
 
-    function test_redeem_whenPartiallyExercised() public {
+    function test_redeem_whenPartiallyAssigned() public {
         uint112 amountWritten = 7;
         uint112 amountExercised = 3;
         uint256 expectedUnderlyingFee = _calculateFee(testUnderlyingAmount);
@@ -874,7 +874,7 @@ contract ValoremOptionsClearinghouseUnitTest is BaseClearinghouseTest {
         );
     }
 
-    function test_redeem_whenFullyExercised() public {
+    function test_redeem_whenFullyAssigned() public {
         uint112 amountWritten = 7;
         uint112 amountExercised = 7;
         uint256 expectedUnderlyingFee = _calculateFee(testUnderlyingAmount);
@@ -987,20 +987,6 @@ contract ValoremOptionsClearinghouseUnitTest is BaseClearinghouseTest {
         engine.redeem(claimId);
 
         vm.expectRevert(abi.encodeWithSelector(IValoremOptionsClearinghouse.CallerDoesNotOwnClaimId.selector, claimId));
-
-        engine.redeem(claimId);
-        vm.stopPrank();
-    }
-
-    function testRevert_redeem_whenClaimTooSoon() public {
-        vm.startPrank(ALICE);
-        uint256 claimId = engine.write(testOptionId, 1);
-
-        vm.warp(testExerciseTimestamp - 1 seconds);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IValoremOptionsClearinghouse.ClaimTooSoon.selector, claimId, testExpiryTimestamp)
-        );
 
         engine.redeem(claimId);
         vm.stopPrank();

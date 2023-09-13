@@ -6,14 +6,11 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import "solmate/utils/FixedPointMathLib.sol";
-import {pp, SolPretty} from "SolPretty/SolPretty.sol";
 
 import "./utils/BaseClearinghouseTest.sol";
 
 /// @notice Unit tests for ValoremOptionsClearinghouse v1.1.0
 contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
-    using SolPretty for string;
-
     address private constant writer1 = ALICE;
     address private constant writer2 = BOB;
     address private constant writer3 = CAROL;
@@ -100,14 +97,14 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
     //     assertEq(engine.feeBalance(testUnderlyingAsset), expectedFee, "Fee balance underlying");
     //     assertEq(engine.feeBalance(testExerciseAsset), 0, "Fee balance exercise"); // no fee assessed on exercise asset during write()
 
-    //     // Unassigned
-    //     IValoremOptionsClearinghouse.Claim memory unassigned = engine.claim(claimId);
-    //     emit log("Unassigned Claim ---------");
-    //     emit log_named_string("amountWritten", pp(unassigned.amountWritten, 18, 0));
-    //     emit log_named_string("amountExercised", pp(unassigned.amountExercised, 18, 0));
-    //     uint256 assignmentPercentage = unassigned.amountExercised / unassigned.amountWritten;
-    //     emit log_named_uint("percentage", assignmentPercentage);
-    //     // if amountExercised == 0, claim is unassigned
+    // Unassigned
+    // IValoremOptionsClearinghouse.Claim memory unassigned = engine.claim(claimId);
+    // emit log("Unassigned Claim ---------");
+    // emit log_named_string("amountWritten", pp(unassigned.amountWritten, 18, 0));
+    // emit log_named_string("amountExercised", pp(unassigned.amountExercised, 18, 0));
+    // uint256 assignmentPercentage = unassigned.amountExercised / unassigned.amountWritten;
+    // emit log_named_uint("percentage", assignmentPercentage);
+    // if amountExercised == 0, claim is unassigned
 
     //     // Partially Assigned
     //     vm.prank(ALICE);
@@ -116,25 +113,25 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
     //     vm.prank(BOB);
     //     engine.exercise(testOptionId, 1);
 
-    //     IValoremOptionsClearinghouse.Claim memory partiallyAssigned = engine.claim(claimId);
-    //     emit log("Partially Assigned Claim ---------");
-    //     emit log_named_string("amountWritten", pp(partiallyAssigned.amountWritten, 18, 0));
-    //     emit log_named_string("amountExercised", pp(partiallyAssigned.amountExercised, 18, 0));
-    //     assignmentPercentage = partiallyAssigned.amountExercised / partiallyAssigned.amountWritten;
-    //     emit log_named_uint("percentage", assignmentPercentage); // TODO use scalar
-    //     // if amountExercised > 0 && amountWritten > amountExercised, claim is partially assigned
+    // IValoremOptionsClearinghouse.Claim memory partiallyAssigned = engine.claim(claimId);
+    // emit log("Partially Assigned Claim ---------");
+    // emit log_named_string("amountWritten", pp(partiallyAssigned.amountWritten, 18, 0));
+    // emit log_named_string("amountExercised", pp(partiallyAssigned.amountExercised, 18, 0));
+    // assignmentPercentage = partiallyAssigned.amountExercised / partiallyAssigned.amountWritten;
+    // emit log_named_uint("percentage", assignmentPercentage); // TODO use scalar
+    // if amountExercised > 0 && amountWritten > amountExercised, claim is partially assigned
 
     //     // Fully Assigned
     //     vm.prank(BOB);
     //     engine.exercise(testOptionId, 4);
 
-    //     IValoremOptionsClearinghouse.Claim memory fullyAssigned = engine.claim(claimId);
-    //     emit log("Fully Assigned Claim ---------");
-    //     emit log_named_string("amountWritten", pp(fullyAssigned.amountWritten, 18, 0));
-    //     emit log_named_string("amountExercised", pp(fullyAssigned.amountExercised, 18, 0));
-    //     assignmentPercentage = fullyAssigned.amountExercised / fullyAssigned.amountWritten;
-    //     emit log_named_uint("percentage", assignmentPercentage);
-    //     // if amountWritten == amountExercised, claim is fully assigned
+    // IValoremOptionsClearinghouse.Claim memory fullyAssigned = engine.claim(claimId);
+    // emit log("Fully Assigned Claim ---------");
+    // emit log_named_string("amountWritten", pp(fullyAssigned.amountWritten, 18, 0));
+    // emit log_named_string("amountExercised", pp(fullyAssigned.amountExercised, 18, 0));
+    // assignmentPercentage = fullyAssigned.amountExercised / fullyAssigned.amountWritten;
+    // emit log_named_uint("percentage", assignmentPercentage);
+    // if amountWritten == amountExercised, claim is fully assigned
     // }
 
     // /*//////////////////////////////////////////////////////////////
@@ -534,13 +531,14 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         position1 = engine.position(claimId1);
         position2 = engine.position(claimId2);
         position3 = engine.position(claimId3);
-        expectedUnderlyingReturnedFromRedeemClaim1 = (1e12 * (claimState1.amountWritten - claimState1.amountExercised)) / 1e18;
+        expectedUnderlyingReturnedFromRedeemClaim1 =
+            (1e12 * (claimState1.amountWritten - claimState1.amountExercised)) / 1e18;
         assertEq(
             position1.underlyingAmount,
             int256(expectedUnderlyingReturnedFromRedeemClaim1),
             "A -- claim 1 underlying asset avail"
         );
-        expectedExerciseReturnedFromRedeemClaim1 = (1750 * claimState1.amountExercised) / 1e18;        
+        expectedExerciseReturnedFromRedeemClaim1 = (1750 * claimState1.amountExercised) / 1e18;
         assertEq(
             position1.exerciseAmount,
             int256(expectedExerciseReturnedFromRedeemClaim1),
@@ -578,7 +576,7 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         );
         assertEq(
             position1B.exerciseAmount,
-             int256((1746 * claimState1B.amountExercised) / 1e18),
+            int256((1746 * claimState1B.amountExercised) / 1e18),
             "B -- claim 1 exercise asset avail"
         );
         assertEq(
@@ -618,7 +616,6 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         //
         // Test net()
         //
-
         uint256 uBalance; // temporary balance values
         uint256 eBalance; // temporary balance values
 
@@ -653,8 +650,16 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         vm.prank(writer1);
         engine.redeem(claimId1);
         assertEq(engine.balanceOf(writer1, claimId1), 0, "A -- writer1 Claim is burned after redeem");
-        assertEq(WETHLIKE.balanceOf(writer1), uBalance + expectedUnderlyingReturnedFromRedeemClaim1, "A -- writer1 got correct WETHLIKE collateral back from redeem");
-        assertEq(USDCLIKE.balanceOf(writer1), eBalance + expectedExerciseReturnedFromRedeemClaim1, "A -- writer1 got correct USDCLIKE collateral back from redeeem");
+        assertEq(
+            WETHLIKE.balanceOf(writer1),
+            uBalance + expectedUnderlyingReturnedFromRedeemClaim1,
+            "A -- writer1 got correct WETHLIKE collateral back from redeem"
+        );
+        assertEq(
+            USDCLIKE.balanceOf(writer1),
+            eBalance + expectedExerciseReturnedFromRedeemClaim1,
+            "A -- writer1 got correct USDCLIKE collateral back from redeeem"
+        );
 
         vm.prank(writer3);
         engine.redeem(claimId3);
@@ -737,5 +742,64 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
     // redeem() early
     //////////////////////////////////////////////////////////////*/
 
-    // TODO
+    function test_redeem_whenBeforeExpiryAndClaimIsFullyAssigned() public {
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 10);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 10, "");
+        vm.stopPrank();
+
+        vm.warp(testExerciseTimestamp);
+        vm.prank(BOB);
+        engine.exercise(testOptionId, 10);
+
+        // pre-redeem check
+        assertEq(
+            ERC20(testExerciseAsset).balanceOf(ALICE), STARTING_BALANCE, "Alice exercise asset balance, pre-redeem"
+        );
+
+        // vm.warp(testExpiryTimestamp);
+        vm.prank(ALICE);
+        engine.redeem(claimId);
+
+        // post-redeem check
+        uint256 expectedPostRedeemBalance = STARTING_BALANCE + (testExerciseAmount * 10);
+        assertEq(
+            ERC20(testExerciseAsset).balanceOf(ALICE),
+            expectedPostRedeemBalance,
+            "Alice exercise asset balance, post-redeem"
+        );
+    }
+
+    function testRevert_redeem_whenBeforeExpiryAndClaimIsUnassigned() public {
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 2);
+
+        vm.warp(testExpiryTimestamp - 1 seconds);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IValoremOptionsClearinghouse.ClaimTooSoon.selector, claimId, testExpiryTimestamp)
+        );
+
+        engine.redeem(claimId);
+        vm.stopPrank();
+    }
+
+    function testRevert_redeem_whenBeforeExpiryAndClaimIsPartiallyAssigned() public {
+        vm.startPrank(ALICE);
+        uint256 claimId = engine.write(testOptionId, 2);
+        engine.safeTransferFrom(ALICE, BOB, testOptionId, 2, "");
+        vm.stopPrank();
+
+        vm.warp(testExpiryTimestamp - 1 seconds);
+
+        vm.prank(BOB);
+        engine.exercise(testOptionId, 1);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IValoremOptionsClearinghouse.ClaimTooSoon.selector, claimId, testExpiryTimestamp)
+        );
+
+        vm.prank(ALICE);
+        engine.redeem(claimId);
+    }
 }

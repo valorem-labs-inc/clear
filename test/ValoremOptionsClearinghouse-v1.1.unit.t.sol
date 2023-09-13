@@ -4,15 +4,12 @@ pragma solidity 0.8.16;
 
 import "solmate/utils/FixedPointMathLib.sol";
 import "forge-std/Test.sol";
-import {pp, SolPretty} from "SolPretty/SolPretty.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
 import "./utils/BaseClearinghouseTest.sol";
 
 /// @notice Unit tests for ValoremOptionsClearinghouse v1.1.0
 contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
-    using SolPretty for string;
-
     /*//////////////////////////////////////////////////////////////
     // Clearinghouse v1.1.0
     //////////////////////////////////////////////////////////////*/
@@ -39,12 +36,12 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         assertEq(engine.feeBalance(testExerciseAsset), 0, "Fee balance exercise"); // no fee assessed on exercise asset during write()
 
         // Unassigned
-        IValoremOptionsClearinghouse.Claim memory unassigned = engine.claim(claimId);
-        emit log("Unassigned Claim ---------");
-        emit log_named_string("amountWritten", pp(unassigned.amountWritten, 18, 0));
-        emit log_named_string("amountExercised", pp(unassigned.amountExercised, 18, 0));
-        uint256 assignmentPercentage = unassigned.amountExercised / unassigned.amountWritten;
-        emit log_named_uint("percentage", assignmentPercentage);
+        // IValoremOptionsClearinghouse.Claim memory unassigned = engine.claim(claimId);
+        // emit log("Unassigned Claim ---------");
+        // emit log_named_string("amountWritten", pp(unassigned.amountWritten, 18, 0));
+        // emit log_named_string("amountExercised", pp(unassigned.amountExercised, 18, 0));
+        // uint256 assignmentPercentage = unassigned.amountExercised / unassigned.amountWritten;
+        // emit log_named_uint("percentage", assignmentPercentage);
         // if amountExercised == 0, claim is unassigned
 
         // Partially Assigned
@@ -54,24 +51,24 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         vm.prank(BOB);
         engine.exercise(testOptionId, 1);
 
-        IValoremOptionsClearinghouse.Claim memory partiallyAssigned = engine.claim(claimId);
-        emit log("Partially Assigned Claim ---------");
-        emit log_named_string("amountWritten", pp(partiallyAssigned.amountWritten, 18, 0));
-        emit log_named_string("amountExercised", pp(partiallyAssigned.amountExercised, 18, 0));
-        assignmentPercentage = partiallyAssigned.amountExercised / partiallyAssigned.amountWritten;
-        emit log_named_uint("percentage", assignmentPercentage); // TODO use scalar
+        // IValoremOptionsClearinghouse.Claim memory partiallyAssigned = engine.claim(claimId);
+        // emit log("Partially Assigned Claim ---------");
+        // emit log_named_string("amountWritten", pp(partiallyAssigned.amountWritten, 18, 0));
+        // emit log_named_string("amountExercised", pp(partiallyAssigned.amountExercised, 18, 0));
+        // assignmentPercentage = partiallyAssigned.amountExercised / partiallyAssigned.amountWritten;
+        // emit log_named_uint("percentage", assignmentPercentage); // TODO use scalar
         // if amountExercised > 0 && amountWritten > amountExercised, claim is partially assigned
 
         // Fully Assigned
         vm.prank(BOB);
         engine.exercise(testOptionId, 4);
 
-        IValoremOptionsClearinghouse.Claim memory fullyAssigned = engine.claim(claimId);
-        emit log("Fully Assigned Claim ---------");
-        emit log_named_string("amountWritten", pp(fullyAssigned.amountWritten, 18, 0));
-        emit log_named_string("amountExercised", pp(fullyAssigned.amountExercised, 18, 0));
-        assignmentPercentage = fullyAssigned.amountExercised / fullyAssigned.amountWritten;
-        emit log_named_uint("percentage", assignmentPercentage);
+        // IValoremOptionsClearinghouse.Claim memory fullyAssigned = engine.claim(claimId);
+        // emit log("Fully Assigned Claim ---------");
+        // emit log_named_string("amountWritten", pp(fullyAssigned.amountWritten, 18, 0));
+        // emit log_named_string("amountExercised", pp(fullyAssigned.amountExercised, 18, 0));
+        // assignmentPercentage = fullyAssigned.amountExercised / fullyAssigned.amountWritten;
+        // emit log_named_uint("percentage", assignmentPercentage);
         // if amountWritten == amountExercised, claim is fully assigned
     }
 

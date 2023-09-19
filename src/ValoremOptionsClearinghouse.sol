@@ -68,7 +68,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
      * keep track of how many options are written from a claim into each bucket,
      * in order to correctly perform fair exercise assignment.
      */
-    struct ClaimIndex {
+    struct ClaimBucketIndex {
         /// @custom:member amountWritten The amount of option contracts written into claim for given bucket.
         uint112 amountWritten;
         /// @custom:member bucketIndex The index of the Bucket into which the options collateral was deposited.
@@ -82,7 +82,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         /// @custom:member State for assignment buckets on this option type.
         BucketState bucketState;
         /// @custom:member A mapping to an array of bucket indices per claim token for this option type.
-        mapping(uint96 => ClaimIndex[]) claimIndices;
+        mapping(uint96 => ClaimBucketIndex[]) claimBucketIndices;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -192,15 +192,15 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         uint256 amountExercised;
 
         OptionTypeState storage optionTypeState = optionTypeStates[optionKey];
-        ClaimIndex[] storage claimIndexArray = optionTypeState.claimIndices[claimKey];
-        uint256 len = claimIndexArray.length;
+        ClaimBucketIndex[] storage claimBucketIndexArray = optionTypeState.claimBucketIndices[claimKey];
+        uint256 len = claimBucketIndexArray.length;
 
         for (uint256 i = 0; i < len; i++) {
-            ClaimIndex storage claimIndex = claimIndexArray[i];
-            Bucket storage bucket = optionTypeState.bucketState.buckets[claimIndex.bucketIndex];
-            amountWritten += claimIndex.amountWritten;
+            ClaimBucketIndex storage claimBucketIndex = claimBucketIndexArray[i];
+            Bucket storage bucket = optionTypeState.bucketState.buckets[claimBucketIndex.bucketIndex];
+            amountWritten += claimBucketIndex.amountWritten;
             amountExercised +=
-                FixedPointMathLib.divWadDown((bucket.amountExercised * claimIndex.amountWritten), bucket.amountWritten);
+                FixedPointMathLib.divWadDown((bucket.amountExercised * claimBucketIndex.amountWritten), bucket.amountWritten);
         }
 
         claimInfo = Claim({
@@ -245,14 +245,14 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
             uint256 totalExerciseAmount = 0;
 
             OptionTypeState storage optionTypeState = optionTypeStates[optionKey];
-            ClaimIndex[] storage claimIndices = optionTypeState.claimIndices[claimKey];
-            uint256 len = claimIndices.length;
+            ClaimBucketIndex[] storage claimBucketIndices = optionTypeState.claimBucketIndices[claimKey];
+            uint256 len = claimBucketIndices.length;
             uint256 underlyingAssetAmount = optionTypeState.option.underlyingAmount;
             uint256 exerciseAssetAmount = optionTypeState.option.exerciseAmount;
 
             for (uint256 i = 0; i < len; i++) {
-                (uint256 indexUnderlyingAmount, uint256 indexExerciseAmount) = _getAssetAmountsForClaimIndex(
-                    underlyingAssetAmount, exerciseAssetAmount, optionTypeState, claimIndices, i
+                (uint256 indexUnderlyingAmount, uint256 indexExerciseAmount) = _getAssetAmountsForClaimBucketIndex(
+                    underlyingAssetAmount, exerciseAssetAmount, optionTypeState, claimBucketIndices, i
                 );
                 totalUnderlyingAmount += indexUnderlyingAmount;
                 totalExerciseAmount += indexExerciseAmount;
@@ -458,7 +458,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
             tokenId = _encodeTokenId(optionKey, nextClaimKey);
 
             // Add claim bucket indices.
-            _addOrUpdateClaimIndex(optionTypeStates[optionKey], nextClaimKey, bucketIndex, amount);
+            _addOrUpdateClaimBucketIndex(optionTypeStates[optionKey], nextClaimKey, bucketIndex, amount);
 
             // Emit events about options written on a new claim.
             emit OptionsWritten(encodedOptionId, msg.sender, tokenId, amount);
@@ -487,7 +487,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
             }
 
             // Add claim bucket indices.
-            _addOrUpdateClaimIndex(optionTypeStates[optionKey], claimKey, bucketIndex, amount);
+            _addOrUpdateClaimBucketIndex(optionTypeStates[optionKey], claimKey, bucketIndex, amount);
 
             // Emit events about options written on existing claim.
             emit OptionsWritten(encodedOptionId, msg.sender, tokenId, amount);
@@ -589,8 +589,8 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         }
 
         // Set up accumulators.
-        ClaimIndex[] storage claimIndices = optionTypeState.claimIndices[claimKey];
-        uint256 len = claimIndices.length;
+        ClaimBucketIndex[] storage claimBucketIndices = optionTypeState.claimBucketIndices[claimKey];
+        uint256 len = claimBucketIndices.length;
         uint256 underlyingAssetAmount = optionTypeState.option.underlyingAmount;
         uint256 exerciseAssetAmount = optionTypeState.option.exerciseAmount;
         uint256 totalUnderlyingAssetAmount;
@@ -598,8 +598,8 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
 
         // Calculate the collateral of the Claim.
         for (uint256 i = len; i > 0; i--) {
-            (uint256 indexUnderlyingAmount, uint256 indexExerciseAmount) = _getAssetAmountsForClaimIndex(
-                underlyingAssetAmount, exerciseAssetAmount, optionTypeState, claimIndices, i - 1
+            (uint256 indexUnderlyingAmount, uint256 indexExerciseAmount) = _getAssetAmountsForClaimBucketIndex(
+                underlyingAssetAmount, exerciseAssetAmount, optionTypeState, claimBucketIndices, i - 1
             );
 
             // Accumulate the amount exercised and unexercised in these variables
@@ -608,7 +608,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
             totalExerciseAssetAmount += indexExerciseAmount;
 
             // This zeroes out the array during the redemption process for a gas refund.
-            claimIndices.pop();
+            claimBucketIndices.pop();
         }
 
         emit ClaimRedeemed(
@@ -777,26 +777,26 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
      * @return initialized Whether or not the claim is initialized.
      */
     function _isClaimInitialized(uint160 optionKey, uint96 claimKey) private view returns (bool initialized) {
-        return optionTypeStates[optionKey].claimIndices[claimKey].length > 0;
+        return optionTypeStates[optionKey].claimBucketIndices[claimKey].length > 0;
     }
 
     /// @notice Returns the exercised and unexercised amounts for a given claim index.
-    function _getAssetAmountsForClaimIndex(
+    function _getAssetAmountsForClaimBucketIndex(
         uint256 underlyingAssetAmount,
         uint256 exerciseAssetAmount,
         OptionTypeState storage optionTypeState,
-        ClaimIndex[] storage claimIndexArray,
+        ClaimBucketIndex[] storage claimBucketIndexArray,
         uint256 index
     ) private view returns (uint256 underlyingAmount, uint256 exerciseAmount) {
-        ClaimIndex storage claimIndex = claimIndexArray[index];
-        Bucket storage bucket = optionTypeState.bucketState.buckets[claimIndex.bucketIndex];
-        uint256 claimIndexAmountWritten = claimIndex.amountWritten;
+        ClaimBucketIndex storage claimBucketIndex = claimBucketIndexArray[index];
+        Bucket storage bucket = optionTypeState.bucketState.buckets[claimBucketIndex.bucketIndex];
+        uint256 claimBucketIndexAmountWritten = claimBucketIndex.amountWritten;
         uint256 bucketAmountWritten = bucket.amountWritten;
         uint256 bucketAmountExercised = bucket.amountExercised;
         underlyingAmount += (
-            (bucketAmountWritten - bucketAmountExercised) * underlyingAssetAmount * claimIndexAmountWritten
+            (bucketAmountWritten - bucketAmountExercised) * underlyingAssetAmount * claimBucketIndexAmountWritten
         ) / bucketAmountWritten;
-        exerciseAmount += (bucketAmountExercised * exerciseAssetAmount * claimIndexAmountWritten) / bucketAmountWritten;
+        exerciseAmount += (bucketAmountExercised * exerciseAssetAmount * claimBucketIndexAmountWritten) / bucketAmountWritten;
     }
 
     //
@@ -922,28 +922,28 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         return writtenBucketIndex;
     }
 
-    /// @notice Updates claimIndices for a given claim key.
-    function _addOrUpdateClaimIndex(
+    /// @notice Updates claimBucketIndices for a given claim key.
+    function _addOrUpdateClaimBucketIndex(
         OptionTypeState storage optionTypeState,
         uint96 claimKey,
         uint96 bucketIndex,
         uint112 amount
     ) private {
-        ClaimIndex[] storage claimIndices = optionTypeState.claimIndices[claimKey];
-        uint256 arrayLength = claimIndices.length;
+        ClaimBucketIndex[] storage claimBucketIndices = optionTypeState.claimBucketIndices[claimKey];
+        uint256 arrayLength = claimBucketIndices.length;
 
         // If the array is empty, create a new index and return.
         if (arrayLength == 0) {
-            claimIndices.push(ClaimIndex({amountWritten: amount, bucketIndex: bucketIndex}));
+            claimBucketIndices.push(ClaimBucketIndex({amountWritten: amount, bucketIndex: bucketIndex}));
 
             return;
         }
 
-        ClaimIndex storage lastIndex = claimIndices[arrayLength - 1];
+        ClaimBucketIndex storage lastIndex = claimBucketIndices[arrayLength - 1];
 
         // If we are writing to an index that doesn't yet exist, create it and return.
         if (lastIndex.bucketIndex < bucketIndex) {
-            claimIndices.push(ClaimIndex({amountWritten: amount, bucketIndex: bucketIndex}));
+            claimBucketIndices.push(ClaimBucketIndex({amountWritten: amount, bucketIndex: bucketIndex}));
 
             return;
         }

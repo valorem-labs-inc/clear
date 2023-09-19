@@ -247,13 +247,10 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
             OptionTypeState storage optionTypeState = optionTypeStates[optionKey];
             ClaimBucketIndex[] storage claimBucketIndices = optionTypeState.claimBucketIndices[claimKey];
             uint256 len = claimBucketIndices.length;
-            uint256 underlyingAssetAmount = optionTypeState.option.underlyingAmount;
-            uint256 exerciseAssetAmount = optionTypeState.option.exerciseAmount;
 
             for (uint256 i = 0; i < len; i++) {
-                (uint256 indexUnderlyingAmount, uint256 indexExerciseAmount) = _getAssetAmountsForClaimBucketIndex(
-                    underlyingAssetAmount, exerciseAssetAmount, optionTypeState, claimBucketIndices, i
-                );
+                (uint256 indexUnderlyingAmount, uint256 indexExerciseAmount) =
+                    _getAssetAmountsForClaimBucketIndex(i, claimBucketIndices, optionTypeState);
                 totalUnderlyingAmount += indexUnderlyingAmount;
                 totalExerciseAmount += indexExerciseAmount;
             }
@@ -591,16 +588,13 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         // Set up accumulators.
         ClaimBucketIndex[] storage claimBucketIndices = optionTypeState.claimBucketIndices[claimKey];
         uint256 len = claimBucketIndices.length;
-        uint256 underlyingAssetAmount = optionTypeState.option.underlyingAmount;
-        uint256 exerciseAssetAmount = optionTypeState.option.exerciseAmount;
         uint256 totalUnderlyingAssetAmount;
         uint256 totalExerciseAssetAmount;
 
         // Calculate the collateral of the Claim.
         for (uint256 i = len; i > 0; i--) {
-            (uint256 indexUnderlyingAmount, uint256 indexExerciseAmount) = _getAssetAmountsForClaimBucketIndex(
-                underlyingAssetAmount, exerciseAssetAmount, optionTypeState, claimBucketIndices, i - 1
-            );
+            (uint256 indexUnderlyingAmount, uint256 indexExerciseAmount) =
+                _getAssetAmountsForClaimBucketIndex(i - 1, claimBucketIndices, optionTypeState);
 
             // Accumulate the amount exercised and unexercised in these variables
             // for later multiplication by optionRecord.exerciseAmount/underlyingAmount.
@@ -780,23 +774,31 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         return optionTypeStates[optionKey].claimBucketIndices[claimKey].length > 0;
     }
 
-    /// @notice Returns the exercised and unexercised amounts for a given claim index.
+    /// @notice Returns (unassigned) amount of the underlying asset and (assigned) amount of the exercise asset for a given ClaimBucketIndex.
     function _getAssetAmountsForClaimBucketIndex(
-        uint256 underlyingAssetAmount,
-        uint256 exerciseAssetAmount,
-        OptionTypeState storage optionTypeState,
+        uint256 index,
         ClaimBucketIndex[] storage claimBucketIndexArray,
-        uint256 index
+        OptionTypeState storage optionTypeState
     ) private view returns (uint256 underlyingAmount, uint256 exerciseAmount) {
+        // Get ClaimBucketIndex, Bucket, and amounts written/exercised from storage.
         ClaimBucketIndex storage claimBucketIndex = claimBucketIndexArray[index];
         Bucket storage bucket = optionTypeState.bucketState.buckets[claimBucketIndex.bucketIndex];
         uint256 claimBucketIndexAmountWritten = claimBucketIndex.amountWritten;
         uint256 bucketAmountWritten = bucket.amountWritten;
         uint256 bucketAmountExercised = bucket.amountExercised;
+
+        // Get underlying amount and exercise amount for this option type.
+        uint256 underlyingAssetAmount = optionTypeState.option.underlyingAmount;
+        uint256 exerciseAssetAmount = optionTypeState.option.exerciseAmount;
+
+        // Calculate (unassigned) amount of underlying asset, based on this ClaimBucketIndex's proportion of claims written into the bucket.
         underlyingAmount += (
             (bucketAmountWritten - bucketAmountExercised) * underlyingAssetAmount * claimBucketIndexAmountWritten
         ) / bucketAmountWritten;
-        exerciseAmount += (bucketAmountExercised * exerciseAssetAmount * claimBucketIndexAmountWritten) / bucketAmountWritten;
+
+        // Calculate (assigned) amount of exercise asset, based on this ClaimBucketIndex's proportion of claims written into the bucket.
+        exerciseAmount +=
+            (bucketAmountExercised * exerciseAssetAmount * claimBucketIndexAmountWritten) / bucketAmountWritten;
     }
 
     //

@@ -1,9 +1,3 @@
-| src/TokenURIGenerator.sol:TokenURIGenerator contract |                 |        |        |        |         |
-|------------------------------------------------------|-----------------|--------|--------|--------|---------|
-| Deployment Cost                                      | Deployment Size |        |        |        |         |
-| 1982298                                              | 9933            |        |        |        |         |
-| Function Name                                        | min             | avg    | median | max    | # calls |
-| constructTokenURI                                    | 420115          | 420115 | 420115 | 420115 | 1       |
 | src/ValoremOptionsClearinghouse.sol:ValoremOptionsClearinghouse contract |                 |        |        |        |         |
 |--------------------------------------------------------------------------|-----------------|--------|--------|--------|---------|
 | Deployment Cost                                                          | Deployment Size |        |        |        |         |
@@ -30,57 +24,3 @@
 | tokenURIGenerator                                                        | 426             | 1426   | 1426   | 2426   | 2       |
 | uri                                                                      | 9574            | 236923 | 236923 | 464273 | 2       |
 | write                                                                    | 450             | 125068 | 115360 | 242841 | 432     |
-| test/ValoremOptionsClearinghouse.invariant.t.sol:ValoremOptionsClearinghouseInvariantTest contract |                 |        |        |        |         |
-|----------------------------------------------------------------------------------------------------|-----------------|--------|--------|--------|---------|
-| Deployment Cost                                                                                    | Deployment Size |        |        |        |         |
-| 10565393                                                                                           | 52415           |        |        |        |         |
-| Function Name                                                                                      | min             | avg    | median | max    | # calls |
-| addOptionType                                                                                      | 27437           | 29091  | 27437  | 44537  | 31      |
-| getClaimIds                                                                                        | 2672            | 2672   | 2672   | 2672   | 393     |
-| getMockErc20s                                                                                      | 16409           | 16409  | 16409  | 16409  | 432     |
-| getOptionTypes                                                                                     | 2717            | 12650  | 11727  | 31844  | 1125    |
-| invariant_erc20_balances                                                                           | 208393          | 208393 | 208393 | 208393 | 1000    |
-| invariant_options_written_match_claims                                                             | 2299            | 64271  | 73068  | 122875 | 1000    |
-| invariant_positions_accounting                                                                     | 91974           | 91974  | 91974  | 91974  | 1000    |
-| test/actors/OptionHolder.sol:OptionHolder contract |                 |       |        |       |         |
-|----------------------------------------------------|-----------------|-------|--------|-------|---------|
-| Deployment Cost                                    | Deployment Size |       |        |       |         |
-| 277087                                             | 1418            |       |        |       |         |
-| Function Name                                      | min             | avg   | median | max   | # calls |
-| exercise                                           | 11320           | 27637 | 28575  | 49432 | 771     |
-| test/actors/OptionWriter.sol:OptionWriter contract |                 |        |        |        |         |
-|----------------------------------------------------|-----------------|--------|--------|--------|---------|
-| Deployment Cost                                    | Deployment Size |        |        |        |         |
-| 756371                                             | 3769            |        |        |        |         |
-| Function Name                                      | min             | avg    | median | max    | # calls |
-| newOptionType                                      | 35797           | 59160  | 36220  | 183385 | 186     |
-| redeem                                             | 11386           | 11386  | 11386  | 11386  | 201     |
-| writeExisting                                      | 16468           | 119726 | 97608  | 294042 | 192     |
-| writeNew                                           | 12278           | 123111 | 102700 | 289864 | 162     |
-| test/actors/ProtocolAdmin.sol:ProtocolAdmin contract |                 |       |        |       |         |
-|------------------------------------------------------|-----------------|-------|--------|-------|---------|
-| Deployment Cost                                      | Deployment Size |       |        |       |         |
-| 546910                                               | 2818            |       |        |       |         |
-| Function Name                                        | min             | avg   | median | max   | # calls |
-| setFeeTo                                             | 3552            | 6301  | 3552   | 12223 | 246     |
-| setFeesEnabled                                       | 11067           | 11067 | 11067  | 11067 | 261     |
-| sweepFees                                            | 55260           | 55260 | 55260  | 55260 | 246     |
-| test/actors/Timekeeper.sol:Timekeeper contract |                 |      |        |      |         |
-|------------------------------------------------|-----------------|------|--------|------|---------|
-| Deployment Cost                                | Deployment Size |      |        |      |         |
-| 96747                                          | 515             |      |        |      |         |
-| Function Name                                  | min             | avg  | median | max  | # calls |
-| tickTock                                       | 3754            | 3754 | 3754   | 3754 | 735     |
-| test/utils/MockERC20.sol:MockERC20 contract |                 |       |        |       |         |
-|---------------------------------------------|-----------------|-------|--------|-------|---------|
-| Deployment Cost                             | Deployment Size |       |        |       |         |
-| 648998                                      | 4360            |       |        |       |         |
-| Function Name                               | min             | avg   | median | max   | # calls |
-| approve                                     | 2546            | 24529 | 24546  | 24546 | 2616    |
-| balanceOf                                   | 542             | 2536  | 2542   | 2542  | 54182   |
-| decimals                                    | 249             | 249   | 249    | 249   | 2       |
-| mint                                        | 2896            | 31899 | 24796  | 46696 | 2616    |
-| symbol                                      | 3236            | 3236  | 3236   | 3236  | 2       |
-| totalSupply                                 | 363             | 2305  | 2363   | 2363  | 6311    |
-| transfer                                    | 2985            | 4962  | 2985   | 24885 | 146     |
-| transferFrom                                | 824             | 16066 | 5030   | 32081 | 351     |

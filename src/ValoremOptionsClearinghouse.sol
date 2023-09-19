@@ -55,8 +55,8 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         uint112 amountExercised;
     }
 
-    /// @notice The bucket information for a given option type.
-    struct BucketInfo {
+    /// @notice The bucket state for a given option type.
+    struct BucketState {
         /// @custom:member An array of buckets for a given option type.
         Bucket[] buckets;
         /// @custom:member An array of bucket indices with collateral available for exercise.
@@ -80,7 +80,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         /// @custom:member State for this option type.
         Option option;
         /// @custom:member State for assignment buckets on this option type.
-        BucketInfo bucketInfo;
+        BucketState bucketState;
         /// @custom:member A mapping to an array of bucket indices per claim token for this option type.
         mapping(uint96 => ClaimIndex[]) claimIndices;
     }
@@ -197,7 +197,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
 
         for (uint256 i = 0; i < len; i++) {
             ClaimIndex storage claimIndex = claimIndexArray[i];
-            Bucket storage bucket = optionTypeState.bucketInfo.buckets[claimIndex.bucketIndex];
+            Bucket storage bucket = optionTypeState.bucketState.buckets[claimIndex.bucketIndex];
             amountWritten += claimIndex.amountWritten;
             amountExercised +=
                 FixedPointMathLib.divWadDown((bucket.amountExercised * claimIndex.amountWritten), bucket.amountWritten);
@@ -789,7 +789,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         uint256 index
     ) private view returns (uint256 underlyingAmount, uint256 exerciseAmount) {
         ClaimIndex storage claimIndex = claimIndexArray[index];
-        Bucket storage bucket = optionTypeState.bucketInfo.buckets[claimIndex.bucketIndex];
+        Bucket storage bucket = optionTypeState.bucketState.buckets[claimIndex.bucketIndex];
         uint256 claimIndexAmountWritten = claimIndex.amountWritten;
         uint256 bucketAmountWritten = bucket.amountWritten;
         uint256 bucketAmountExercised = bucket.amountExercised;
@@ -853,17 +853,17 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         uint112 amount
     ) private {
         // Setup pointers to buckets and buckets with collateral available for exercise.
-        Bucket[] storage buckets = optionTypeState.bucketInfo.buckets;
-        uint96[] storage unexercisedBucketIndices = optionTypeState.bucketInfo.unexercisedBucketIndices;
+        Bucket[] storage buckets = optionTypeState.bucketState.buckets;
+        uint96[] storage unexercisedBucketIndices = optionTypeState.bucketState.unexercisedBucketIndices;
         uint96 numUnexercisedBuckets = uint96(unexercisedBucketIndices.length);
         uint96 exerciseIndex = uint96(optionRecord.settlementSeed % numUnexercisedBuckets);
 
         while (amount > 0) {
             // Get the claim bucket to assign exercise to.
             uint96 bucketIndex = unexercisedBucketIndices[exerciseIndex];
-            Bucket storage bucketInfo = buckets[bucketIndex];
+            Bucket storage bucketState = buckets[bucketIndex];
 
-            uint112 amountAvailable = bucketInfo.amountWritten - bucketInfo.amountExercised;
+            uint112 amountAvailable = bucketState.amountWritten - bucketState.amountExercised;
             uint112 amountPresentlyExercised = 0;
             if (amountAvailable <= amount) {
                 // Bucket is fully exercised/assigned.
@@ -879,7 +879,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
                 amountPresentlyExercised = amount;
                 amount = 0;
             }
-            bucketInfo.amountExercised += amountPresentlyExercised;
+            bucketState.amountExercised += amountPresentlyExercised;
 
             emit BucketAssignedExercise(optionId, bucketIndex, amountPresentlyExercised);
 
@@ -893,14 +893,14 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
     /// @notice Adds or updates a bucket as needed for a given option type and amount written.
     function _addOrUpdateBucket(OptionTypeState storage optionTypeState, uint112 amount) private returns (uint96) {
         // Setup pointers to buckets.
-        BucketInfo storage bucketInfo = optionTypeState.bucketInfo;
-        Bucket[] storage buckets = bucketInfo.buckets;
+        BucketState storage bucketState = optionTypeState.bucketState;
+        Bucket[] storage buckets = bucketState.buckets;
         uint96 writtenBucketIndex = uint96(buckets.length);
 
         if (buckets.length == 0) {
             // Add a new bucket for this option type, because none exist.
             buckets.push(Bucket(amount, 0));
-            bucketInfo.unexercisedBucketIndices.push(writtenBucketIndex);
+            bucketState.unexercisedBucketIndices.push(writtenBucketIndex);
 
             return writtenBucketIndex;
         }
@@ -912,7 +912,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         if (currentBucket.amountExercised != 0) {
             // Add a new bucket to this option type, because the last was partially or fully exercised.
             buckets.push(Bucket(amount, 0));
-            bucketInfo.unexercisedBucketIndices.push(writtenBucketIndex);
+            bucketState.unexercisedBucketIndices.push(writtenBucketIndex);
         } else {
             // Write to the existing unexercised bucket.
             currentBucket.amountWritten += amount;

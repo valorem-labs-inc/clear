@@ -312,7 +312,7 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         vm.prank(writer3);
         claimId3 = engine.write(optionId, 0.01e6);
 
-        // writer1 writes 0.75 options, no taker
+        // writer1 writes 0.85 options, no taker
         vm.prank(writer1);
         engine.write(claimId1, 0.85e6);
 
@@ -381,7 +381,7 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
             underlyingAsset: address(WETHLIKE),
             underlyingAmount: 1e12,
             exerciseAsset: address(USDCLIKE),
-            exerciseAmount: 1746, // slightly less USDC dust, for a different settlementSeed
+            exerciseAmount: 1746, // slightly less USDC, for a different settlementSeed
             exerciseTimestamp: uint40(DAWN + 2 days),
             expiryTimestamp: uint40(DAWN + 9 days) // 1 more day than Option Type A, for staggered redemption ability
         });
@@ -477,7 +477,7 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         // = 1050000.000000000000000000
         // for a total of 1.05 options exercised
 
-        // Scenario C -- writer1 has a claim worth 1 option
+        // Scenario C -- writer2 has a claim worth 1 option
 
         // Options written, by claim
         // 1000000000000000000000000
@@ -675,7 +675,21 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         vm.warp(DAWN + 8 days); // warp to Option Type A expiry
 
         // Now let's redeem the rest of writer2's claim for the last little bit of collateral
-        // TODO
+        uBalance = WETHLIKE.balanceOf(writer2);
+        eBalance = USDCLIKE.balanceOf(writer2);
+        vm.prank(writer2);
+        engine.redeem(claimId2);
+        assertEq(engine.balanceOf(writer2, claimId2), 0, "A -- writer2 Claim is burned after redeem");
+        assertEq(
+            WETHLIKE.balanceOf(writer2),
+            uBalance + expectedUnderlyingReturnedFromRedeemClaim2,
+            "A -- writer2 got correct WETHLIKE collateral back from redeem"
+        );
+        assertEq(
+            USDCLIKE.balanceOf(writer2),
+            eBalance + expectedExerciseReturnedFromRedeemClaim2,
+            "A -- writer2 got correct USDCLIKE collateral back from redeeem"
+        );
 
         // Let's redeem the other writers' claims and ensure they also get back the correct collateral
         uBalance = WETHLIKE.balanceOf(writer1);
@@ -756,7 +770,6 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         engine.net(claimId2B, 0.026e6);
         assertEq(engine.balanceOf(writer2, optionIdB), 0.0275e6 - 0.026e6, "B -- writer2 SOME options burned after net");
         assertEq(engine.balanceOf(writer2, claimId2B), 1, "B -- writer2 Claim is not burned after net");
-        // TODO implement rest of net()
         assertEq(
             WETHLIKE.balanceOf(writer2),
             uBalance + expectedUnderlyingReturnedFromNetClaim2B,
@@ -771,7 +784,21 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         vm.warp(DAWN + 9 days); // warp to Option Type B expiry
 
         // Now let's redeem the rest of writer2's claim for the last little bit of collateral
-        // TODO
+        uBalance = WETHLIKE.balanceOf(writer2);
+        eBalance = USDCLIKE.balanceOf(writer2);
+        vm.prank(writer2);
+        engine.redeem(claimId2B);
+        assertEq(engine.balanceOf(writer2, claimId2B), 0, "B -- writer2 Claim is burned after redeem");
+        assertEq(
+            WETHLIKE.balanceOf(writer2),
+            uBalance + expectedUnderlyingReturnedFromRedeemClaim2B,
+            "B -- writer2 got correct WETHLIKE collateral back from redeem"
+        );
+        assertEq(
+            USDCLIKE.balanceOf(writer2),
+            eBalance + expectedExerciseReturnedFromRedeemClaim2B,
+            "B -- writer2 got correct USDCLIKE collateral back from redeeem"
+        );
 
         // Again let's redeem the other writers' claims and ensure they get back the correct collateral from redeem
         uBalance = WETHLIKE.balanceOf(writer1);

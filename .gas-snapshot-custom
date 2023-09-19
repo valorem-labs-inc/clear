@@ -1,0 +1,88 @@
+| src/TokenURIGenerator.sol:TokenURIGenerator contract |                 |        |        |        |         |
+|------------------------------------------------------|-----------------|--------|--------|--------|---------|
+| Deployment Cost                                      | Deployment Size |        |        |        |         |
+| 1982298                                              | 9933            |        |        |        |         |
+| Function Name                                        | min             | avg    | median | max    | # calls |
+| constructTokenURI                                    | 420115          | 420115 | 420115 | 420115 | 1       |
+| src/ValoremOptionsClearinghouse.sol:ValoremOptionsClearinghouse contract |                 |        |        |        |         |
+|--------------------------------------------------------------------------|-----------------|--------|--------|--------|---------|
+| Deployment Cost                                                          | Deployment Size |        |        |        |         |
+| 3361783                                                                  | 16902           |        |        |        |         |
+| Function Name                                                            | min             | avg    | median | max    | # calls |
+| acceptFeeTo                                                              | 585             | 2455   | 2705   | 3825   | 4       |
+| balanceOf                                                                | 642             | 2598   | 2642   | 2642   | 9578    |
+| claim                                                                    | 831             | 2834   | 2831   | 6269   | 4506    |
+| exercise                                                                 | 513             | 32222  | 20848  | 80748  | 90      |
+| feeBalance                                                               | 619             | 2611   | 2619   | 2619   | 6034    |
+| feeBps                                                                   | 294             | 294    | 294    | 294    | 36      |
+| feeTo                                                                    | 406             | 2252   | 2406   | 2406   | 235     |
+| feesEnabled                                                              | 395             | 1061   | 395    | 2395   | 3       |
+| net                                                                      | 9800            | 11455  | 9823   | 15468  | 5       |
+| nettable                                                                 | 3167            | 4418   | 4776   | 6385   | 9       |
+| newOptionType                                                            | 3505            | 56175  | 97049  | 106049 | 234     |
+| option                                                                   | 1978            | 3231   | 1978   | 9978   | 7       |
+| position                                                                 | 1272            | 5398   | 4444   | 11026  | 61      |
+| redeem                                                                   | 443             | 13903  | 12830  | 24715  | 64      |
+| safeTransferFrom                                                         | 3522            | 13796  | 19442  | 28802  | 87      |
+| setFeeTo                                                                 | 720             | 2366   | 720    | 24712  | 57      |
+| setFeesEnabled                                                           | 1726            | 2591   | 2732   | 6957   | 264     |
+| setTokenURIGenerator                                                     | 2594            | 4671   | 2689   | 8731   | 3       |
+| sweepFees                                                                | 2863            | 16637  | 15776  | 83936  | 171     |
+| tokenType                                                                | 724             | 1647   | 1062   | 2724   | 5       |
+| tokenURIGenerator                                                        | 448             | 1448   | 1448   | 2448   | 2       |
+| uri                                                                      | 9530            | 236879 | 236879 | 464229 | 2       |
+| write                                                                    | 450             | 123614 | 107783 | 242841 | 365     |
+| test/ValoremOptionsClearinghouse.invariant.t.sol:ValoremOptionsClearinghouseInvariantTest contract |                 |        |        |        |         |
+|----------------------------------------------------------------------------------------------------|-----------------|--------|--------|--------|---------|
+| Deployment Cost                                                                                    | Deployment Size |        |        |        |         |
+| 10657366                                                                                           | 52874           |        |        |        |         |
+| Function Name                                                                                      | min             | avg    | median | max    | # calls |
+| addOptionType                                                                                      | 27437           | 28991  | 27437  | 44537  | 22      |
+| getClaimIds                                                                                        | 2672            | 2672   | 2672   | 2672   | 262     |
+| getMockErc20s                                                                                      | 16409           | 16409  | 16409  | 16409  | 288     |
+| getOptionTypes                                                                                     | 2717            | 14285  | 13962  | 27373  | 750     |
+| invariant_erc20_balances                                                                           | 260093          | 260093 | 260093 | 260093 | 1       |
+| invariant_options_written_match_claims                                                             | 2299            | 64526  | 73298  | 148285 | 1000    |
+| invariant_positions_accounting                                                                     | 91842           | 91842  | 91842  | 91842  | 1000    |
+| test/actors/OptionHolder.sol:OptionHolder contract |                 |       |        |       |         |
+|----------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                    | Deployment Size |       |        |       |         |
+| 277087                                             | 1418            |       |        |       |         |
+| Function Name                                      | min             | avg   | median | max   | # calls |
+| exercise                                           | 11320           | 29640 | 30915  | 44819 | 514     |
+| test/actors/OptionWriter.sol:OptionWriter contract |                 |        |        |        |         |
+|----------------------------------------------------|-----------------|--------|--------|--------|---------|
+| Deployment Cost                                    | Deployment Size |        |        |        |         |
+| 756371                                             | 3769            |        |        |        |         |
+| Function Name                                      | min             | avg    | median | max    | # calls |
+| newOptionType                                      | 26982           | 60245  | 36198  | 183363 | 124     |
+| redeem                                             | 11386           | 11386  | 11386  | 11386  | 134     |
+| writeExisting                                      | 16468           | 120110 | 103401 | 289401 | 128     |
+| writeNew                                           | 12278           | 130717 | 107335 | 285224 | 108     |
+| test/actors/ProtocolAdmin.sol:ProtocolAdmin contract |                 |       |        |       |         |
+|------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                      | Deployment Size |       |        |       |         |
+| 546933                                               | 2818            |       |        |       |         |
+| Function Name                                        | min             | avg   | median | max   | # calls |
+| setFeeTo                                             | 3552            | 6255  | 3552   | 12246 | 164     |
+| setFeesEnabled                                       | 11112           | 11112 | 11112  | 11112 | 174     |
+| sweepFees                                            | 55261           | 55261 | 55261  | 55261 | 164     |
+| test/actors/Timekeeper.sol:Timekeeper contract |                 |      |        |      |         |
+|------------------------------------------------|-----------------|------|--------|------|---------|
+| Deployment Cost                                | Deployment Size |      |        |      |         |
+| 96747                                          | 515             |      |        |      |         |
+| Function Name                                  | min             | avg  | median | max  | # calls |
+| tickTock                                       | 3754            | 3754 | 3754   | 3754 | 490     |
+| test/utils/MockERC20.sol:MockERC20 contract |                 |       |        |       |         |
+|---------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                             | Deployment Size |       |        |       |         |
+| 648998                                      | 4360            |       |        |       |         |
+| Function Name                               | min             | avg   | median | max   | # calls |
+| approve                                     | 2546            | 24540 | 24546  | 24546 | 8566    |
+| balanceOf                                   | 542             | 2464  | 2542   | 2542  | 6320    |
+| decimals                                    | 249             | 249   | 249    | 249   | 2       |
+| mint                                        | 2896            | 26965 | 24796  | 46696 | 8566    |
+| symbol                                      | 3236            | 3236  | 3236   | 3236  | 2       |
+| totalSupply                                 | 363             | 1066  | 363    | 2363  | 287     |
+| transfer                                    | 2985            | 4808  | 2985   | 24885 | 164     |
+| transferFrom                                | 824             | 15094 | 3381   | 32081 | 325     |

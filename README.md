@@ -1,7 +1,7 @@
 # Valorem Options Clearinghouse V1
 
 ![ci](https://github.com/valorem-labs-inc/valorem-core/actions/workflows/CI.yml/badge.svg)
-[![codecov](https://codecov.io/gh/valorem-labs-inc/valorem-core/branch/master/graph/badge.svg?token=M52NC4Q3SW)](https://codecov.io/gh/valorem-labs-inc/valorem-core)
+[![codecov](https://codecov.io/gh/valorem-labs-inc/clear/branch/master/graph/badge.svg?token=M52NC4Q3SW)](https://codecov.io/gh/valorem-labs-inc/clear)
 
 [Valorem](https://valorem.xyz/) is a DeFi money lego, enabling writing covered call and covered put, physically settled, American, European, or Exotic options.
 

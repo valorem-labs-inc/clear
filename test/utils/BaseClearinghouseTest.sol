@@ -404,15 +404,6 @@ abstract contract BaseClearinghouseTest is Test {
 
     event OptionsWritten(uint256 indexed optionId, address indexed writer, uint256 indexed claimId, uint112 amount);
 
-    event ClaimNetted(
-        uint256 indexed claimId,
-        uint256 indexed optionId,
-        address netter,
-        uint256 indexed amountOptionsNetted,
-        uint256 exerciseAmountRedeemed,
-        uint256 underlyingAmountRedeemed
-    );
-
     event ClaimRedeemed(
         uint256 indexed claimId,
         uint256 indexed optionId,

@@ -53,6 +53,8 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
     struct Bucket {
         /// @custom:member amountWritten The number of option contracts written into this bucket.
         uint112 amountWritten;
+        // /// @custom:member TODO
+        // uint112 amountNetted;
         /// @custom:member amountExercised The number of option contracts exercised from this bucket.
         uint112 amountExercised;
     }
@@ -73,6 +75,8 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
     struct ClaimBucketIndex {
         /// @custom:member amountWritten The amount of option contracts written into claim for given bucket.
         uint112 amountWritten;
+        // /// @custom:member TODO
+        // uint112 amountNetted;
         /// @custom:member bucketIndex The index of the Bucket into which the options collateral was deposited.
         uint96 bucketIndex;
     }
@@ -193,6 +197,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         uint256 amountWritten;
         uint256 amountExercised;
 
+        // Setup pointers and put XYZ on the stack
         OptionTypeState storage optionTypeState = optionTypeStates[optionKey];
         ClaimBucketIndex[] storage claimBucketIndexArray = optionTypeState.claimBucketIndices[claimKey];
         uint256 len = claimBucketIndexArray.length;
@@ -201,8 +206,9 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
             ClaimBucketIndex storage claimBucketIndex = claimBucketIndexArray[i];
             Bucket storage bucket = optionTypeState.bucketState.buckets[claimBucketIndex.bucketIndex];
             amountWritten += claimBucketIndex.amountWritten;
-            amountExercised +=
-                FixedPointMathLib.divWadDown((bucket.amountExercised * claimBucketIndex.amountWritten), bucket.amountWritten);
+            amountExercised += FixedPointMathLib.divWadDown(
+                (bucket.amountExercised * (claimBucketIndex.amountWritten)), (bucket.amountWritten)
+            );
         }
 
         claimState = Claim({
@@ -509,6 +515,59 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
     //
 
     /// @inheritdoc IValoremOptionsClearinghouse
+    function netNoAssign(uint256 claimId, uint256 amountOptionsToNet) external {
+        (uint160 optionKey, uint96 claimKey) = _decodeTokenId(claimId);
+
+        // Must be a claimId.
+        if (claimKey == 0) {
+            // TODO revert can't net an option
+        }
+
+        // Must hold this claim.
+        uint256 claimBalance = balanceOf[msg.sender][claimId];
+        if (claimBalance != 1) {
+            revert CallerDoesNotOwnClaimId(claimId);
+        }
+
+        // Setup pointers to the option and claim state.
+        OptionTypeState storage optionTypeState = optionTypeStates[optionKey];
+        Option storage optionRecord = optionTypeState.option;
+
+        // Must be before expiry (otherwise claim holder should just redeem).
+        if (block.timestamp >= optionRecord.expiryTimestamp) {
+            // TODO revert can't net on or after expiry
+        }
+
+        // Must not be assigned.
+        Claim memory claimState = claim(claimId);
+        if (claimState.amountExercised == 0) {
+            // TODO revert can't net a Claim that has been assigned
+        }
+
+        // Must hold sufficient options and must be netting a nettable amount of options.
+        uint256 optionId = uint256(optionKey) << OPTION_KEY_PADDING;
+        uint256 amountOptionsHeld = balanceOf[msg.sender][optionId];
+        uint256 amountOptionsNettable = nettable(claimId);
+        if (amountOptionsToNet > amountOptionsHeld || amountOptionsToNet > amountOptionsNettable) {
+            revert CallerHoldsInsufficientClaimToNetOptions(claimId, amountOptionsToNet, amountOptionsNettable);
+        }
+
+        // Consume claim -- as much as needed to fulfill desired net amount, returning
+        // the asset amounts to be transferred to the netter.
+        uint256 underlyingAmountNetted = amountOptionsToNet * optionRecord.underlyingAmount;
+
+        // TODO Bucket stuff
+
+        emit ClaimNetted(claimId, optionId, msg.sender, amountOptionsToNet, underlyingAmountNetted);
+
+        // Burn options, burn the claim (only if fully consumed), and make ERC20 asset transfers.
+        _burn(msg.sender, optionId, amountOptionsToNet);
+        // _burn(msg.sender, claimId, 1); // TODO
+
+        SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, underlyingAmountNetted);
+    }
+
+    /// @inheritdoc IValoremOptionsClearinghouse
     function net(uint256 claimId, uint256 amountOptionsToNet) external {
         (uint160 optionKey, uint96 claimKey) = _decodeTokenId(claimId);
 
@@ -535,38 +594,41 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         // Must hold sufficient options and must be netting a nettable amount of options.
         uint256 optionId = uint256(optionKey) << OPTION_KEY_PADDING;
         uint256 amountOptionsHeld = balanceOf[msg.sender][optionId];
-        uint256 amountOptionsNettable = nettable(claimId);        
+        uint256 amountOptionsNettable = nettable(claimId);
         if (amountOptionsToNet > amountOptionsHeld || amountOptionsToNet > amountOptionsNettable) {
             revert CallerHoldsInsufficientClaimToNetOptions(claimId, amountOptionsToNet, amountOptionsNettable);
         }
 
         // Consume claim -- as much as needed to fulfill desired net amount, returning
         // the asset amounts to be transferred to the netter.
-        (uint256 nettedUnderlyingAmount, uint256 nettedExerciseAmount) =  _netOffsetting(amountOptionsToNet, claimKey, optionTypeState);        
+        uint256 underlyingAmountNetted = _netOffsetting(amountOptionsToNet, claimKey, optionTypeState);
+                console.log("before burn options");
 
-        emit ClaimNetted(claimId, optionId, msg.sender, amountOptionsToNet, 123, 456);
-
-        // Burn options, burn the claim (only if fully consumed), and make ERC20 asset transfers.
+        // Burn options, burn the claim (only if fully consumed and never assigned), and make ERC20 asset transfers.
         _burn(msg.sender, optionId, amountOptionsToNet);
-        // _burn(msg.sender, claimId, 1);
+                console.log("before burn claim");
 
-        if (nettedUnderlyingAmount > 0) {
-            SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, nettedUnderlyingAmount);
+        if (!_isClaimInitialized(optionKey, claimKey)) {
+            _burn(msg.sender, claimId, 1);
         }
 
-        if (nettedExerciseAmount > 0) {
-            SafeTransferLib.safeTransfer(ERC20(optionRecord.exerciseAsset), msg.sender, nettedExerciseAmount);
+        // } else {
+        //    Claim memory claimState = claim(claimId);
+       
+        // // if (claimState.amountWritten == 0 && claimState.amountExercised == 0) {
+        //     // _burn(msg.sender, claimId, 1);
+        // // }
+ 
+        // }
+                console.log("before transfer underlying");
+
+        if (underlyingAmountNetted > 0) {
+            SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, underlyingAmountNetted);
         }
+
+        emit ClaimNetted(claimId, optionId, msg.sender, amountOptionsToNet, underlyingAmountNetted);
 
         // OLD
-
-        // // Check assignment status of Claim.
-        // Claim memory claimState = claim(claimId);
-        // // TODO compare balanceOfBatch gas usage
-        // uint256 optionBalance = balanceOf[msg.sender][claimState.optionId];
-        // if (optionBalance * 1e18 == claimState.amountWritten - claimState.amountExercised) {
-        //     redeem(claimId);
-        // }
 
         // Setup pointers to the option and info.
         // OptionTypeState storage optionTypeState = optionTypeStates[optionKey];
@@ -574,58 +636,75 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
     }
 
     /// @notice TODO
-    function _netOffsetting(
-        uint256 amountOptionsToNet,
-        uint96 claimKey,
-        OptionTypeState storage optionTypeState
-    ) private returns (uint256 nettedUnderlyingAmount, uint256 nettedExerciseAmount) {
+    function _netOffsetting(uint256 amountOptionsToNet, uint96 claimKey, OptionTypeState storage optionTypeState)
+        private
+        returns (uint256 underlyingAmountNetted)
+    {
         Bucket[] storage buckets = optionTypeState.bucketState.buckets;
         ClaimBucketIndex[] storage claimBucketIndices = optionTypeState.claimBucketIndices[claimKey];
-        // uint256 len = claimBucketIndices.length; // TODO TBD
 
-        // Get underlying amount and exercise amount for this option type.
-        Option storage optionRecord = optionTypeState.option;
-        uint256 underlyingAmount = optionRecord.underlyingAmount;
-        uint256 exerciseAmount = optionRecord.exerciseAmount;
+        // Get underlying amount for this option type.
+        uint256 underlyingAmount = optionTypeState.option.underlyingAmount;
 
         // Calculate the nettable collateral, based on amount of options that are nettable, iterating
         // through each ClaimBucketIndex until enough options have been consumed.
-        // for (uint256 i = len; i > 0; i--) {
         uint256 i = 0;
         while (amountOptionsToNet > 0) {
+            console.log("IIIIII", i);
             // Get the ClaimBucketIndex and associated Bucket.
             ClaimBucketIndex storage claimBucketIndex = claimBucketIndices[i];
             Bucket storage bucket = buckets[claimBucketIndex.bucketIndex];
 
-            // Calculate nettable options, based on this ClaimBucketIndex's proportion of
-            // Options written into the Bucket.
-            // uint256 availableOptionsInIndex = FixedPointMathLib.divWadDown(bucket.amountWritten * claimBucketIndex.amountWritten, bucket.amountWritten);
+            uint256 claimBucketIndexAmountWritten = claimBucketIndex.amountWritten;
+            // uint256 claimBucketIndexAmountNetted = claimBucketIndex.amountNetted;
+            uint256 bucketAmountWritten = bucket.amountWritten;
+            // uint256 bucketAmountNetted = bucket.amountNetted;
+            uint256 bucketAmountExercised = bucket.amountExercised;
 
-            console.log("Index: ", i);
-            console.log("CBI amountWritten: ", claimBucketIndex.amountWritten);
-            console.log("amountOptionsToNet: ", amountOptionsToNet);
+            // Calculate nettable options, based on this Bucket's available options and this ClaimBucketIndex's
+            // proportion of options written into the Bucket, less any options already netted.
+            uint256 availableOptionsInIndex = (
+                (bucketAmountWritten - bucketAmountExercised) * (claimBucketIndex.amountWritten)
+            ) / (bucketAmountWritten);
 
-            // Is this more or less than the nettable amount of options?
-            if (claimBucketIndex.amountWritten >= amountOptionsToNet) {
+            // console.log("Index: ", i);
+            // console.log("CBI amountWritten: ", claimBucketIndex.amountWritten);
+            // console.log("amountOptionsToNet: ", amountOptionsToNet);
+            // console.log("availableOptionsInIndex: ", availableOptionsInIndex);
 
-                // Accumulate the amount of underlying and exercise assets in these variables,
-                // based on the ClaimBucketIndex's exercise assignment status.
-                nettedUnderlyingAmount += amountOptionsToNet * underlyingAmount; // TODO wrong, only works in Scenario C, when no assignment
-                nettedExerciseAmount += amountOptionsToNet * exerciseAmount;
+            // Is the available options in this ClaimBucketIndex sufficient to fulfill the full net?
+            if (availableOptionsInIndex >= amountOptionsToNet) {
+                console.log("SUFFICIENT");
+                // Accumulate the amount of underlying asset to return upon netting completion.
+                underlyingAmountNetted += amountOptionsToNet * underlyingAmount;
 
-                // If Claim is fully consumed, zero out the index during the netting process for a gas refund.
-                if (claimBucketIndex.amountWritten == amountOptionsToNet) {
+                // Update bucket accounting.
+                claimBucketIndex.amountWritten = uint112(claimBucketIndexAmountWritten - amountOptionsToNet);
+                bucket.amountWritten = uint112(bucketAmountWritten - amountOptionsToNet);
+                
+                // TODO messy
+                if (availableOptionsInIndex == amountOptionsToNet && bucket.amountExercised == 0) {
+                    // Perform "swap and pop" index management.
+                    claimBucketIndices[i] = claimBucketIndices[claimBucketIndices.length - 1];
                     claimBucketIndices.pop();
-                } else {
                 }
-
-                // TODO Update bucket accounting.
 
                 amountOptionsToNet = 0;
             } else {
+                // This is not sufficient, so we need to consume all of this ClaimBucketIndex then move to the next.
+                console.log("NOPENOPE");
 
+                // Accumulate the amount of underlying asset to return upon netting completion.
+                underlyingAmountNetted += availableOptionsInIndex * underlyingAmount;
+
+                // Update bucket accounting.
+                claimBucketIndex.amountWritten = uint112(claimBucketIndexAmountWritten - availableOptionsInIndex);
+                bucket.amountWritten = uint112(bucketAmountWritten - availableOptionsInIndex);
+
+                // Loop management.
+                amountOptionsToNet -= availableOptionsInIndex;
+                i++;
             }
-
 
             // // Calculate the total amount of collateral associated with this ClaimBucketIndex.
             // (uint256 indexUnderlyingAmount, uint256 indexExerciseAmount) = _getAssetAmountsForClaimBucketIndex(i - 1, claimBucketIndices, optionTypeState);
@@ -645,10 +724,9 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
 
             //     return;
             // } else {
-            //     // This is not sufficient, so we need to consume more of the claim,
-            //     // moving to the next ClaimBucketIndex.
+            //     
 
-            //     // 
+            //     //
             //     totalUnderlyingAssetAmount += indexUnderlyingAmount;
             //     totalExerciseAssetAmount += indexExerciseAmount;
 
@@ -684,6 +762,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
 
         // Can't redeem before expiry, unless Claim is fully assigned.
         if (optionRecord.expiryTimestamp > block.timestamp && claimState.amountWritten > claimState.amountExercised) {
+            // TODO add claimState.amountNetted
             revert ClaimTooSoon(claimId, optionRecord.expiryTimestamp);
         }
 
@@ -886,22 +965,24 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         ClaimBucketIndex storage claimBucketIndex = claimBucketIndexArray[index];
         Bucket storage bucket = optionTypeState.bucketState.buckets[claimBucketIndex.bucketIndex];
         uint256 claimBucketIndexAmountWritten = claimBucketIndex.amountWritten;
+        // uint256 claimBucketIndexAmountNetted = claimBucketIndex.amountNetted;
         uint256 bucketAmountWritten = bucket.amountWritten;
+        // uint256 bucketAmountNetted = bucket.amountNetted;
         uint256 bucketAmountExercised = bucket.amountExercised;
 
         // Get underlying amount and exercise amount for this option type.
-        // TODO better caching
+        // TODO ⛽️ better caching
         uint256 underlyingAssetAmount = optionTypeState.option.underlyingAmount;
         uint256 exerciseAssetAmount = optionTypeState.option.exerciseAmount;
 
-        // Calculate (unassigned) amount of underlying asset, based on this ClaimBucketIndex's proportion of claims written into the bucket.
-        underlyingAmount += (
-            (bucketAmountWritten - bucketAmountExercised) * underlyingAssetAmount * claimBucketIndexAmountWritten
-        ) / bucketAmountWritten;
+        // Calculate (unassigned, unnetted) amount of underlying asset, based on this ClaimBucketIndex's proportion of claims written into the bucket.
+        underlyingAmount += // TODO ⛽️ why increment ?
+        ((bucketAmountWritten - bucketAmountExercised) * underlyingAssetAmount * (claimBucketIndexAmountWritten))
+            / (bucketAmountWritten);
 
         // Calculate (assigned) amount of exercise asset, based on this ClaimBucketIndex's proportion of claims written into the bucket.
         exerciseAmount +=
-            (bucketAmountExercised * exerciseAssetAmount * claimBucketIndexAmountWritten) / bucketAmountWritten;
+            (bucketAmountExercised * exerciseAssetAmount * (claimBucketIndexAmountWritten)) / (bucketAmountWritten);
     }
 
     //
@@ -971,7 +1052,8 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
             uint112 amountAvailable = bucket.amountWritten - bucket.amountExercised;
             uint112 amountPresentlyExercised = 0;
 
-            console.log("ASSIGNED", bucketIndex);
+            console.log("Assignment --- Bucket", bucketIndex);
+            console.log("Amount available", amountAvailable, "Amount exercised", bucket.amountExercised);
 
             if (amountAvailable <= amount) {
                 // Bucket is fully assigned exercise.
@@ -999,7 +1081,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         }
     }
 
-    /// @notice Adds or updates a bucket as needed for a given option type and amount written.
+    /// @notice Adds or updates a Bucket as needed for a given option type and amount written.
     function _addOrUpdateBucket(OptionTypeState storage optionTypeState, uint112 amount) private returns (uint96) {
         // Setup pointers to buckets.
         BucketState storage bucketState = optionTypeState.bucketState;
@@ -1008,7 +1090,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
 
         if (buckets.length == 0) {
             // Add a new bucket for this option type, because none exist.
-            buckets.push(Bucket(amount, 0));
+            buckets.push(Bucket({amountWritten: amount, amountExercised: 0}));
             bucketState.unexercisedBucketIndices.push(writtenBucketIndex);
 
             return writtenBucketIndex;
@@ -1020,7 +1102,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
 
         if (currentBucket.amountExercised != 0) {
             // Add a new bucket to this option type, because the last was partially or fully exercised.
-            buckets.push(Bucket(amount, 0));
+            buckets.push(Bucket({amountWritten: amount, amountExercised: 0}));
             bucketState.unexercisedBucketIndices.push(writtenBucketIndex);
         } else {
             // Write to the existing unexercised bucket.
@@ -1031,7 +1113,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         return writtenBucketIndex;
     }
 
-    /// @notice Updates claimBucketIndices for a given claim key.
+    /// @notice Adds or updates a ClaimBucketIndex as needed for a given claim key and amount written.
     function _addOrUpdateClaimBucketIndex(
         OptionTypeState storage optionTypeState,
         uint96 claimKey,

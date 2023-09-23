@@ -89,9 +89,8 @@ interface IValoremOptionsClearinghouse {
         uint256 indexed claimId,
         uint256 indexed optionId,
         address netter,
-        uint256 indexed amountOptionsNetted,
-        uint256 exerciseAmountRedeemed,
-        uint256 underlyingAmountRedeemed
+        uint256 indexed optionsAmountNetted,
+        uint256 underlyingAmountNetted
     );
 
     //
@@ -336,6 +335,8 @@ interface IValoremOptionsClearinghouse {
     struct Claim {
         /// @custom:member amountWritten The number of option contracts written against this claim expressed as a 1e18 scalar value.
         uint256 amountWritten;
+        /// @custom:member TODO
+        // uint256 amountNetted;
         /// @custom:member amountExercised The amount of option contracts exercised against this claim expressed as a 1e18 scalar value.
         uint256 amountExercised;
         /// @custom:member optionId The option ID of the option type this claim is for.
@@ -510,6 +511,11 @@ interface IValoremOptionsClearinghouse {
      * @notice TODO
      */
     function net(uint256 claimId, uint256 amountOptionsToNet) external;
+
+    /**
+     * @notice TODO
+     */
+    function netNoAssign(uint256 claimId, uint256 amountOptionsToNet) external;
 
     /*//////////////////////////////////////////////////////////////
     //  Redeem Claims

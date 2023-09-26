@@ -80,6 +80,8 @@ interface IValoremOptionsClearinghouse {
         uint256 indexed optionId, uint256 indexed claimId, uint96 indexed bucketIndex, uint112 amount
     );
 
+    // TODO do we need an additional event, BucketNettedFrom ?
+
     //
     // Net events
     //
@@ -515,7 +517,7 @@ interface IValoremOptionsClearinghouse {
     /**
      * @notice TODO
      */
-    function netNoAssign(uint256 claimId, uint256 amountOptionsToNet) external;
+    // function netNoAssign(uint256 claimId, uint256 amountOptionsToNet) external;
 
     /*//////////////////////////////////////////////////////////////
     //  Redeem Claims

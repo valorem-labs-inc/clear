@@ -17,41 +17,24 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
     address private constant exerciser1 = userD;
     address private constant exerciser2 = userE;
 
+    // Scenario A, writer2 nets and redeems, writer1 and writer3 redeem
+    // Scenario B, writer2 nets and redeems, writer1 and writer3 redeem
+    // Scenario C, writer2 nets when not assigned
+    // Scenario D, writer2 nets after assignment
+
     uint256 private optionId;
     uint256 private claimId1;
     uint256 private claimId2;
     uint256 private claimId3;
 
-    uint256 private optionIdB;
-    uint256 private claimId1B;
-    uint256 private claimId2B;
-    uint256 private claimId3B;
-
-    uint256 private optionId2C;
-    uint256 private claimId2C;
-
-    uint256 private optionId2D;
-    uint256 private claimId2D;
-
     IValoremOptionsClearinghouse.Claim private claimState1;
     IValoremOptionsClearinghouse.Claim private claimState2;
     IValoremOptionsClearinghouse.Claim private claimState3;
-    IValoremOptionsClearinghouse.Claim private claimState1B;
-    IValoremOptionsClearinghouse.Claim private claimState2B;
-    IValoremOptionsClearinghouse.Claim private claimState3B;
-    IValoremOptionsClearinghouse.Claim private claimState2C;
-    IValoremOptionsClearinghouse.Claim private claimState2D;
 
     IValoremOptionsClearinghouse.Position private position1;
     IValoremOptionsClearinghouse.Position private position2;
     IValoremOptionsClearinghouse.Position private position3;
-    IValoremOptionsClearinghouse.Position private position1B;
-    IValoremOptionsClearinghouse.Position private position2B;
-    IValoremOptionsClearinghouse.Position private position3B;
-    IValoremOptionsClearinghouse.Position private position2C;
-    IValoremOptionsClearinghouse.Position private position2D;
 
-    // Scenario A, writer2 nets and redeems, writer1 and writer3 redeem
     uint256 expectedUnderlyingReturnedFromRedeemClaim1;
     uint256 expectedExerciseReturnedFromRedeemClaim1;
 
@@ -61,25 +44,6 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
 
     uint256 expectedUnderlyingReturnedFromRedeemClaim3;
     uint256 expectedExerciseReturnedFromRedeemClaim3;
-
-    // Scenario B, writer2 nets and redeems, writer1 and writer3 redeem
-    uint256 expectedUnderlyingReturnedFromRedeemClaim1B;
-    uint256 expectedExerciseReturnedFromRedeemClaim1B;
-
-    uint256 expectedUnderlyingReturnedFromNetClaim2B;
-    uint256 expectedUnderlyingReturnedFromRedeemClaim2B;
-    uint256 expectedExerciseReturnedFromRedeemClaim2B;
-
-    uint256 expectedUnderlyingReturnedFromRedeemClaim3B;
-    uint256 expectedExerciseReturnedFromRedeemClaim3B;
-
-    // Scenario C, writer2 nets when not assigned
-    uint256 expectedUnderlyingReturnedFromNetClaim2C;
-    uint256 expectedExerciseReturnedFromRedeemClaim2C;
-
-    // Scenario D, writer2 nets after assignment
-    uint256 expectedUnderlyingReturnedFromNetClaim2D;
-    uint256 expectedExerciseReturnedFromRedeemClaim2D;
 
     uint256 private constant DAWN = 1_000_000 seconds;
 
@@ -602,15 +566,13 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
             eBalance + expectedExerciseReturnedFromRedeemClaim3,
             "A -- writer3 got correct USDCLIKE collateral back from redeeem"
         );
-
-        
     }
 
-    function skiptest_net_scenarioB_whenThreeWritersTwoExercisesAndNetInsufficientOnFirstTries() public {        
+    function test_net_scenarioB_whenThreeWritersTwoExercisesAndNetInsufficientOnFirstTries() public {        
         // Scenario B, run the same actions but with a slightly different Option Type, for a different settlementSeed,
         // resulting in a different assignment path
         vm.startPrank(writer1);
-        optionIdB = engine.newOptionType({
+        optionId = engine.newOptionType({
             underlyingAsset: address(WETHLIKE),
             underlyingAmount: 1e12,
             exerciseAsset: address(USDCLIKE),
@@ -618,46 +580,46 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
             exerciseTimestamp: uint40(DAWN + 2 days),
             expiryTimestamp: uint40(DAWN + 9 days) // 1 more day than Option Type A, for staggered redemption ability
         });
-        claimId1B = engine.write(optionIdB, 0.01e6);
-        engine.write(claimId1B, 0.04e6);
-        engine.write(claimId1B, 0.95e6);
-        engine.safeTransferFrom(writer1, exerciser1, optionIdB, 1e6, "");
-        engine.write(claimId1B, 0.15e6);
+        claimId1 = engine.write(optionId, 0.01e6);
+        engine.write(claimId1, 0.04e6);
+        engine.write(claimId1, 0.95e6);
+        engine.safeTransferFrom(writer1, exerciser1, optionId, 1e6, "");
+        engine.write(claimId1, 0.15e6);
         vm.stopPrank();
         vm.startPrank(writer2);
-        claimId2B = engine.write(optionIdB, 0.1e6);
-        engine.safeTransferFrom(writer2, exerciser2, optionIdB, 0.1e6, "");
+        claimId2 = engine.write(optionId, 0.1e6);
+        engine.safeTransferFrom(writer2, exerciser2, optionId, 0.1e6, "");
         vm.stopPrank();
         vm.warp(DAWN + 2 days);
         vm.prank(exerciser1);
-        engine.exercise(optionIdB, 1e6);
+        engine.exercise(optionId, 1e6);
         vm.prank(writer3);
-        claimId3B = engine.write(optionIdB, 0.01e6);
+        claimId3 = engine.write(optionId, 0.01e6);
         vm.prank(writer1);
-        engine.write(claimId1B, 0.85e6);
+        engine.write(claimId1, 0.85e6);
         vm.prank(writer2);
-        engine.write(claimId2B, 0.01e6);
+        engine.write(claimId2, 0.01e6);
         vm.prank(exerciser2);
-        engine.exercise(optionIdB, 0.05e6);
+        engine.exercise(optionId, 0.05e6);
         vm.prank(writer1);
-        engine.write(claimId1B, 1e6);
-        assertEq(engine.balanceOf(writer1, optionIdB), 2e6, "writer1 option balance t6");
-        assertEq(engine.balanceOf(exerciser1, optionIdB), 0, "exerciser1 option balance t6");
-        assertEq(engine.balanceOf(writer2, optionIdB), 0.01e6, "writer2 option balance t6");
-        assertEq(engine.balanceOf(exerciser2, optionIdB), 0.05e6, "exerciser2 option balance t6");
-        assertEq(engine.balanceOf(writer3, optionIdB), 0.01e6, "writer3 option balance t6");
+        engine.write(claimId1, 1e6);
+        assertEq(engine.balanceOf(writer1, optionId), 2e6, "writer1 option balance t6");
+        assertEq(engine.balanceOf(exerciser1, optionId), 0, "exerciser1 option balance t6");
+        assertEq(engine.balanceOf(writer2, optionId), 0.01e6, "writer2 option balance t6");
+        assertEq(engine.balanceOf(exerciser2, optionId), 0.05e6, "exerciser2 option balance t6");
+        assertEq(engine.balanceOf(writer3, optionId), 0.01e6, "writer3 option balance t6");
 
-        claimState1B = engine.claim(claimId1B);
-        claimState2B = engine.claim(claimId2B);
-        claimState3B = engine.claim(claimId3B);
+        claimState1 = engine.claim(claimId1);
+        claimState2 = engine.claim(claimId2);
+        claimState3 = engine.claim(claimId3);
 
         console.log("Scenario B ------------------");
         // console.log("Claim 1 ----------");
-        // console.log("amountWritten", claimState1B.amountWritten, "amountExercised", claimState1B.amountExercised);
+        // console.log("amountWritten", claimState1.amountWritten, "amountExercised", claimState1.amountExercised);
         // console.log("Claim 2 ----------");
-        // console.log("amountWritten", claimState2B.amountWritten, "amountExercised", claimState2B.amountExercised);
+        // console.log("amountWritten", claimState2.amountWritten, "amountExercised", claimState2.amountExercised);
         // console.log("Claim 3 ----------");
-        // console.log("amountWritten", claimState3B.amountWritten, "amountExercised", claimState3B.amountExercised);
+        // console.log("amountWritten", claimState3.amountWritten, "amountExercised", claimState3.amountExercised);
 
         //
         // Summary of current assignment status
@@ -683,22 +645,22 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         // Finally, we can test nettable()
         //
 
-        uint256 nettableWriter1B = engine.nettable(claimId1B);
-        uint256 nettableWriter2B = engine.nettable(claimId2B);
-        uint256 nettableWriter3B = engine.nettable(claimId3B);
+        uint256 nettableWriter1B = engine.nettable(claimId1);
+        uint256 nettableWriter2B = engine.nettable(claimId2);
+        uint256 nettableWriter3B = engine.nettable(claimId3);
         assertEq(
             nettableWriter1B,
-            (claimState1B.amountWritten - claimState1B.amountExercised) / 1e18,
+            (claimState1.amountWritten - claimState1.amountExercised) / 1e18,
             "B -- claim 1 nettable"
         );
         assertEq(
             nettableWriter2B,
-            (claimState2B.amountWritten - claimState2B.amountExercised) / 1e18,
+            (claimState2.amountWritten - claimState2.amountExercised) / 1e18,
             "B -- claim 2 nettable"
         );
         assertEq(
             nettableWriter3B,
-            (claimState3B.amountWritten - claimState3B.amountExercised) / 1e18,
+            (claimState3.amountWritten - claimState3.amountExercised) / 1e18,
             "B -- claim 3 nettable"
         );
 
@@ -706,51 +668,51 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         // Get positions for each Claim and check amounts available, before getting into actual netting
         //
 
-        position1B = engine.position(claimId1B);
-        position2B = engine.position(claimId2B);
-        position3B = engine.position(claimId3B);
+        position1 = engine.position(claimId1);
+        position2 = engine.position(claimId2);
+        position3 = engine.position(claimId3);
 
-        expectedUnderlyingReturnedFromRedeemClaim1B =
-            (1e12 * (claimState1B.amountWritten - claimState1B.amountExercised)) / 1e18;
-        expectedExerciseReturnedFromRedeemClaim1B = (1746 * claimState1B.amountExercised) / 1e18;
+        expectedUnderlyingReturnedFromRedeemClaim1 =
+            (1e12 * (claimState1.amountWritten - claimState1.amountExercised)) / 1e18;
+        expectedExerciseReturnedFromRedeemClaim1 = (1746 * claimState1.amountExercised) / 1e18;
         assertEq(
-            position1B.underlyingAmount,
-            int256(expectedUnderlyingReturnedFromRedeemClaim1B),
+            position1.underlyingAmount,
+            int256(expectedUnderlyingReturnedFromRedeemClaim1),
             "B -- claim 1 underlying asset avail"
         );
         assertEq(
-            position1B.exerciseAmount,
-            int256(expectedExerciseReturnedFromRedeemClaim1B),
+            position1.exerciseAmount,
+            int256(expectedExerciseReturnedFromRedeemClaim1),
             "B -- claim 1 exercise asset avail"
         );
 
-        expectedUnderlyingReturnedFromNetClaim2B =
-            (0.026e6 * 1e12 * (claimState2B.amountWritten - claimState2B.amountExercised)) / claimState2B.amountWritten;
-        expectedUnderlyingReturnedFromRedeemClaim2B =
-            (1e12 * (claimState2B.amountWritten - claimState2B.amountExercised)) / 1e18;
-        expectedExerciseReturnedFromRedeemClaim2B = (1746 * claimState2B.amountExercised) / 1e18;
+        expectedUnderlyingReturnedFromNetClaim2 =
+            (0.026e6 * 1e12 * (claimState2.amountWritten - claimState2.amountExercised)) / claimState2.amountWritten;
+        expectedUnderlyingReturnedFromRedeemClaim2 =
+            (1e12 * (claimState2.amountWritten - claimState2.amountExercised)) / 1e18;
+        expectedExerciseReturnedFromRedeemClaim2 = (1746 * claimState2.amountExercised) / 1e18;
         assertEq(
-            position2B.underlyingAmount,
-            int256(expectedUnderlyingReturnedFromRedeemClaim2B),
+            position2.underlyingAmount,
+            int256(expectedUnderlyingReturnedFromRedeemClaim2),
             "B -- claim 2 underlying asset avail"
         );
         assertEq(
-            position2B.exerciseAmount,
-            int256(expectedExerciseReturnedFromRedeemClaim2B),
+            position2.exerciseAmount,
+            int256(expectedExerciseReturnedFromRedeemClaim2),
             "B -- claim 2 exercise asset avail"
         );
 
-        expectedUnderlyingReturnedFromRedeemClaim3B =
-            (1e12 * (claimState3B.amountWritten - claimState3B.amountExercised)) / 1e18;
-        expectedExerciseReturnedFromRedeemClaim3B = (1746 * claimState3B.amountExercised) / 1e18;
+        expectedUnderlyingReturnedFromRedeemClaim3 =
+            (1e12 * (claimState3.amountWritten - claimState3.amountExercised)) / 1e18;
+        expectedExerciseReturnedFromRedeemClaim3 = (1746 * claimState3.amountExercised) / 1e18;
         assertEq(
-            position3B.underlyingAmount,
-            int256(expectedUnderlyingReturnedFromRedeemClaim3B),
+            position3.underlyingAmount,
+            int256(expectedUnderlyingReturnedFromRedeemClaim3),
             "B -- claim 3 underlying asset avail"
         );
         assertEq(
-            position3B.exerciseAmount,
-            int256(expectedExerciseReturnedFromRedeemClaim3B),
+            position3.exerciseAmount,
+            int256(expectedExerciseReturnedFromRedeemClaim3),
             "B -- claim 3 exercise asset avail"
         );
 
@@ -766,34 +728,34 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IValoremOptionsClearinghouse.CallerHoldsInsufficientClaimToNetOptions.selector,
-                claimId2B,
+                claimId2,
                 0.026e6,
-                engine.nettable(claimId2B)
+                engine.nettable(claimId2)
             )
         );
         vm.prank(writer2);
-        engine.net(claimId2B, 0.026e6);
+        engine.net(claimId2, 0.026e6);
 
         // Try to net too much, based on amount options nettable (ie, writer2 holds enough but 0.0275e6 isn't nettable)
         vm.prank(writer1);
-        engine.safeTransferFrom(writer1, writer2, optionIdB, 0.0175e6, "");
+        engine.safeTransferFrom(writer1, writer2, optionId, 0.0175e6, "");
 
         vm.expectRevert(
             abi.encodeWithSelector(
                 IValoremOptionsClearinghouse.CallerHoldsInsufficientClaimToNetOptions.selector,
-                claimId2B,
+                claimId2,
                 0.0275e6,
-                engine.nettable(claimId2B)
+                engine.nettable(claimId2)
             )
         );
         vm.prank(writer2);
-        engine.net(claimId2B, 0.0275e6);
+        engine.net(claimId2, 0.0275e6);
 
         // Finally, we net a nettable amount (ie, writer2 holds enough and 0.026e6 is nettable)
         // vm.expectEmit(true, true, true, true); // TODO re-enable and investigate; forge not playing nice
         // emit ClaimNetted(
-        //     claimId2B,
-        //     optionIdB,
+        //     claimId2,
+        //     optionId,
         //     writer2,
         //     0.026e6,
         //     111
@@ -802,12 +764,12 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         uBalance = WETHLIKE.balanceOf(writer2);
         eBalance = USDCLIKE.balanceOf(writer2);
         vm.prank(writer2);
-        engine.net(claimId2B, 0.026e6);
-        assertEq(engine.balanceOf(writer2, optionIdB), 0.0275e6 - 0.026e6, "B -- writer2 SOME options burned after net");
-        assertEq(engine.balanceOf(writer2, claimId2B), 1, "B -- writer2 Claim is not burned after net");
+        engine.net(claimId2, 0.026e6);
+        assertEq(engine.balanceOf(writer2, optionId), 0.0275e6 - 0.026e6, "B -- writer2 SOME options burned after net");
+        assertEq(engine.balanceOf(writer2, claimId2), 1, "B -- writer2 Claim is not burned after net");
         assertEq(
             WETHLIKE.balanceOf(writer2),
-            uBalance + expectedUnderlyingReturnedFromNetClaim2B,
+            uBalance + expectedUnderlyingReturnedFromNetClaim2,
             "B -- writer2 got correct WETHLIKE collateral back from net"
         );
         assertEq(
@@ -822,16 +784,16 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         uBalance = WETHLIKE.balanceOf(writer2);
         eBalance = USDCLIKE.balanceOf(writer2);
         vm.prank(writer2);
-        engine.redeem(claimId2B);
-        assertEq(engine.balanceOf(writer2, claimId2B), 0, "B -- writer2 Claim is burned after redeem");
+        engine.redeem(claimId2);
+        assertEq(engine.balanceOf(writer2, claimId2), 0, "B -- writer2 Claim is burned after redeem");
         assertEq(
             WETHLIKE.balanceOf(writer2),
-            uBalance + expectedUnderlyingReturnedFromRedeemClaim2B,
+            uBalance + expectedUnderlyingReturnedFromRedeemClaim2,
             "B -- writer2 got correct WETHLIKE collateral back from redeem"
         );
         assertEq(
             USDCLIKE.balanceOf(writer2),
-            eBalance + expectedExerciseReturnedFromRedeemClaim2B,
+            eBalance + expectedExerciseReturnedFromRedeemClaim2,
             "B -- writer2 got correct USDCLIKE collateral back from redeeem"
         );
 
@@ -839,41 +801,40 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         uBalance = WETHLIKE.balanceOf(writer1);
         eBalance = USDCLIKE.balanceOf(writer1);
         vm.prank(writer1);
-        engine.redeem(claimId1B);
-        assertEq(engine.balanceOf(writer1, claimId1B), 0, "B -- writer1 Claim is burned after redeem");
+        engine.redeem(claimId1);
+        assertEq(engine.balanceOf(writer1, claimId1), 0, "B -- writer1 Claim is burned after redeem");
         assertEq(
             WETHLIKE.balanceOf(writer1),
-            uBalance + expectedUnderlyingReturnedFromRedeemClaim1B,
+            uBalance + expectedUnderlyingReturnedFromRedeemClaim1,
             "B -- writer1 got correct WETHLIKE collateral back from redeem"
         );
         assertEq(
             USDCLIKE.balanceOf(writer1),
-            eBalance + expectedExerciseReturnedFromRedeemClaim1B,
+            eBalance + expectedExerciseReturnedFromRedeemClaim1,
             "B -- writer1 got correct USDCLIKE collateral back from redeeem"
         );
 
         uBalance = WETHLIKE.balanceOf(writer3);
         eBalance = USDCLIKE.balanceOf(writer3);
         vm.prank(writer3);
-        engine.redeem(claimId3B);
-        assertEq(engine.balanceOf(writer3, claimId3B), 0, "B -- writer3 Claim is burned after redeem");
+        engine.redeem(claimId3);
+        assertEq(engine.balanceOf(writer3, claimId3), 0, "B -- writer3 Claim is burned after redeem");
         assertEq(
             WETHLIKE.balanceOf(writer3),
-            uBalance + expectedUnderlyingReturnedFromRedeemClaim3B,
+            uBalance + expectedUnderlyingReturnedFromRedeemClaim3,
             "B -- writer3 got correct WETHLIKE collateral back from redeem"
         );
         assertEq(
             USDCLIKE.balanceOf(writer3),
-            eBalance + expectedExerciseReturnedFromRedeemClaim3B,
+            eBalance + expectedExerciseReturnedFromRedeemClaim3,
             "B -- writer3 got correct USDCLIKE collateral back from redeeem"
         );
-
     }
 
     function test_net_scenarioC_whenOneWriterNoExercise() public {
         // Scenario C, 1 writer, 1 claim, 1 bucket, no assigment -- will burn Claim during net()
         vm.startPrank(writer2);
-        optionId2C = engine.newOptionType({
+        optionId = engine.newOptionType({
             underlyingAsset: address(WETHLIKE),
             underlyingAmount: 1e12,
             exerciseAsset: address(USDCLIKE),
@@ -881,14 +842,14 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
             exerciseTimestamp: uint40(DAWN + 3 days),
             expiryTimestamp: uint40(DAWN + 10 days) // 1 more day than Option Type B, for staggered redemption ability
         });
-        claimId2C = engine.write(optionId2C, 1e6);
+        claimId2 = engine.write(optionId, 1e6);
         vm.stopPrank();
 
-        claimState2C = engine.claim(claimId2C);
+        claimState2 = engine.claim(claimId2);
 
         console.log("Scenario C ------------------");
         // console.log("Claim 2 ----------");
-        // console.log("amountWritten", claimState2C.amountWritten, "amountExercised", claimState2C.amountExercised);
+        // console.log("amountWritten", claimState2.amountWritten, "amountExercised", claimState2.amountExercised);
 
         //
         // Summary of current assignment status
@@ -910,10 +871,10 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         // Finally, we can test nettable()
         //
         
-        uint256 nettableWriter2C = engine.nettable(claimId2C);
+        uint256 nettableWriter2C = engine.nettable(claimId2);
         assertEq(
             nettableWriter2C,
-            (claimState2C.amountWritten - claimState2C.amountExercised) / 1e18,
+            (claimState2.amountWritten - claimState2.amountExercised) / 1e18,
             "C -- claim 2 nettable"
         );
 
@@ -921,18 +882,18 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         // Get positions for each Claim and check amounts available, before getting into actual netting
         //
 
-        position2C = engine.position(claimId2C);
-        expectedUnderlyingReturnedFromNetClaim2C =
-            (1e12 * (claimState2C.amountWritten - claimState2C.amountExercised)) / 1e18;
-        expectedExerciseReturnedFromRedeemClaim2C = (1750 * claimState2C.amountExercised) / 1e18;
+        position2 = engine.position(claimId2);
+        expectedUnderlyingReturnedFromNetClaim2 =
+            (1e12 * (claimState2.amountWritten - claimState2.amountExercised)) / 1e18;
+        expectedExerciseReturnedFromRedeemClaim2 = (1750 * claimState2.amountExercised) / 1e18;
         assertEq(
-            position2C.underlyingAmount,
-            int256(expectedUnderlyingReturnedFromNetClaim2C),
+            position2.underlyingAmount,
+            int256(expectedUnderlyingReturnedFromNetClaim2),
             "C -- claim 2 underlying asset avail"
         );
         assertEq(
-            position2C.exerciseAmount,
-            int256(expectedExerciseReturnedFromRedeemClaim2C),
+            position2.exerciseAmount,
+            int256(expectedExerciseReturnedFromRedeemClaim2),
             "C -- claim 2 exercise asset avail"
         );
 
@@ -947,12 +908,12 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         uBalance = WETHLIKE.balanceOf(writer2);
         eBalance = USDCLIKE.balanceOf(writer2);
         vm.prank(writer2);
-        engine.net(claimId2C, 1e6);
-        assertEq(engine.balanceOf(writer2, optionId2C), 0, "C -- writer2 ALL options burned after net");
-        assertEq(engine.balanceOf(writer2, claimId2C), 0, "C -- writer2 Claim IS burned after net");
+        engine.net(claimId2, 1e6);
+        assertEq(engine.balanceOf(writer2, optionId), 0, "C -- writer2 ALL options burned after net");
+        assertEq(engine.balanceOf(writer2, claimId2), 0, "C -- writer2 Claim IS burned after net");
         assertEq(
             WETHLIKE.balanceOf(writer2),
-            uBalance + expectedUnderlyingReturnedFromNetClaim2C,
+            uBalance + expectedUnderlyingReturnedFromNetClaim2,
             "C -- writer2 got correct WETHLIKE collateral back from net"
         );
         assertEq(USDCLIKE.balanceOf(writer2), eBalance, "C -- writer2 got No USDCLIKE collateral back from net");
@@ -961,7 +922,7 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
     function test_net_scenarioD_whenOneWriterOneExercise() public {
         // Scenario D, 1 writer, 1 claim, 1 bucket, 1 taker takes 0.3e6 options
         vm.startPrank(writer2);
-        optionId2D = engine.newOptionType({
+        optionId = engine.newOptionType({
             underlyingAsset: address(WETHLIKE),
             underlyingAmount: 1e12,
             exerciseAsset: address(USDCLIKE),
@@ -969,20 +930,20 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
             exerciseTimestamp: uint40(DAWN + 4 days),
             expiryTimestamp: uint40(DAWN + 11 days) // 1 more day than Option Type C, for staggered redemption ability
         });
-        claimId2D = engine.write(optionId2D, 1e6);
-        engine.safeTransferFrom(writer2, exerciser2, optionId2D, 0.3e6, "");
+        claimId2 = engine.write(optionId, 1e6);
+        engine.safeTransferFrom(writer2, exerciser2, optionId, 0.3e6, "");
         vm.stopPrank();
 
         // t = 2
         vm.warp(DAWN + 4 days);
         vm.prank(exerciser2);
-        engine.exercise(optionId2D, 0.3e6);
+        engine.exercise(optionId, 0.3e6);
 
-        claimState2D = engine.claim(claimId2D);
+        claimState2 = engine.claim(claimId2);
 
         console.log("Scenario D ------------------");
         // console.log("Claim 2 ----------");
-        // console.log("amountWritten", claimState2D.amountWritten, "amountExercised", claimState2D.amountExercised);
+        // console.log("amountWritten", claimState2.amountWritten, "amountExercised", claimState2.amountExercised);
 
         //
         // Summary of current assignment status
@@ -1004,10 +965,10 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         // Finally, we can test nettable()
         //
         
-        uint256 nettableWriter2D = engine.nettable(claimId2D);
+        uint256 nettableWriter2D = engine.nettable(claimId2);
         assertEq(
             nettableWriter2D,
-            (claimState2D.amountWritten - claimState2D.amountExercised) / 1e18,
+            (claimState2.amountWritten - claimState2.amountExercised) / 1e18,
             "D -- claim 2 nettable"
         );
 
@@ -1015,18 +976,18 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         // Get positions for each Claim and check amounts available, before getting into actual netting
         //
 
-        position2D = engine.position(claimId2D);
-        expectedUnderlyingReturnedFromNetClaim2D =
-            (1e12 * (claimState2D.amountWritten - claimState2D.amountExercised)) / 1e18;
-        expectedExerciseReturnedFromRedeemClaim2D = (1750 * claimState2D.amountExercised) / 1e18;
+        position2 = engine.position(claimId2);
+        expectedUnderlyingReturnedFromNetClaim2 =
+            (1e12 * (claimState2.amountWritten - claimState2.amountExercised)) / 1e18;
+        expectedExerciseReturnedFromRedeemClaim2 = (1750 * claimState2.amountExercised) / 1e18;
         assertEq(
-            position2D.underlyingAmount,
-            int256(expectedUnderlyingReturnedFromNetClaim2D),
+            position2.underlyingAmount,
+            int256(expectedUnderlyingReturnedFromNetClaim2),
             "D -- claim 2 underlying asset avail"
         );
         assertEq(
-            position2D.exerciseAmount,
-            int256(expectedExerciseReturnedFromRedeemClaim2D),
+            position2.exerciseAmount,
+            int256(expectedExerciseReturnedFromRedeemClaim2),
             "D -- claim 2 exercise asset avail"
         );
 
@@ -1053,12 +1014,12 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         uBalance = WETHLIKE.balanceOf(writer2);
         eBalance = USDCLIKE.balanceOf(writer2);
         vm.prank(writer2);
-        engine.net(claimId2D, 0.7e6);
-        assertEq(engine.balanceOf(writer2, optionId2D), 0, "D -- writer2 ALL options burned after net");
-        assertEq(engine.balanceOf(writer2, claimId2D), 1, "D -- writer2 Claim is not burned after net");
+        engine.net(claimId2, 0.7e6);
+        assertEq(engine.balanceOf(writer2, optionId), 0, "D -- writer2 ALL options burned after net");
+        assertEq(engine.balanceOf(writer2, claimId2), 1, "D -- writer2 Claim is not burned after net");
         assertEq(
             WETHLIKE.balanceOf(writer2),
-            uBalance + expectedUnderlyingReturnedFromNetClaim2D,
+            uBalance + expectedUnderlyingReturnedFromNetClaim2,
             "D -- writer2 got correct WETHLIKE collateral back from net"
         );
         assertEq(USDCLIKE.balanceOf(writer2), eBalance, "D -- writer2 got No USDCLIKE collateral back from net");
@@ -1069,12 +1030,12 @@ contract ValoremOptionsClearinghousev11UnitTest is BaseClearinghouseTest {
         uBalance = WETHLIKE.balanceOf(writer2);
         eBalance = USDCLIKE.balanceOf(writer2);
         vm.prank(writer2);
-        engine.redeem(claimId2D);
-        assertEq(engine.balanceOf(writer2, claimId2D), 0, "D -- writer2 Claim is burned after redeem");
+        engine.redeem(claimId2);
+        assertEq(engine.balanceOf(writer2, claimId2), 0, "D -- writer2 Claim is burned after redeem");
         assertEq(WETHLIKE.balanceOf(writer2), uBalance, "D -- writer2 got No WETHLIKE collateral back from redeem");
         assertEq(
             USDCLIKE.balanceOf(writer2),
-            eBalance + expectedExerciseReturnedFromRedeemClaim2D,
+            eBalance + expectedExerciseReturnedFromRedeemClaim2,
             "D -- writer2 got correct USDCLIKE collateral back from redeeem"
         );
     }

@@ -515,57 +515,57 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
     //
 
     /// @inheritdoc IValoremOptionsClearinghouse
-    function netNoAssign(uint256 claimId, uint256 amountOptionsToNet) external {
-        (uint160 optionKey, uint96 claimKey) = _decodeTokenId(claimId);
+    // function netNoAssign(uint256 claimId, uint256 amountOptionsToNet) external {
+    //     (uint160 optionKey, uint96 claimKey) = _decodeTokenId(claimId);
 
-        // Must be a claimId.
-        if (claimKey == 0) {
-            // TODO revert can't net an option
-        }
+    //     // Must be a claimId.
+    //     if (claimKey == 0) {
+    //         // TODO revert can't net an option
+    //     }
 
-        // Must hold this claim.
-        uint256 claimBalance = balanceOf[msg.sender][claimId];
-        if (claimBalance != 1) {
-            revert CallerDoesNotOwnClaimId(claimId);
-        }
+    //     // Must hold this claim.
+    //     uint256 claimBalance = balanceOf[msg.sender][claimId];
+    //     if (claimBalance != 1) {
+    //         revert CallerDoesNotOwnClaimId(claimId);
+    //     }
 
-        // Setup pointers to the option and claim state.
-        OptionTypeState storage optionTypeState = optionTypeStates[optionKey];
-        Option storage optionRecord = optionTypeState.option;
+    //     // Setup pointers to the option and claim state.
+    //     OptionTypeState storage optionTypeState = optionTypeStates[optionKey];
+    //     Option storage optionRecord = optionTypeState.option;
 
-        // Must be before expiry (otherwise claim holder should just redeem).
-        if (block.timestamp >= optionRecord.expiryTimestamp) {
-            // TODO revert can't net on or after expiry
-        }
+    //     // Must be before expiry (otherwise claim holder should just redeem).
+    //     if (block.timestamp >= optionRecord.expiryTimestamp) {
+    //         // TODO revert can't net on or after expiry
+    //     }
 
-        // Must not be assigned.
-        Claim memory claimState = claim(claimId);
-        if (claimState.amountExercised == 0) {
-            // TODO revert can't net a Claim that has been assigned
-        }
+    //     // Must not be assigned.
+    //     Claim memory claimState = claim(claimId);
+    //     if (claimState.amountExercised == 0) {
+    //         // TODO revert can't net a Claim that has been assigned
+    //     }
 
-        // Must hold sufficient options and must be netting a nettable amount of options.
-        uint256 optionId = uint256(optionKey) << OPTION_KEY_PADDING;
-        uint256 amountOptionsHeld = balanceOf[msg.sender][optionId];
-        uint256 amountOptionsNettable = nettable(claimId);
-        if (amountOptionsToNet > amountOptionsHeld || amountOptionsToNet > amountOptionsNettable) {
-            revert CallerHoldsInsufficientClaimToNetOptions(claimId, amountOptionsToNet, amountOptionsNettable);
-        }
+    //     // Must hold sufficient options and must be netting a nettable amount of options.
+    //     uint256 optionId = uint256(optionKey) << OPTION_KEY_PADDING;
+    //     uint256 amountOptionsHeld = balanceOf[msg.sender][optionId];
+    //     uint256 amountOptionsNettable = nettable(claimId);
+    //     if (amountOptionsToNet > amountOptionsHeld || amountOptionsToNet > amountOptionsNettable) {
+    //         revert CallerHoldsInsufficientClaimToNetOptions(claimId, amountOptionsToNet, amountOptionsNettable);
+    //     }
 
-        // Consume claim -- as much as needed to fulfill desired net amount, returning
-        // the asset amounts to be transferred to the netter.
-        uint256 underlyingAmountNetted = amountOptionsToNet * optionRecord.underlyingAmount;
+    //     // Consume claim -- as much as needed to fulfill desired net amount, returning
+    //     // the asset amounts to be transferred to the netter.
+    //     uint256 underlyingAmountNetted = amountOptionsToNet * optionRecord.underlyingAmount;
 
-        // TODO Bucket stuff
+    //     // TODO Bucket stuff
 
-        emit ClaimNetted(claimId, optionId, msg.sender, amountOptionsToNet, underlyingAmountNetted);
+    //     emit ClaimNetted(claimId, optionId, msg.sender, amountOptionsToNet, underlyingAmountNetted);
 
-        // Burn options, burn the claim (only if fully consumed), and make ERC20 asset transfers.
-        _burn(msg.sender, optionId, amountOptionsToNet);
-        // _burn(msg.sender, claimId, 1); // TODO
+    //     // Burn options, burn the claim (only if fully consumed), and make ERC20 asset transfers.
+    //     _burn(msg.sender, optionId, amountOptionsToNet);
+    //     // _burn(msg.sender, claimId, 1); // TODO
 
-        SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, underlyingAmountNetted);
-    }
+    //     SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, underlyingAmountNetted);
+    // }
 
     /// @inheritdoc IValoremOptionsClearinghouse
     function net(uint256 claimId, uint256 amountOptionsToNet) external {
@@ -608,31 +608,19 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
         _burn(msg.sender, optionId, amountOptionsToNet);
                 console.log("before burn claim");
 
+        // TODO may need an additional logic check, if the claim is still marked as initialized but is consumed
+        // (but under what circumstances is this even possible?)
         if (!_isClaimInitialized(optionKey, claimKey)) {
             _burn(msg.sender, claimId, 1);
         }
 
-        // } else {
-        //    Claim memory claimState = claim(claimId);
-       
-        // // if (claimState.amountWritten == 0 && claimState.amountExercised == 0) {
-        //     // _burn(msg.sender, claimId, 1);
-        // // }
- 
-        // }
-                console.log("before transfer underlying");
+        console.log("before transfer underlying");
 
         if (underlyingAmountNetted > 0) {
             SafeTransferLib.safeTransfer(ERC20(optionRecord.underlyingAsset), msg.sender, underlyingAmountNetted);
         }
 
         emit ClaimNetted(claimId, optionId, msg.sender, amountOptionsToNet, underlyingAmountNetted);
-
-        // OLD
-
-        // Setup pointers to the option and info.
-        // OptionTypeState storage optionTypeState = optionTypeStates[optionKey];
-        // Option memory optionRecord = optionTypeState.option;
     }
 
     /// @notice TODO
@@ -682,7 +670,7 @@ contract ValoremOptionsClearinghouse is ERC1155, IValoremOptionsClearinghouse {
                 claimBucketIndex.amountWritten = uint112(claimBucketIndexAmountWritten - amountOptionsToNet);
                 bucket.amountWritten = uint112(bucketAmountWritten - amountOptionsToNet);
                 
-                // TODO messy
+                // TODO messy -- could we combine?
                 if (availableOptionsInIndex == amountOptionsToNet && bucket.amountExercised == 0) {
                     // Perform "swap and pop" index management.
                     claimBucketIndices[i] = claimBucketIndices[claimBucketIndices.length - 1];

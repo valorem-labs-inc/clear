@@ -5,7 +5,6 @@ libs = ['lib']
 remappings = ['forge-std/=lib/forge-std/src/', 'solmate/=lib/solmate/src/']
 
 [fuzz]
-seed = 7
 max_test_rejects = 100000
 
 [invariant]

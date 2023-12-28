@@ -3,7 +3,7 @@
 //
 // Deploys mock ERC20 tokens USDC, WETH, GMX, and WBTC for testing
 //
-// Can be used with forge: forge script script/DeployMocks.s.sol --rpc-url=<rpc_url> --broadcast --slow
+// Can be used with forge: forge script script/DeployMocks.s.sol --rpc-url=<rpc_url> --broadcast --slow --verifier-url=<block_explorer_url> --etherscan-api-key=<block_explorer_key> --verify
 //   (requires environment variable TEST_DEPLOYER_PK to be set)
 pragma solidity 0.8.16;
 

@@ -13,6 +13,7 @@ import "test/mocks/MockUSDC.sol";
 import "test/mocks/MockWETH.sol";
 import "test/mocks/MockGMX.sol";
 import "test/mocks/MockWBTC.sol";
+import "test/mocks/MockARB.sol";
 
 contract DeployMocksScript is Script {
     uint256 constant SALT = 0x2023091301;
@@ -20,6 +21,7 @@ contract DeployMocksScript is Script {
     //  Mock WETH Deployed to address: 0x1D621b431bF56a3fd49339FF0f9ea9F5B8933C1d
     //  Mock GMX Deployed to address: 0x385Fc55C5E5bAA04c938f85C439a53d9484780cc
     //  Mock WBTC Deployed to address: 0x88109802Af6eB7D9499B1289baa88e1429eA655E
+    //  Mock ARB Deployed to address: 0x998a301ed303D9b6fAc3096E27eb3FAd72379360
 
     function run() public {
         // Deploy USDC Mock
@@ -44,6 +46,12 @@ contract DeployMocksScript is Script {
         vm.startBroadcast(vm.envUint("TEST_DEPLOYER_PK"));
         MockWBTC mockWbtc = new MockWBTC{salt: bytes32(SALT)}();
         console.log("Mock WBTC Deployed to address: %s", address(mockWbtc));
+        vm.stopBroadcast();
+
+        // Deploy ARB Mock
+        vm.startBroadcast(vm.envUint("TEST_DEPLOYER_PK"));
+        MockARB mockArb = new MockARB{salt: bytes32(SALT)}();
+        console.log("Mock ARB Deployed to address: %s", address(mockArb));
         vm.stopBroadcast();
     }
 }
